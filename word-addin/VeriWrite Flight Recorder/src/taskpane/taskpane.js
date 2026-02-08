@@ -53,12 +53,6 @@ function computeDiff(oldText, newText, lastPoll) {
     
     // Find length of common suffix
     let s = 0;
-    // let commonEndOld = oldText.length - 1;
-    // let commonEndNew = newText.length - 1;
-    // while (commonEndOld >=  p && commonEndNew >=  p && oldText[commonEndOld] === newText[commonEndNew]) {
-    //     commonEndOld--;
-    //     commonEndNew--;
-    // }
     let i = oldText.length - 1;
     let j = newText.length - 1;
     while (i >= p && j >= p && oldText[i] === newText[j]) {
