@@ -23,8 +23,20 @@ let lastFrameTs = 0;
 let playTs = 0;     // Playback timestamp in ms
 
 
+// Do not display metadata before file is uploaded
+function initializeUpload() {
+    inputErrTxt.hidden = true;
+    titleEl.textContent = "";
+    eventsEl.textContent = "";
+    durationEl.textContent = "";
+    screenEl.textContent = "";
+}
+
+
 // Upload file & Data Check 
 fileEl.addEventListener("change", async () => {
+  initializeUpload();
+
   const f = fileEl.files?.[0];
   if (!f) return;
   const fileText = await f.text();
@@ -36,7 +48,7 @@ fileEl.addEventListener("change", async () => {
   if ((record?.v ?? 0) !== 1 || 
   typeof init !== "string" || 
   !Array.isArray(ev) ||
-  ev.every(e => 
+  ev.some(e => 
     !Array.isArray(e) ||
     typeof e[0] !== "number" || 
     typeof e[1] !== "number" || 
@@ -61,9 +73,13 @@ fileEl.addEventListener("change", async () => {
       playTs = 0;
       titleEl.textContent = `Title: ${record.m.title}` ?? "Untitled";
       eventsEl.textContent = `Events: 0 /${ev.length}`;
-      screenEl.textContent = init;
+      screenEl.textContent = normalizeLines(init);
       durationEl.textContent = "00:00:00";
       progressEl.value = 0;
+  }
+
+  function normalizeLines(s) {
+      return String(s).replace(/\r/g, "\n")
   }
 
   function step() {
@@ -102,7 +118,7 @@ fileEl.addEventListener("change", async () => {
   function applyPatch(eventArr) {
       const pos = eventArr[1];
       const delLen = eventArr[2]
-      const ins = eventArr[3];
+      const ins = normalizeLines(eventArr[3]);
       
       const prev = screenEl.textContent;
       screenEl.textContent = prev.slice(0, pos) + ins + prev.slice(pos + delLen);
