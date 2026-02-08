@@ -13,6 +13,10 @@ const pauseBtn = document.getElementById("pauseBtn");
 const resetBtn = document.getElementById("resetBtn");
 const speedLbl = document.getElementById("speedLbl");
 const speedSlider = document.getElementById("speedSlider");
+// Cursors
+const caretEl = document.getElementById("caret");
+const beforeEl = document.getElementById("before");
+const afterEl = document.getElementById("after");
 
 
 // Global Variables & State Machine
@@ -25,6 +29,8 @@ let playTs = 0;     // Playback timestamp in ms
 let ev = null;
 let init = null;
 let record = null;
+let caretPos = 0;
+let docText = "";
 
 
 // Do not display metadata before file is uploaded
@@ -33,7 +39,11 @@ function initializeUpload() {
     titleEl.textContent = "";
     eventsEl.textContent = "";
     durationEl.textContent = "";
-    screenEl.textContent = "";
+    beforeEl.textContent = "";
+    afterEl.textContent = "";
+    caretEl.hidden = true;
+    docText = "";
+    // caretPos = 0;
     progressEl.value = 0;
 }
 
@@ -80,11 +90,16 @@ function resetStatus() {
       playTs = 0;
       titleEl.textContent = `Title: ${record.m.title}`;
       eventsEl.textContent = `Events: 0 /${ev.length}`;
-      screenEl.textContent = normalizeLines(init);
+      docText = normalizeLines(init);
       durationEl.textContent = "00:00:00";
       progressEl.value = 0;
+      // Reset caret
+      caretPos = docText.length;
+      caretEl.hidden = false;
+      renderCursor();
   }
 
+// Handle \r in microsoft word
 function normalizeLines(s) {
     return String(s).replace(/\r\n/g, "\n").replace(/\r/g, "\n")
 }
@@ -92,7 +107,7 @@ function normalizeLines(s) {
 function step() {
   if (playing === false) return;
   
-  const now = Date.now();
+  const now = performance.now();
   const frameMs = now - lastFrameTs;
   budget += frameMs * speed;
   // Replay
@@ -102,7 +117,7 @@ function step() {
     budget -= ev[i][0];
     i++;    // forwards to next event
   }
-  lastFrameTs = Date.now();
+  lastFrameTs = performance.now();
 
 
   eventsEl.textContent = `Events: ${i} /${ev.length}`;
@@ -114,6 +129,10 @@ function step() {
     playing = false;
     return;
   }
+
+  // console.log(caretPos);
+  // console.log(docText.length);
+  // console.log(docText.slice(caretPos-5, caretPos+5))
 
   requestAnimationFrame(step)   // Next frame
 }
@@ -127,8 +146,25 @@ function applyPatch(eventArr) {
     const delLen = eventArr[2]
     const ins = normalizeLines(eventArr[3]);
     
-    const prev = screenEl.textContent;
-    screenEl.textContent = prev.slice(0, pos) + ins + prev.slice(pos + delLen);
+    const prev = docText;
+    docText = prev.slice(0, pos) + ins + prev.slice(pos + delLen);
+
+    // Caret/cursor
+    if (ins === "" && delLen > 0) {    // Delete but no inserts
+      caretPos = pos;   
+    } else {
+      caretPos = pos + ins.length;
+    }
+
+    // docText = text.slice(0, caretPos) + caretEl.textContent + text.slice(caretPos);  // Animate cursor
+    // screenEl.textContent = docText;
+    renderCursor();
+}
+
+function renderCursor() {
+    caretEl.hidden = false;
+    beforeEl.textContent = docText.slice(0, caretPos);
+    afterEl.textContent = docText.slice(caretPos);
 }
 
 function convertTs() {
@@ -154,7 +190,7 @@ function startPlaying() {
         resetStatus()
     }
 
-    lastFrameTs = Date.now();
+    lastFrameTs = performance.now();
     requestAnimationFrame(step);
 }
 

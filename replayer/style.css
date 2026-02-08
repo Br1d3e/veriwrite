@@ -1,10 +1,39 @@
-body { font-family: system-ui, sans-serif; margin: 20px; }
+body {
+    font-family: system-ui, sans-serif;
+    margin: 20px;
+    background: #f4f4f9;
+}
 
 #screen {
-    white-space: pre-wrap;
+    background: white;
+    white-space: pre;
+    overflow-x: auto;
     font-family: monospace; 
+    font-size: 14px;
+    line-height: 1.5;
+    
     border: 1px solid #ccc;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
     min-height: 300px;
-    padding: 10px;
+    padding: 20px;
+    margin-top: 10px;
+    margin-bottom: 10px;
 }
+
+#caret {
+    display: inline-block; 
+    width: 0;  
+    height: 1.2em; 
+    border-left: 2px solid black;
+    margin: 0;
+    padding: 0;
+    vertical-align: text-bottom; 
+    animation: blinker 1s linear infinite;
+}
+@keyframes blinker{
+    50% {
+        opacity: 0;
+    }
+}
+
 

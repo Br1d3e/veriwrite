@@ -8,20 +8,21 @@
 <body>
   <h2>VeriWrite Replayer</h2>
   <input id="file" type="file" accept="application/json" />
-  <span id="invalidInput" hidden="hidden" style="color: #F54927">Invalid file format</span>
-  <span id="title"></span>
-  <span id="events"></span>
-  <span id="duration"></span> 
-  <div id="screen"></div>
-  <div>
-  <progress id="replayProg" value="0" min="0" max="100"></progress>  
+  <span id="invalidInput" hidden>Invalid file format</span>
+  <div class="meta">
+    <span id="title"></span> <br>
+    <span id="events"></span> <br>
+    <span id="duration"></span> <br>
   </div>
-  <button id="playBtn">Play</button>
-  <button id="pauseBtn">Pause</button>
-  <button id="resetBtn">Reset</button>
-  <span id="speedLbl">Speed: 1x</span>
-
-  <input id="speedSlider" type="range" min="0.1" max="5" step="0.1" value="1">
+  <div id="screen"><span id="before"></span><span id="caret" class="cursor" hidden="true"></span><span id="after"></span></div>
+  <div class="controls">
+    <progress id="replayProg" value="0" min="0" max="100" style="width: 100%; height: 1"></progress>  
+    <button id="playBtn">Play</button>
+    <button id="pauseBtn">Pause</button>
+    <button id="resetBtn">Reset</button>
+    <span id="speedLbl">Speed: 1x</span> 
+    <input id="speedSlider" type="range" min="0.1" max="5" step="0.1" value="1">
+  </div>   
   <script src="./app.js"></script>
 </body>
 </html>
