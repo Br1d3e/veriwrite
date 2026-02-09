@@ -1,0 +1,42 @@
+{
+    "v": 2,
+    "m": {
+        "docId": "uuid-v4",
+        "created": 1770545443380,
+        "lastModified": 1770545543380,
+        "title": "Untitled",
+        "author": "br1d3e"
+    },
+    "sessions": [
+        {
+            "id": "s1",
+            "t0": 1770545443380,
+            "tn": 1770545448380,
+            "init": "",
+            "ev": [
+                [400, 0, 0, "E"]
+            ],
+            "kf": [],
+            "stats": {
+                "charCount": 1
+            },
+            "prevHash": null,
+            "endHash": null
+        },
+        {
+            "id": "s2",
+            "t0": 1770546443380,
+            "tn": 1770546448380,
+            "init": "E",
+            "ev": [
+                [240, 0, 0, "va"]
+            ],
+            "kf": [],
+            "stats": {
+                "charCount": 2
+            },
+            "prevHash": null,
+            "endHash": null
+        }
+    ]
+}

@@ -5,29 +5,133 @@
 
 /* global document, Office, Word */
 
-// Office.onReady((info) => {
-//   if (info.host === Office.HostType.Word) {
-//     document.getElementById("sideload-msg").style.display = "none";
-//     document.getElementById("app-body").style.display = "flex";
-//   }
-// });
 
-
-let flightRecord = {
-  "v": 1,                       // (int) Schema version. Current: 1
-  "m": {                        // (object) Metadata (short keys to reduce size)
-    "t0": 0,        // (int) Start time in Unix epoch milliseconds
-//    "sample": 200,              // (int) Polling interval in ms used by recorder (for reference)
-    "title": "Essay"            // (string, optional) Document title
-  },
-  "init": "",                   // (string) Initial full text at recording start (stored once)
-  "ev": [],                       // (array) Event stream (patch operations), in chronological order
-  "kf": []                      // (array, optional) Keyframes for fast seeking; may be empty or omitted
-}
-
+// Initialize record
+let flightRecord = null;
+let session = null;
+let uuid = null;
+let schema = null;
+let xmlId = null;
+// Recorder States
 let recording = false;
 let lastPoll = Date.now();
 let lastText = "";
+
+
+// uuid generator
+function generateUUID() {
+  return crypto.randomUUID();
+}
+
+// Creates new flightRecord.json
+async function newRecord() {
+  let flightRecord = {
+    "v": 2,
+    "m": {
+      "docId": generateUUID(),
+      "created": Date.now(),
+      "lastModified": Date.now(),
+      "title": await getDocTitle(),
+      "author": await getDocAuthor()
+    },
+    "sessions": []
+  }
+  return flightRecord;
+}
+
+function b64Encoder(str) {
+  const bytes = new TextEncoder().encode(str); // Uint8Array
+  let bin = "";
+  for (const b of bytes) bin += String.fromCharCode(b);
+  return btoa(bin); // base64 string
+}
+
+function b64Decoder(b64) {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new TextDecoder().decode(bytes);
+}
+
+/** Saves flightRecord.json at Word's CustomXmlPart Interface
+ * 
+ * @param {object} record - The flightRecord file
+ */
+async function saveCustomXml(record) {
+  const json = JSON.stringify(record);
+  const b64 = b64Encoder(json);   // Encode with base64
+  const xml = `<vw xmlns="urn:veriwrite:v2">${b64}</vw>`;
+  try {
+    await(Word.run(async (context) => {
+      const settings = context.document.settings;
+      await context.sync();
+      const recordXml = null;
+      if (!xmlId) {
+        recordXml = Office.context.document.customXmlParts.add(xml);
+      } else {
+        recordXml = Office.context.document.customXmlParts.set(xml);
+      }
+      recordXml.load("id");
+      settings.set("xmlId", recordXml.id);
+      settings.saveAsync();
+    }))
+  } catch(err) {
+    console.log("Error saving custom xml: ", err)
+  }
+}
+
+// Load Settings: v, m.docId, 
+async function loadSettings() {
+  try {
+    await Word.run(async (context) => {
+      const settings = context.document.settings;
+      await context.sync()
+      uuid = settings.get('docId') ?? null;
+      schema = settings.get('v') ?? null;
+      // No docId, create new flightRecord
+      if (!uuid || !schema) {
+        flightRecord = await newRecord();
+        settings.set('docId', flightRecord.m.docId);  // Update Settings
+        settings.set('v', flightRecord.v);
+        settings.saveAsync();
+      }
+    })
+  } catch(err) {
+    console.log(`Error loading settings: ${err}`);
+  }
+}
+
+// Load flightRecord from XML
+async function loadRecord() {
+  try {
+    Word.run(async (context) => {
+      
+      const settings = context.document.settings;
+      await context.sync();
+      xmlId = settings.get('xmlId');
+      context.document.customXmlParts.getById(xmlId);
+      
+
+    })
+  } catch(err) {
+    console.log(`Error loading record: ${err}`);
+  }
+}
+
+async function initializeSession() {
+  session = {
+    "id": `s${flightRecord.sessions.length + 1}`,
+    "t0": Date.now(),
+    "tn": Date.now(),
+    "init": await readBodyText(),
+    "ev": [],
+    "kf": [],
+    "stats": {},
+    "prevHash": null,
+    "endHash": null
+  };
+}
+
 
 /**
  * Compares two input texts, generates [dt, pos, delLen, ins]
@@ -85,6 +189,19 @@ async function getDocTitle() {
   }
 }
 
+async function getDocAuthor() {
+  try {
+    return await Word.run(async (context) => {
+      const props = context.document.properties;
+      props.load("author");
+      await context.sync();
+      return props.author || "Unknown";
+    });
+  } catch {
+    return "Unknown";
+  }
+}
+
 async function readBodyText() {
   return Word.run(async (context) => {
     const body = context.document.body;
@@ -94,30 +211,6 @@ async function readBodyText() {
   });
 }
 
-async function startRecording() {
-  if (recording) return;
-  
-  recording = true;
-  console.log("Recording Started")
-
-  try {
-      const now = Date.now();
-      const title = await getDocTitle();
-      const initText = await readBodyText();
-      
-      flightRecord.m.t0 = now;
-      flightRecord.m.title = title;
-      flightRecord.init = initText;
-
-      lastPoll = now;
-      lastText = initText;
-  } catch (error) {
-      console.error("Recording Error: ", error);
-  }
-
-  poll();
-}
-
 async function poll() {
   if (!recording) return;
 
@@ -125,9 +218,9 @@ async function poll() {
     const newText = await readBodyText();
     // Compute Difference
     const diff = computeDiff(lastText, newText, lastPoll);
-    // If difference, log into flightRecord events
+    // If difference, log into session events
     if (diff) {
-      flightRecord.ev.push(diff);
+      session.ev.push(diff);
       lastPoll = Date.now();
       lastText = newText;
       console.log("Captured Difference: ", diff);
@@ -142,11 +235,44 @@ async function poll() {
   }
 }
 
+// Append new session into flightRecord.sessions
+async function updateSession() {
+  flightRecord.sessions.push(session);
+  flightRecord.m.lastModified = Date.now();
+  flightRecord.m.title = await getDocTitle();
+  flightRecord.m.author = await getDocAuthor();
+
+  await saveCustomXml(flightRecord);
+}
+
+async function startRecording() {
+  if (recording) return;
+
+  await loadSettings();
+  await loadRecord();
+  await initializeSession();
+
+  lastPoll = Date.now();
+  const initText = await readBodyText()
+  lastText = initText;
+    
+  recording = true;
+  console.log("Recording Started")
+
+  poll();
+}
+
+
 async function stopRecording() {
   recording = false;
   
-  const duration = (Date.now() - flightRecord.m.t0) / 1000;
-  console.log(`Recording stopped. Duration: ${duration}s. Events: ${flightRecord.ev.length}`);
+  const duration = (Date.now() - session.t0) / 1000;
+  session.tn = Date.now();
+  session.stats.charCount = session.ev.length;
+  console.log(`Recording stopped. Duration: ${duration}s. Events: ${session.ev.length}`);
+
+  await updateSession();
+  await initializeSession();
 }
 
 
@@ -166,7 +292,6 @@ Office.onReady((info) => {
       document.getElementById("app-body").style.display = "flex";
     }
     document.getElementById("btnStart")?.addEventListener("click", startRecording);
-    // document.getElementById("btnStop")?.addEventListener("click", stopRecording);
     document.getElementById("btnExport")?.addEventListener("click", () => {
       stopRecording();
       downloadJSON();
