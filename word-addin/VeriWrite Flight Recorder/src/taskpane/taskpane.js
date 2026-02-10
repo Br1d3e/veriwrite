@@ -9,7 +9,7 @@
 // Initialize record
 let flightRecord = null;
 let session = null;
-let uuid = null;
+let docId = null;
 let schema = null;
 let xmlId = null;
 // Recorder States
@@ -60,40 +60,51 @@ function b64Decoder(b64) {
 async function saveCustomXml(record) {
   const json = JSON.stringify(record);
   const b64 = b64Encoder(json);   // Encode with base64
-  const xml = `<vw xmlns="urn:veriwrite:v2">${b64}</vw>`;
+  const xml = `<vw xmlns="urn:veriwrite:v2"><b64>${b64}</b64></vw>`;
   try {
     await(Word.run(async (context) => {
       const settings = context.document.settings;
       await context.sync();
-      const recordXml = null;
-      if (!xmlId) {
-        recordXml = Office.context.document.customXmlParts.add(xml);
-      } else {
-        recordXml = Office.context.document.customXmlParts.set(xml);
+      
+      // Replace original xml part
+      const existingId = settings.getItemOrNullObject('xmlId');
+      if (existingId) {
+        context.document.customXmlParts.getById(existingId).delete();
       }
+
+      const recordXml = context.document.customXmlParts.add(xml);
       recordXml.load("id");
+      await context.sync();
       settings.set("xmlId", recordXml.id);
-      settings.saveAsync();
+      await context.sync();
+      xmlId = recordXml.id;
     }))
   } catch(err) {
     console.log("Error saving custom xml: ", err)
   }
 }
 
-// Load Settings: v, m.docId, 
+// Load Settings: v, m.docId, xmlId
 async function loadSettings() {
   try {
     await Word.run(async (context) => {
       const settings = context.document.settings;
       await context.sync()
-      uuid = settings.get('docId') ?? null;
-      schema = settings.get('v') ?? null;
+      docId = settings.getItemOrNullObject('docId') ?? null;
+      schema = settings.getItemOrNullObject('v') ?? null;
+      xmlId = settings.getItemOrNullObject('xmlId') ?? null;
       // No docId, create new flightRecord
-      if (!uuid || !schema) {
+      if (!docId || !schema) {
         flightRecord = await newRecord();
         settings.set('docId', flightRecord.m.docId);  // Update Settings
         settings.set('v', flightRecord.v);
-        settings.saveAsync();
+        await context.sync();
+      }
+      // No xmlId
+      if (!xmlId) {
+        await saveCustomXml(flightRecord);
+      } else {
+        await loadRecord();
       }
     })
   } catch(err) {
@@ -104,14 +115,21 @@ async function loadSettings() {
 // Load flightRecord from XML
 async function loadRecord() {
   try {
-    Word.run(async (context) => {
-      
+    await Word.run(async (context) => {
       const settings = context.document.settings;
+      const xmlId = settings.getItemOrNullObject('xmlId');
       await context.sync();
-      xmlId = settings.get('xmlId');
-      context.document.customXmlParts.getById(xmlId);
-      
-
+      if (!xmlId) return;
+      // Extract XML
+      const xmlPart =context.document.customXmlParts.getById(xmlId);
+      const xml = xmlPart.getXml();
+      await context.sync();
+      // Parse XML
+      const xmlStr = xml.value;
+      const xmlDoc = new DOMParser().parseFromString(xmlStr, "text/xml");
+      const b64 = xmlDoc.getElementsByTagName("b64")[0].textContent;
+      const json = b64Decoder(b64);
+      flightRecord = JSON.parse(json);
     })
   } catch(err) {
     console.log(`Error loading record: ${err}`);
@@ -249,7 +267,13 @@ async function startRecording() {
   if (recording) return;
 
   await loadSettings();
-  await loadRecord();
+
+  // 【安全兜底】如果读取失败，flightRecord 依然是 null，强制新建一个
+  if (!flightRecord) {
+      console.log("Record load failed or is new, initializing fresh record...");
+      flightRecord = await newRecord();
+  }
+
   await initializeSession();
 
   lastPoll = Date.now();
@@ -268,11 +292,9 @@ async function stopRecording() {
   
   const duration = (Date.now() - session.t0) / 1000;
   session.tn = Date.now();
-  session.stats.charCount = session.ev.length;
   console.log(`Recording stopped. Duration: ${duration}s. Events: ${session.ev.length}`);
 
   await updateSession();
-  await initializeSession();
 }
 
 
