@@ -268,7 +268,7 @@ async function startRecording() {
 
   await loadSettings();
 
-  // 【安全兜底】如果读取失败，flightRecord 依然是 null，强制新建一个
+  // If failed to loadSettings, create new Record
   if (!flightRecord) {
       console.log("Record load failed or is new, initializing fresh record...");
       flightRecord = await newRecord();
