@@ -14,7 +14,7 @@ function dedupe(sessions) {
             || sessions[i].ev === sessions[i-1].ev
         ) {
             sessions = sessions.splice(i, 1);
-            console.log(`Repeating Session ${sessions[i].id}`)
+            // console.log(`Repeating Session ${sessions[i].id}`)
         }
     }
 }

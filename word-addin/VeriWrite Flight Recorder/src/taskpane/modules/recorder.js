@@ -80,7 +80,7 @@ async function updateSession() {
   flightRecord.m.title = await getDocTitle();
   flightRecord.m.author = await getDocAuthor();
 
-  xmlId = await saveCustomXml(flightRecord);    // New XMl id
+  xmlId = saveCustomXml(flightRecord);    // New XMl id
 }
 
 export async function startRecording() {
