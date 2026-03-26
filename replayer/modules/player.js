@@ -44,6 +44,8 @@ export function loadRecord(flightRecord) {
     processData(flightRecord);
     state.record = flightRecord
     state.sessions = flightRecord.sessions;
+
+    return flightRecord; 
 }
 
 export function startPlaying() {
@@ -96,8 +98,8 @@ export function resetStatus() {
       eventsEl.textContent = `Events: 0 /${state.sessions[0].ev.length}`;
       state.docText = normalizeLines(state.sessions[0].init);   // Start with first session's init text
       durationEl.textContent = "Session Time: 00:00:00";
-      progressEl.value = 0;
-      calculateTotalEv();
+      state.evTotal = calculateTotalEv(state.sessions.length);
+      progressEl.value = calculateProgress();
       // Reset caret
       state.caretPos = state.docText.length;
       caretEl.hidden = false;
@@ -107,12 +109,16 @@ export function resetStatus() {
   }
 
 
-function calculateTotalEv() {
+function calculateTotalEv(totalS) {     // Total session numbers
   let total = 0;
-  for (let i = 0; i < state.sessions.length; i++) {
+  for (let i = 0; i < totalS; i++) {
     total += state.sessions[i].ev.length;
   }
-  state.evTotal = total;
+  return total;
+}
+
+function calculateProgress() {
+  return state.evCount / state.evTotal * 100;
 }
 
 
@@ -136,20 +142,40 @@ function runSessions() {
       return;
     }
 
-    state.currentSession++;
-    state.i = 0;
-    state.evCount = 0;
-    state.playTs = 0;
-    sessionsEl.textContent = `Session: ${state.currentSession + 1} / ${state.sessions.length}`;
-    // progressEl.value = (state.currentSession + 1) / state.sessions.length * 100;
-    const init = state.sessions[state.currentSession].init;
-    state.docText = normalizeLines(init);
-    state.caretPos = state.docText.length;
-    renderCursor();
+    seekNextSession();
   }
 
   requestAnimationFrame(runSessions);
 }
+
+
+// Switch to destinated session with sid
+export function seekToSession(sid) {    // sid starts from 0
+    // validate sid
+    if (typeof sid !== "number" || sid < 0 || sid >= state.sessions.length) return;
+
+    state.currentSession = sid;
+    state.i = 0;
+    state.evCount = calculateTotalEv(state.currentSession + 1);
+    progressEl.value = calculateProgress();
+    state.playTs = 0;
+    sessionsEl.textContent = `Session: ${state.currentSession + 1} / ${state.sessions.length}`;
+    const init = state.sessions[state.currentSession].init;
+    state.docText = normalizeLines(init);
+    state.caretPos = state.docText.length;
+    renderCursor();
+}
+
+export function seekNextSession() {
+  if (state.currentSession >= state.sessions.length - 1) return;
+  seekToSession(state.currentSession + 1);
+}
+
+export function seekPrevSession() {
+  if (state.currentSession <= 0) return;
+  seekToSession(state.currentSession - 1);
+}
+
 
 
 /**
@@ -179,7 +205,7 @@ function step(ev) {
   // Update meta & progress bar
   eventsEl.textContent = `Events: ${state.i} /${ev.length}`;
   durationEl.textContent = `Session Time: ${convertTs()}`;
-  progressEl.value = state.evCount / state.evTotal * 100;
+  progressEl.value = calculateProgress();
 
 
   // if (state.i >= ev.length) {

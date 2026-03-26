@@ -1,5 +1,5 @@
 
-import { loadRecord, startPlaying, stopPlaying, resetStatus, changeSpeed, updateDOM } from "./modules/player.js"
+import { loadRecord, startPlaying, stopPlaying, resetStatus, changeSpeed, updateDOM, seekToSession, seekNextSession, seekPrevSession } from "./modules/player.js"
 import { cursorDOM } from "./modules/renderer.js";
 import { checkStruct } from "./modules/loader.js";
 
@@ -20,6 +20,7 @@ const pauseBtn = document.getElementById("pauseBtn");
 const resetBtn = document.getElementById("resetBtn");
 const speedLbl = document.getElementById("speedLbl");
 const speedSlider = document.getElementById("speedSlider");
+const sessionBtns = document.getElementById("sessionBtns");
 // Cursors
 const caretEl = document.getElementById("caret");
 const beforeEl = document.getElementById("before");
@@ -28,20 +29,20 @@ const afterEl = document.getElementById("after");
 
 // DOM Object transferred to recorder & player
 const DOM = {
-        caretEl: caretEl,
-        beforeEl: beforeEl,
-        afterEl: afterEl,
-        eventsEl: eventsEl,
-        durationEl: durationEl,
-        progressEl: progressEl,
-        speedLbl: speedLbl,
-        titleEl: titleEl, 
-        screenEl: screenEl,
-        speedLbl: speedLbl,
-        speedSlider: speedSlider,
-        sessionsEl: sessionsEl
-    }
-
+  caretEl: caretEl,
+  beforeEl: beforeEl,
+  afterEl: afterEl,
+  eventsEl: eventsEl,
+  durationEl: durationEl,
+  progressEl: progressEl,
+  speedLbl: speedLbl,
+  titleEl: titleEl, 
+  screenEl: screenEl,
+  speedLbl: speedLbl,
+  speedSlider: speedSlider,
+  sessionsEl: sessionsEl,
+  sessionBtns: sessionBtns
+}
 
 
 // Do not display metadata before file is uploaded
@@ -64,6 +65,41 @@ function enableButtons() {
     speedSlider.disabled = false;
 }
 
+// Generate session buttons according to record.sessions
+function genSessionBtns(sessions) {
+  resetSessionBtns();
+
+  // Prev button
+  const prev = document.createElement("button");
+  prev.id = "prev";
+  prev.textContent = "Prev";
+  sessionBtns.appendChild(prev)
+
+  for (let i = 0; i < sessions.length; i++) {
+    const btn = document.createElement("button");
+    btn.id = i;
+    btn.textContent = `Session ${i + 1}`;
+    // Hover text: session start time and duration
+    const start = new Date(sessions[i].t0);
+    const end = new Date(sessions[i].tn);
+    const duration = new Date(sessions[i].tn - sessions[i].t0);
+    btn.title = `Start: ${start.toLocaleString()}\nEnd: ${end.toLocaleString()}`;
+    sessionBtns.appendChild(btn);
+  }
+
+  // Next button
+  const next = document.createElement("button");
+  next.id = "next";
+  next.textContent = "Next";
+  sessionBtns.appendChild(next);
+}
+
+function resetSessionBtns() {
+  while (sessionBtns.firstChild) {
+    sessionBtns.removeChild(sessionBtns.firstChild);
+  }
+}
+
 
 updateDOM(DOM);
 
@@ -72,30 +108,11 @@ fileEl.addEventListener("change", async () => {
   const f = fileEl.files?.[0];
   if (!f) return;
   const fileText = await f.text();
-  const record = JSON.parse(fileText);
+  let flightRecord = JSON.parse(fileText);
 
   initializeUpload();
 
-  // Check Data Structure
-//   if ((record?.v ?? 0) !== 1 || 
-//   typeof init !== "string" || 
-//   !Array.isArray(ev) ||
-//   ev.some(e => 
-//     !Array.isArray(e) ||
-//     typeof e[0] !== "number" || 
-//     typeof e[1] !== "number" || 
-//     typeof e[2] !== "number" || 
-//     typeof e[3] !== "string"
-//   )) {
-//       // console.log("hide")
-//       inputErrTxt.hidden = false;
-//       setTimeout(() => {
-//           inputErrTxt.hidden = true;
-//       }, 3000);
-//       return;
-//   }
-
-  if (!checkStruct(record)) {
+  if (!checkStruct(flightRecord)) {
     inputErrTxt.hidden = false;
     setTimeout(() => {
         inputErrTxt.hidden = true;
@@ -104,12 +121,15 @@ fileEl.addEventListener("change", async () => {
   }
 
   enableButtons();
+  resetSessionBtns();
 
   updateDOM(DOM);
   cursorDOM(DOM);
 
   // Pass record to player.js
-  loadRecord(record);
+  flightRecord = loadRecord(flightRecord);
+
+  genSessionBtns(flightRecord.sessions);
 
   // Update HTML
   resetStatus();
@@ -123,4 +143,22 @@ resetBtn.addEventListener("click", resetStatus);
 speedSlider.addEventListener("change", () => {
   changeSpeed(Number(speedSlider.value))
   });
+// Switch sessions
+sessionBtns.addEventListener("click", (e) => {
+  if (e.target === null) return;
+  const btnId = e.target.id;
+
+  stopPlaying();
+  switch (btnId) {
+    case "prev":
+      seekPrevSession();
+      break;
+    case "next":
+      seekNextSession();
+      break
+    default:
+      const sid = Number(btnId);
+      seekToSession(sid);
+  }
+})
 
