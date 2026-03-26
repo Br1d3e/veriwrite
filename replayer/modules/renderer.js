@@ -64,9 +64,9 @@ export function normalizeLines(s) {
     .replace(/\r/g, '\n')   // Hard Break
     .replace(/\u000b/g, '\n')   // Soft Break
 
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
+    // .replace(/&/g, '&amp;')
+    // .replace(/</g, '&lt;')
+    // .replace(/>/g, '&gt;')
+    // .replace(/"/g, '&quot;')
+    // .replace(/'/g, '&#39;')
 }
