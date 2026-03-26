@@ -6,7 +6,7 @@ body {
 
 #screen {
     background: white;
-    white-space: pre;
+    white-space: pre-wrap;
     overflow-x: auto;
     font-family: monospace; 
     font-size: 14px;
@@ -18,6 +18,10 @@ body {
     padding: 20px;
     margin-top: 10px;
     margin-bottom: 10px;
+
+    /* line break */
+    word-wrap: break-word;
+    word-break: keep-all;
 }
 
 #caret {

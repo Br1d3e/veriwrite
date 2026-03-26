@@ -1,9 +1,16 @@
+
+import { loadRecord, startPlaying, stopPlaying, resetStatus, changeSpeed, updateDOM, seekToSession, seekNextSession, seekPrevSession } from "./modules/player.js"
+import { cursorDOM } from "./modules/renderer.js";
+import { checkStruct } from "./modules/loader.js";
+
+
 // HTML Elements
 const fileEl = document.getElementById("file");
 const screenEl = document.getElementById("screen");
 const inputErrTxt = document.getElementById("invalidInput");
 // Meta
 const titleEl = document.getElementById("title");
+const sessionsEl = document.getElementById("sessions");
 const eventsEl = document.getElementById("events");
 const durationEl = document.getElementById("duration");
 const progressEl = document.getElementById("replayProg");
@@ -13,24 +20,29 @@ const pauseBtn = document.getElementById("pauseBtn");
 const resetBtn = document.getElementById("resetBtn");
 const speedLbl = document.getElementById("speedLbl");
 const speedSlider = document.getElementById("speedSlider");
+const sessionBtns = document.getElementById("sessionBtns");
 // Cursors
 const caretEl = document.getElementById("caret");
 const beforeEl = document.getElementById("before");
 const afterEl = document.getElementById("after");
 
 
-// Global Variables & State Machine
-let i = 0;    // Event index
-let playing = false;
-let speed = 1;
-let budget = 0;
-let lastFrameTs = 0;
-let playTs = 0;     // Playback timestamp in ms
-let ev = null;
-let init = null;
-let record = null;
-let caretPos = 0;
-let docText = "";
+// DOM Object transferred to recorder & player
+const DOM = {
+  caretEl: caretEl,
+  beforeEl: beforeEl,
+  afterEl: afterEl,
+  eventsEl: eventsEl,
+  durationEl: durationEl,
+  progressEl: progressEl,
+  speedLbl: speedLbl,
+  titleEl: titleEl, 
+  screenEl: screenEl,
+  speedLbl: speedLbl,
+  speedSlider: speedSlider,
+  sessionsEl: sessionsEl,
+  sessionBtns: sessionBtns
+}
 
 
 // Do not display metadata before file is uploaded
@@ -38,178 +50,115 @@ function initializeUpload() {
     inputErrTxt.hidden = true;
     titleEl.textContent = "";
     eventsEl.textContent = "";
+    sessionsEl.textContent = "";
     durationEl.textContent = "";
     beforeEl.textContent = "";
     afterEl.textContent = "";
     caretEl.hidden = true;
-    docText = "";
-    // caretPos = 0;
     progressEl.value = 0;
 }
 
+function enableButtons() {
+    playBtn.disabled = false;
+    pauseBtn.disabled = false;
+    resetBtn.disabled = false;
+    speedSlider.disabled = false;
+}
+
+// Generate session buttons according to record.sessions
+function genSessionBtns(sessions) {
+  resetSessionBtns();
+
+  // Prev button
+  const prev = document.createElement("button");
+  prev.id = "prev";
+  prev.textContent = "Prev";
+  sessionBtns.appendChild(prev)
+
+  for (let i = 0; i < sessions.length; i++) {
+    const btn = document.createElement("button");
+    btn.id = i;
+    btn.textContent = `Session ${i + 1}`;
+    // Hover text: session start time and duration
+    const start = new Date(sessions[i].t0);
+    const end = new Date(sessions[i].tn);
+    const duration = new Date(sessions[i].tn - sessions[i].t0);
+    btn.title = `Start: ${start.toLocaleString()}\nEnd: ${end.toLocaleString()}`;
+    sessionBtns.appendChild(btn);
+  }
+
+  // Next button
+  const next = document.createElement("button");
+  next.id = "next";
+  next.textContent = "Next";
+  sessionBtns.appendChild(next);
+}
+
+function resetSessionBtns() {
+  while (sessionBtns.firstChild) {
+    sessionBtns.removeChild(sessionBtns.firstChild);
+  }
+}
+
+
+updateDOM(DOM);
 
 // Upload file & Data Check 
 fileEl.addEventListener("change", async () => {
-  initializeUpload();
-
   const f = fileEl.files?.[0];
   if (!f) return;
   const fileText = await f.text();
-  record = JSON.parse(fileText);
-  init = record?.init ?? "";
-  ev = record?.ev ?? [];
+  let flightRecord = JSON.parse(fileText);
 
-  // Check Data Structure
-  if ((record?.v ?? 0) !== 1 || 
-  typeof init !== "string" || 
-  !Array.isArray(ev) ||
-  ev.some(e => 
-    !Array.isArray(e) ||
-    typeof e[0] !== "number" || 
-    typeof e[1] !== "number" || 
-    typeof e[2] !== "number" || 
-    typeof e[3] !== "string"
-  )) {
-      // console.log("hide")
-      inputErrTxt.hidden = false;
-      setTimeout(() => {
-          inputErrTxt.hidden = true;
-      }, 3000);
-      return;
+  initializeUpload();
+
+  if (!checkStruct(flightRecord)) {
+    inputErrTxt.hidden = false;
+    setTimeout(() => {
+        inputErrTxt.hidden = true;
+    }, 3000);
+    return;
   }
+
+  enableButtons();
+  resetSessionBtns();
+
+  updateDOM(DOM);
+  cursorDOM(DOM);
+
+  // Pass record to player.js
+  flightRecord = loadRecord(flightRecord);
+
+  genSessionBtns(flightRecord.sessions);
+
   // Update HTML
   resetStatus();
 });
 
-function resetStatus() {
-      console.log("reset status");
-      i = 0;
-      playing = false;
-      budget = 0;
-      lastFrameTs = 0;
-      playTs = 0;
-      titleEl.textContent = `Title: ${record.m.title}`;
-      eventsEl.textContent = `Events: 0 /${ev.length}`;
-      docText = normalizeLines(init);
-      durationEl.textContent = "00:00:00";
-      progressEl.value = 0;
-      // Reset caret
-      caretPos = docText.length;
-      caretEl.hidden = false;
-      renderCursor();
-  }
 
-// Handle \r in microsoft word
-function normalizeLines(s) {
-    return String(s).replace(/\r\n/g, "\n").replace(/\r/g, "\n")
-}
-
-function step() {
-  if (playing === false) return;
-  
-  const now = performance.now();
-  const frameMs = now - lastFrameTs;
-  budget += frameMs * speed;
-  // Replay
-  while (i < ev.length && budget >= ev[i][0]) {
-    applyPatch(ev[i]);
-    playTs += ev[i][0];
-    budget -= ev[i][0];
-    i++;    // forwards to next event
-  }
-  lastFrameTs = performance.now();
-
-
-  eventsEl.textContent = `Events: ${i} /${ev.length}`;
-  convertTs()
-  progressEl.value = i / ev.length * 100;
-
-  if (i >= ev.length) {
-    console.log("Replay Finished")
-    playing = false;
-    return;
-  }
-
-  // console.log(caretPos);
-  // console.log(docText.length);
-  // console.log(docText.slice(caretPos-5, caretPos+5))
-
-  requestAnimationFrame(step)   // Next frame
-}
-
-/**
- * Processes each change to the document. Display them on the screen.
- * @param {Array | null} eventArr - an array of each event in [dt, pos, delLen, ins] 
- */
-function applyPatch(eventArr) {
-    const pos = eventArr[1];
-    const delLen = eventArr[2]
-    const ins = normalizeLines(eventArr[3]);
-    
-    const prev = docText;
-    docText = prev.slice(0, pos) + ins + prev.slice(pos + delLen);
-
-    // Caret/cursor
-    if (ins === "" && delLen > 0) {    // Delete but no inserts
-      caretPos = pos;   
-    } else {
-      caretPos = pos + ins.length;
-    }
-
-    // docText = text.slice(0, caretPos) + caretEl.textContent + text.slice(caretPos);  // Animate cursor
-    // screenEl.textContent = docText;
-    renderCursor();
-}
-
-function renderCursor() {
-    caretEl.hidden = false;
-    beforeEl.textContent = docText.slice(0, caretPos);
-    afterEl.textContent = docText.slice(caretPos);
-}
-
-function convertTs() {
-    const totalSec = playTs / 1000;
-    const tsHr = Math.floor(totalSec / 3600);
-    const tsMin = Math.floor((totalSec % 3600) / 60);
-    const tsSec = Math.floor(totalSec % 60);
-    const textHr = tsHr.toString().padStart(2, '0');
-    const textMin = tsMin.toString().padStart(2, '0');
-    const textSec = tsSec.toString().padStart(2, '0');
-    durationEl.textContent = `${textHr}:${textMin}:${textSec}`;
-}
-
-
-function startPlaying() {
-    if (playing === true) return;
-
-    playing = true;
-    console.log("Started Playing");
-
-    // Finished playing, reset then play
-    if (i >= ev.length) {
-        resetStatus()
-    }
-
-    lastFrameTs = performance.now();
-    requestAnimationFrame(step);
-}
-
-
-function stopPlaying() {
-    if (playing === false) return;
-
-    playing = false;
-    console.log("Stopped Playing");
-}
-
-
-function changeSpeed() {
-    speed = Number(speedSlider.value);
-    speedLbl.textContent = `Speed: ${speed}x`
-}
-
-
+// Event Listeners
 playBtn.addEventListener("click", startPlaying);
 pauseBtn.addEventListener("click", stopPlaying);
 resetBtn.addEventListener("click", resetStatus);
-speedSlider.addEventListener("change", changeSpeed);
+speedSlider.addEventListener("change", () => {
+  changeSpeed(Number(speedSlider.value))
+  });
+// Switch sessions
+sessionBtns.addEventListener("click", (e) => {
+  if (e.target === null) return;
+  const btnId = e.target.id;
+
+  stopPlaying();
+  switch (btnId) {
+    case "prev":
+      seekPrevSession();
+      break;
+    case "next":
+      seekNextSession();
+      break
+    default:
+      const sid = Number(btnId);
+      seekToSession(sid);
+  }
+})
+
