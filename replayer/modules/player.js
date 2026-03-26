@@ -8,34 +8,20 @@ import { applyPatch, normalizeLines, updateState, renderCursor } from "./rendere
 
 
 // Global Variables & State Machine
-const i = 0;    // Event index
-const playing = false;
-const speed = 1;
-const budget = 0;
-const lastFrameTs = 0;
-const playTs = 0;     // Playback timestamp in ms
-const record = null;      // Normalized flightRecorder
-const sessions = null;     // Sessions Array
-// const ev = null;
-// const init = null;
-const caretPos = 0;
-const docText = "";
 let state = {
-  i: i,       // event index
+  i: 0,       // Event index
   evCount: 0,    // event count for progress bar
   evTotal: 0,    // number of events in total
-  playing: playing,
-  speed: speed,
-  budget: budget,
-  lastFrameTs: lastFrameTs,
-  playTs: playTs,
-  record: record,
-  sessions: sessions,
+  playing: false,
+  speed: 1.0,
+  budget: 0,
+  lastFrameTs: 0,
+  playTs: 0,     // Playback timestamp in ms
+  record: null,      // Normalized flightRecorder
+  sessions: null,     // Sessions Array
   currentSession: 0,    // index in session
-  // ev: ev,
-  // init: init,
-  caretPos: caretPos,
-  docText: docText
+  caretPos: 0,
+  docText: ""
 }
 
 
@@ -53,27 +39,18 @@ let sessionsEl = null;
 // Interface with app.js
 // Load record from app.js
 export function loadRecord(flightRecord) {
-    state.record = flightRecord; 
-
-    // // testing
-    // state.ev = flightRecord.ev;
-    // state.init = flightRecord.init;
 
     // Normalize data using loading.js
     processData(flightRecord);
+    state.record = flightRecord
     state.sessions = flightRecord.sessions;
 }
 
 export function startPlaying() {
-    if (state.playing === true) return;
+    if (state.playing === true || !state.record) return;
 
     state.playing = true;
     console.log("Started Playing");
-
-    // // Finished playing, reset then play
-    // if (state.i >= state.ev.length) {
-    //     resetStatus()
-    // }
 
     state.lastFrameTs = performance.now();
     requestAnimationFrame(runSessions);
@@ -81,7 +58,7 @@ export function startPlaying() {
 
 
 export function stopPlaying() {
-    if (state.playing === false) return;
+    if (state.playing === false || !state.record) return;
 
     state.playing = false;
     console.log("Stopped Playing");
@@ -105,23 +82,27 @@ export function updateDOM(DOM) {    // an object
 }
 
 export function resetStatus() {
+      if (!state.record) return;
       console.log("reset status");
-      updateState(state);
       state.i = 0;
       state.playing = false;
       state.budget = 0;
       state.lastFrameTs = 0;
       state.playTs = 0;
+      state.currentSession = 0;
+      state.evCount = 0;
       titleEl.textContent = `Title: ${state.record.m.title}`;
       sessionsEl.textContent = `Session: ${state.currentSession + 1} / ${state.sessions.length}`;
       eventsEl.textContent = `Events: 0 /${state.sessions[0].ev.length}`;
       state.docText = normalizeLines(state.sessions[0].init);   // Start with first session's init text
-      durationEl.textContent = "00:00:00";
+      durationEl.textContent = "Session Time: 00:00:00";
       progressEl.value = 0;
       calculateTotalEv();
       // Reset caret
       state.caretPos = state.docText.length;
       caretEl.hidden = false;
+
+      updateState(state);
       renderCursor();
   }
 
@@ -141,23 +122,30 @@ function calculateTotalEv() {
 function runSessions() {
   if (state.playing === false) return;
 
-  // Stop playing when finished all
-  if (state.currentSession >= state.sessions.length) {
-    resetStatus();
-    return;
-  }
-
   const ev = state.sessions[state.currentSession].ev;
-  const init = state.sessions[state.currentSession].init;
 
   step(ev);
 
   // Forward to next session
   if (state.i >= ev.length) {
+
+    // Stop playing when finished all
+    if (state.currentSession >= state.sessions.length - 1) {
+      console.log(`Finished All Sessions`);
+      resetStatus();
+      return;
+    }
+
     state.currentSession++;
     state.i = 0;
+    state.evCount = 0;
+    state.playTs = 0;
     sessionsEl.textContent = `Session: ${state.currentSession + 1} / ${state.sessions.length}`;
     // progressEl.value = (state.currentSession + 1) / state.sessions.length * 100;
+    const init = state.sessions[state.currentSession].init;
+    state.docText = normalizeLines(init);
+    state.caretPos = state.docText.length;
+    renderCursor();
   }
 
   requestAnimationFrame(runSessions);
@@ -188,18 +176,19 @@ function step(ev) {
   state.lastFrameTs = performance.now();
 
 
+  // Update meta & progress bar
   eventsEl.textContent = `Events: ${state.i} /${ev.length}`;
-  durationEl.textContent = convertTs()
+  durationEl.textContent = `Session Time: ${convertTs()}`;
   progressEl.value = state.evCount / state.evTotal * 100;
 
 
-  if (state.i >= ev.length) {
-    console.log("Replay Finished")
-    state.playing = false;
-    return;
-  }
+  // if (state.i >= ev.length) {
+  //   console.log(`Event ${state.i + 1} Finished`)
+  //   // state.playing = false;
+  //   return;
+  // }
 
-  requestAnimationFrame(step)   // Next frame
+  // requestAnimationFrame(step)   // Next frame
 }
 
 

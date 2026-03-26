@@ -1,6 +1,7 @@
 
 import { loadRecord, startPlaying, stopPlaying, resetStatus, changeSpeed, updateDOM } from "./modules/player.js"
 import { cursorDOM } from "./modules/renderer.js";
+import { checkStruct } from "./modules/loader.js";
 
 
 // HTML Elements
@@ -53,9 +54,14 @@ function initializeUpload() {
     beforeEl.textContent = "";
     afterEl.textContent = "";
     caretEl.hidden = true;
-    // docText = "";
-    // caretPos = 0;
     progressEl.value = 0;
+}
+
+function enableButtons() {
+    playBtn.disabled = false;
+    pauseBtn.disabled = false;
+    resetBtn.disabled = false;
+    speedSlider.disabled = false;
 }
 
 
@@ -63,16 +69,12 @@ updateDOM(DOM);
 
 // Upload file & Data Check 
 fileEl.addEventListener("change", async () => {
-  initializeUpload();
-  updateDOM(DOM);
-  cursorDOM(DOM);
-
   const f = fileEl.files?.[0];
   if (!f) return;
   const fileText = await f.text();
   const record = JSON.parse(fileText);
-  // Pass record to player.js
-  loadRecord(record);
+
+  initializeUpload();
 
   // Check Data Structure
 //   if ((record?.v ?? 0) !== 1 || 
@@ -92,18 +94,33 @@ fileEl.addEventListener("change", async () => {
 //       }, 3000);
 //       return;
 //   }
+
+  if (!checkStruct(record)) {
+    inputErrTxt.hidden = false;
+    setTimeout(() => {
+        inputErrTxt.hidden = true;
+    }, 3000);
+    return;
+  }
+
+  enableButtons();
+
+  updateDOM(DOM);
+  cursorDOM(DOM);
+
+  // Pass record to player.js
+  loadRecord(record);
+
   // Update HTML
   resetStatus();
-
-
-  // Event Listeners
-  playBtn.addEventListener("click", startPlaying);
-  pauseBtn.addEventListener("click", stopPlaying);
-  resetBtn.addEventListener("click", resetStatus);
-  speedSlider.addEventListener("change", () => {
-    changeSpeed(Number(speedSlider.value))
-    });
 });
 
 
+// Event Listeners
+playBtn.addEventListener("click", startPlaying);
+pauseBtn.addEventListener("click", stopPlaying);
+resetBtn.addEventListener("click", resetStatus);
+speedSlider.addEventListener("change", () => {
+  changeSpeed(Number(speedSlider.value))
+  });
 

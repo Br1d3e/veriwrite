@@ -14,7 +14,7 @@ function dedupe(sessions) {
             // || sessions[i].ev === sessions[i-1].ev
         ) {
             sessions.splice(i, 1);
-            console.log(`Repeating Session ${sessions[i].id}`)
+            i--;
         }
     }
     return sessions;
@@ -27,9 +27,18 @@ function sort(sessions) {
 }
 
 export function processData(flightRecord) {
-    let sessions = flightRecord.sessions;
+    const newRecord = flightRecord;
+    let sessions = newRecord.sessions;
     sessions = dedupe(sessions);
     sessions = sort(sessions);
-    flightRecord.sessions = sessions;
-    return flightRecord;
+    return newRecord;
+}
+
+
+export function checkStruct(flightRecord) {
+    const v = flightRecord.v ?? null;
+    const m = flightRecord.m ?? null;
+    const sessions = flightRecord.sessions ?? null
+    
+    return flightRecord && v === 2 && m && sessions && typeof sessions === "object";
 }
