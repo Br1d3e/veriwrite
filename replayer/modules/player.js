@@ -3,7 +3,7 @@
 // Output: Player Class used by app.js
 
 
-import { processData } from "./loader.js";
+// import { processData } from "./loader.js";
 import { applyPatch, normalizeLines, updateState, renderCursor } from "./renderer.js";
 
 
@@ -39,9 +39,6 @@ let sessionsEl = null;
 // Interface with app.js
 // Load record from app.js
 export function loadRecord(flightRecord) {
-
-    // Normalize data using loading.js
-    processData(flightRecord);
     state.record = flightRecord
     state.sessions = flightRecord.sessions;
 
@@ -138,7 +135,7 @@ function runSessions() {
     // Stop playing when finished all
     if (state.currentSession >= state.sessions.length - 1) {
       console.log(`Finished All Sessions`);
-      resetStatus();
+      // resetStatus();
       return;
     }
 
