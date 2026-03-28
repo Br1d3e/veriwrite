@@ -35,8 +35,8 @@
  * frontEdit：发生在文本前段的编辑次数
  * midEdit：发生在文本中部的编辑次数
  * backtrack：编辑位置明显向前跳回的次数
- * editPosMean：编辑绝对位置平均值
- * editPosStd：编辑绝对位置离散程度
+ * editPosMean：编辑相对位置平均值
+ * editPosStd：编辑相对位置离散程度
 /*/
 
 
@@ -190,8 +190,10 @@ function calEditSize(sid) {
 
     // Histogram counting every insert and deletion
     const threshold = 5000;     // Insert/delete threshold
-    let histIns = new Uint16Array(threshold + 2);
-    let histDel = new Uint16Array(threshold + 2);
+    let histIns = new Uint32Array(threshold + 2);
+    let histDel = new Uint32Array(threshold + 2);
+    let insCount = 0;        // event count where ins.length > 0
+    let delCount = 0;        // event count where del.length > 0
 
     for (let i = 0; i < ev.length; i++) {
         const delLen = ev[i][2];
@@ -202,23 +204,27 @@ function calEditSize(sid) {
         editSize.maxDeleteLen = Math.max(editSize.maxDeleteLen, delLen);
 
         // Update histogram
+        if (insLen > 0) insCount++;
+        if (delLen > 0) delCount++;
         let bIns = insLen <= threshold ? insLen : threshold + 1;
         let bDel = delLen <= threshold ? delLen : threshold + 1;
         histIns[bIns]++;
         histDel[bDel]++;
     }
 
-    const p90Pos= Math.ceil(ev.length * 0.9);
-    const p95Pos= Math.ceil(ev.length * 0.95); 
+    const insP90Pos= Math.ceil(insCount * 0.9);
+    const insP95Pos= Math.ceil(insCount * 0.95); 
+    const delP90Pos= Math.ceil(delCount * 0.9);
+    const delP95Pos= Math.ceil(delCount * 0.95); 
 
     // Remove insLen or delLen = 0
     histIns[0] = 0;
     histDel[0] = 0;
 
-    editSize.insertLenP90 = histHelper(histIns, p90Pos);
-    editSize.insertLenP95 = histHelper(histIns, p95Pos);
-    editSize.deleteLenP90 = histHelper(histDel, p90Pos);
-    editSize.deleteLenP95 = histHelper(histDel, p95Pos);
+    editSize.insertLenP90 = histHelper(histIns, insP90Pos);
+    editSize.insertLenP95 = histHelper(histIns, insP95Pos);
+    editSize.deleteLenP90 = histHelper(histDel, delP90Pos);
+    editSize.deleteLenP95 = histHelper(histDel, delP95Pos);
 
     return editSize;
 }
@@ -231,12 +237,7 @@ function calEditSize(sid) {
 function calEditPos(sid) {
     if (sid < 0 || sid >= sessions.length) return;
 
-    const posThresRel = 0.2;    // relative position threshold - front: 0~20%, mid: 20%~80%, apd: 80%~100%
-
     let editPos = {
-        // endEdit: 0,        
-        // frontEdit: 0,
-        // midEdit: 0,
         backtrack: 0,
         editPosMean: 0,
         editPosStd: 0,
@@ -247,39 +248,39 @@ function calEditPos(sid) {
     const init = session.init;
 
 
-    let totalPos = 0; 
-    let endPos = 0;   // the largest pos value
+    let totalPos = 0;     
+    // Current text length
+    let currentLen = init.length;
 
-    // Calculate mean edit position (absolute) and ending position
+    // Calculate mean edit position (relative) and ending position
     for (let i = 0; i < ev.length; i++) {
         const pos = ev[i][1];
+        const delLen = ev[i][2];
+        const ins = ev[i][3];
+        const insLen = ins.length;
 
-        totalPos += pos;
-        endPos = Math.max(endPos, pos);
+        const posRel = pos / Math.max(currentLen, 0);
+        currentLen = currentLen + insLen - delLen;      // Dynamic update session document length
+        totalPos += posRel;
     }
 
     editPos.editPosMean = totalPos / ev.length;
-
-    // Current text length
-    let currentLen = endPos - init.length;
     
+    // Calculate std value using relative position
+    currentLen = init.length;
     for (let i = 0; i < ev.length; i++) {
         const pos = ev[i][1];
-        const posRel = pos / currentLen;
+        const delLen = ev[i][2];
+        const ins = ev[i][3];
+        const insLen = ins.length;
 
-        // // Count editing distribution using relative position
-        // if (posRel <= posThresRel && posRel >= 0) {
-        //     editPos.frontEdit++;
-        // } else if (posRel <= 1 && posRel >= 1 - posThresRel) {
-        //     editPos.endEdit++;
-        // } else {
-        //     editPos.midEdit++;
-        // }
-
+        const posRel = pos / Math.max(currentLen, 0);
+        currentLen = currentLen + insLen - delLen;
         // Compute std
-        editPos.editPosStd += (pos - editPos.editPosMean) ** 2 / ev.length;
+        editPos.editPosStd += (posRel - editPos.editPosMean) ** 2 / ev.length;
     }
 
+    editPos.editPosStd = Math.sqrt(editPos.editPosStd);
 
     // Backtrack detection
     const btThres = 10;     // Backtrack threshold (position/characters)
