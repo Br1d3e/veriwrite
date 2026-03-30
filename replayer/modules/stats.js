@@ -250,7 +250,7 @@ function calEditPos(sid) {
 
     let totalPos = 0;     
     // Current text length
-    let currentLen = init.length;
+    let currentLen = init.length ?? 0;
 
     // Calculate mean edit position (relative) and ending position
     for (let i = 0; i < ev.length; i++) {
@@ -259,7 +259,7 @@ function calEditPos(sid) {
         const ins = ev[i][3];
         const insLen = ins.length;
 
-        const posRel = pos / Math.max(currentLen, 0);
+        const posRel = pos / Math.max(currentLen, 1);
         currentLen = currentLen + insLen - delLen;      // Dynamic update session document length
         totalPos += posRel;
     }
@@ -267,14 +267,14 @@ function calEditPos(sid) {
     editPos.editPosMean = totalPos / ev.length;
     
     // Calculate std value using relative position
-    currentLen = init.length;
+    currentLen = init.length ?? 0;
     for (let i = 0; i < ev.length; i++) {
         const pos = ev[i][1];
         const delLen = ev[i][2];
         const ins = ev[i][3];
         const insLen = ins.length;
 
-        const posRel = pos / Math.max(currentLen, 0);
+        const posRel = pos / Math.max(currentLen, 1);
         currentLen = currentLen + insLen - delLen;
         // Compute std
         editPos.editPosStd += (posRel - editPos.editPosMean) ** 2 / ev.length;
