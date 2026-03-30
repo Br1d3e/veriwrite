@@ -25,7 +25,7 @@ export function calSessionInterpret(session) {
 /**
  * Interprets paste-like insertion events
  * @param {*} session 
- * @returns pasteIns array of evDesc object: {lvl, evIdx, ins, dt, rate, reason}
+ * @returns pasteIns array of evDesc object: {lvl, evIdx, ins, dt, rate, tags}
  */
 function calPasteIns(session) {
     if (!session) return;
@@ -55,26 +55,24 @@ function calPasteIns(session) {
             ins: ins,
             dt: dt,
             rate: rate,
-            reason: []
+            tags: []
         }
 
         if (insLen < medThreshold) continue;
 
-        let countFlag = false;      // Account for multiple possible reasons
+        // let countFlag = false;      // Account for multiple possible reasons
         if (rate >= rateThreshold) {
             evDesc.lvl = "high";
-            evDesc.reason.push("high rate");
-            countFlag = true;
+            evDesc.tags.push("high rate");
+            // countFlag = true;
         }
         
         if (insLen >= medThreshold && insLen < highThreshold) {
-            evDesc.reason.push("large insertion");
+            evDesc.tags.push("large insertion");
             evDesc.lvl = "medium";
         } else if (insLen >= highThreshold) {
-            evDesc.reason.push("large insertion");
-            if (!countFlag) {
-                evDesc.lvl = "high";
-            }
+            evDesc.tags.push("large insertion");
+            evDesc.lvl = "high";
         }
 
         pasteIns.push(evDesc);
