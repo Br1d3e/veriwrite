@@ -251,7 +251,7 @@ function calEditPos(session) {
         totalPos += posRel;
     }
 
-    editPos.editPosMean = totalPos / ev.length;
+    editPos.editPosMean = totalPos / Math.max(ev.length, 1);
     
     // Calculate std value using relative position
     currentLen = init.length ?? 0;
