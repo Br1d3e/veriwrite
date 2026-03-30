@@ -1,8 +1,8 @@
-// Analyzes flightRecord data from player.js
+// stats_layer1
+// Analyzes session-level, descriptive, fact-based data
 
 
-/** Session stats
- * 
+/* List 
  * 
  * 1. Overview
  * durationMs
@@ -22,18 +22,16 @@
  * 
  * 
  * 3. Edit Size
- * maxInsertLen
- * insertLenP90
- * insertLenP95
- * maxDeleteLen
- * deleteLenP90
- * deleteLenP95
+ * maxInsLen
+ * insLenP90
+ * insLenP95
+ * insLenP99
+ * maxDelLen
+ * delLenP90
+ * delLenP95
  * 
  * 
  * 4. Edit Position
- * endEdit：发生在文末附近的编辑次数
- * frontEdit：发生在文本前段的编辑次数
- * midEdit：发生在文本中部的编辑次数
  * backtrack：编辑位置明显向前跳回的次数
  * editPosMean：编辑相对位置平均值
  * editPosStd：编辑相对位置离散程度
@@ -41,41 +39,31 @@
 
 
 
-let flightRecord = null;
-let sessions = null;
-
-
-export function initializeStats(record) {
-    flightRecord = record;
-    sessions = flightRecord.sessions;
-}
-
-
 /**
- * 
- * @param {number} sid session index starting from 0
+ * Calculates session descriptive stats, returns an sessionStats object
+ * @param {object} session
  */
-export function calSession(sid) {
-    if (sid < 0 || sid >= sessions.length) return;
+export function calSessionDesc(session) {
+    if (!session) return;
 
     // Stats object
-    let sessionStats = {
-        overview: calOverview(sid),
-        rhythm: calRhythm(sid),
-        editSize: calEditSize(sid),
-        editPos: calEditPos(sid)
+    let descStats = {
+        overview: calOverview(session),
+        rhythm: calRhythm(session),
+        editSize: calEditSize(session),
+        editPos: calEditPos(session)
     }
 
-    return sessionStats;
+    return descStats;
 }
 
 
 /**
  * Calculates overview stats, returns an overview object
- * @param {number} sid session index starting from 0
+ * @param {object} session
  */
-function calOverview(sid) {
-    if (sid < 0 || sid >= sessions.length) return;
+function calOverview(session) {
+    if (!session) return;
 
     let overview = {
     durationMs: 0,
@@ -86,7 +74,6 @@ function calOverview(sid) {
     replaceEv: 0,
     }
 
-    const session = sessions[sid];
     const ev = session.ev;
     
     overview.durationMs = session.tn - session.t0;
@@ -124,10 +111,10 @@ function histHelper(hist, pos) {
 
 /**
  * Calculates rhythm stats, returns a rhythm object
- * @param {number} sid session index starting from 0
+ * @param {object} session
  */
-function calRhythm(sid) {
-    if (sid < 0 || sid >= sessions.length) return;
+function calRhythm(session) {
+    if (!session) return;
 
     let rhythm = {
         dtMedian: 0,
@@ -137,7 +124,6 @@ function calRhythm(sid) {
         pause5sCount: 0,
     }
 
-    const session = sessions[sid];
     const ev = session.ev;
 
     // Histogram counting every dt
@@ -171,21 +157,21 @@ function calRhythm(sid) {
 
 /**
  * Calculates edit size stats, returns an edit obejct
- * @param {number} sid session id starting from 0
+ * @param {object} session
  */
-function calEditSize(sid) {
-    if (sid < 0 || sid >= sessions.length) return;
+function calEditSize(session) {
+    if (!session) return;
 
     let editSize = {
-        maxInsertLen: 0,
-        insertLenP90: 0,
-        insertLenP95: 0,
-        maxDeleteLen: 0,
-        deleteLenP90: 0,
-        deleteLenP95: 0,
+        maxInsLen: 0,
+        insLenP90: 0,
+        insLenP95: 0,
+        insLenP99: 0,
+        maxDelLen: 0,
+        delLenP90: 0,
+        delLenP95: 0,
     }
 
-    const session = sessions[sid];
     const ev = session.ev;
 
     // Histogram counting every insert and deletion
@@ -200,8 +186,8 @@ function calEditSize(sid) {
         const ins = ev[i][3];
         const insLen = ins.length;
 
-        editSize.maxInsertLen = Math.max(editSize.maxInsertLen, insLen);
-        editSize.maxDeleteLen = Math.max(editSize.maxDeleteLen, delLen);
+        editSize.maxInsLen = Math.max(editSize.maxInsLen, insLen);
+        editSize.maxDelLen = Math.max(editSize.maxDelLen, delLen);
 
         // Update histogram
         if (insLen > 0) insCount++;
@@ -214,6 +200,7 @@ function calEditSize(sid) {
 
     const insP90Pos= Math.ceil(insCount * 0.9);
     const insP95Pos= Math.ceil(insCount * 0.95); 
+    const insP99Pos= Math.ceil(insCount * 0.99); 
     const delP90Pos= Math.ceil(delCount * 0.9);
     const delP95Pos= Math.ceil(delCount * 0.95); 
 
@@ -221,10 +208,11 @@ function calEditSize(sid) {
     histIns[0] = 0;
     histDel[0] = 0;
 
-    editSize.insertLenP90 = histHelper(histIns, insP90Pos);
-    editSize.insertLenP95 = histHelper(histIns, insP95Pos);
-    editSize.deleteLenP90 = histHelper(histDel, delP90Pos);
-    editSize.deleteLenP95 = histHelper(histDel, delP95Pos);
+    editSize.insLenP90 = histHelper(histIns, insP90Pos);
+    editSize.insLenP95 = histHelper(histIns, insP95Pos);
+    editSize.insLenP99 = histHelper(histIns, insP99Pos);
+    editSize.delLenP90 = histHelper(histDel, delP90Pos);
+    editSize.delLenP95 = histHelper(histDel, delP95Pos);
 
     return editSize;
 }
@@ -232,10 +220,10 @@ function calEditSize(sid) {
 
 /**
  * Calculates edit position stats, returns an editPos object
- * @param {number} sid session id starting from 0
+ * @param {object} session
  */
-function calEditPos(sid) {
-    if (sid < 0 || sid >= sessions.length) return;
+function calEditPos(session) {
+    if (!session) return;
 
     let editPos = {
         backtrack: 0,
@@ -243,7 +231,6 @@ function calEditPos(sid) {
         editPosStd: 0,
     }
 
-    const session = sessions[sid];
     const ev = session.ev;
     const init = session.init;
 

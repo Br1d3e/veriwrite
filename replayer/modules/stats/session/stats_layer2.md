@@ -80,6 +80,7 @@ Most naturally expressed as:
 This is **not** a writing quality score.
 It does not mean that pausing is good or bad.
 It only describes how smoothly text output unfolds over time.
+**!! if pause to look AI-generated content and type it in document, linearity is still low!!**
 
 ---
 

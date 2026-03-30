@@ -2,7 +2,7 @@
 import { loadRecord, startPlaying, stopPlaying, resetStatus, changeSpeed, updateDOM, seekToSession, seekNextSession, seekPrevSession } from "./modules/player.js"
 import { cursorDOM } from "./modules/renderer.js";
 import { checkStruct, processData } from "./modules/loader.js";
-import { initializeStats, calSession } from "./modules/stats.js";
+import { calSession } from "./modules/stats/session/index.js";
 
 
 // HTML Elements
@@ -131,8 +131,6 @@ fileEl.addEventListener("change", async () => {
   flightRecord = processData(flightRecord);
   // Pass record to player.js
   loadRecord(flightRecord);
-  // initialize statistics
-  initializeStats(flightRecord);
 
   // Generate session buttons
   genSessionBtns(flightRecord.sessions);
@@ -164,9 +162,9 @@ sessionBtns.addEventListener("click", (e) => {
       break
     default:
       const sid = Number(btnId);
-      seekToSession(sid);
+      const session = seekToSession(sid);
       // test
-      console.log(calSession(sid))
+      console.log(calSession(session))
   }
 })
 

@@ -145,9 +145,12 @@ function runSessions() {
   requestAnimationFrame(runSessions);
 }
 
-
-// Switch to destinated session with sid
-export function seekToSession(sid) {    // sid starts from 0
+/**
+ * Switch to destinated session with sid
+ * @param {number} sid session id starting from 0
+ * @returns current session
+ */
+export function seekToSession(sid) {
     // validate sid
     if (typeof sid !== "number" || sid < 0 || sid >= state.sessions.length) return;
 
@@ -161,6 +164,8 @@ export function seekToSession(sid) {    // sid starts from 0
     state.docText = normalizeLines(init);
     state.caretPos = state.docText.length;
     renderCursor();
+
+    return state.sessions[state.currentSession];   
 }
 
 export function seekNextSession() {
