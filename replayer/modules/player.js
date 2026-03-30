@@ -4,7 +4,7 @@
 
 
 // import { processData } from "./loader.js";
-import { applyPatch, normalizeLines, updateState, renderCursor } from "./renderer.js";
+import { applyPatch, updateState, renderCursor } from "./renderer.js";
 
 
 // Global Variables & State Machine
@@ -93,7 +93,7 @@ export function resetStatus() {
       titleEl.textContent = `Title: ${state.record.m.title}`;
       sessionsEl.textContent = `Session: ${state.currentSession + 1} / ${state.sessions.length}`;
       eventsEl.textContent = `Events: 0 /${state.sessions[0].ev.length}`;
-      state.docText = normalizeLines(state.sessions[0].init);   // Start with first session's init text
+      state.docText = state.sessions[0].init;   // Start with first session's init text
       durationEl.textContent = "Session Time: 00:00:00";
       state.evTotal = calculateTotalEv(state.sessions.length);
       progressEl.value = calculateProgress();
@@ -161,7 +161,7 @@ export function seekToSession(sid) {
     state.playTs = 0;
     sessionsEl.textContent = `Session: ${state.currentSession + 1} / ${state.sessions.length}`;
     const init = state.sessions[state.currentSession].init;
-    state.docText = normalizeLines(init);
+    state.docText = init;
     state.caretPos = state.docText.length;
     renderCursor();
 
@@ -208,15 +208,6 @@ function step(ev) {
   eventsEl.textContent = `Events: ${state.i} /${ev.length}`;
   durationEl.textContent = `Session Time: ${convertTs()}`;
   progressEl.value = calculateProgress();
-
-
-  // if (state.i >= ev.length) {
-  //   console.log(`Event ${state.i + 1} Finished`)
-  //   // state.playing = false;
-  //   return;
-  // }
-
-  // requestAnimationFrame(step)   // Next frame
 }
 
 
