@@ -4,9 +4,10 @@ import { calSessionInterpret } from "./interpret.js";
 
 
 export function calSession(session) {
+    const desc = calSessionDesc(session);
     let sessionStats = {
-        desc: calSessionDesc(session),
-        interpret: calSessionInterpret(session)
+        desc: desc,
+        interpret: calSessionInterpret(session, desc)
     }
     return sessionStats;
 }
