@@ -35,18 +35,23 @@ function calPasteIns(session) {
     let pasteIns = []
 
     const ev = session.ev;
+    const init = session.init;      
+    let currentText = init;     // Keep track of current docText
 
     // Maximum insLen for each
     const medThreshold = 15;
     const highThreshold = 30;
-    const rateThreshold = 40;       // tested from data
+    // Maximum input rate
+    const rateThreshold = 40;     
 
 
     for (let i = 0; i < ev.length; i++) {
         const ins = ev[i][3];
         const insLen = ins.length;
+        const delLen = ev[i][2];
+        const pos = ev[i][1];
         const dt = ev[i][0];
-        const rate = Number((insLen / dt * 1000).toFixed(2));   // average kps
+        const rate = Number((insLen / Math.max(dt, 1) * 1000).toFixed(2));   // average kps
 
         // Update description
         let evDesc = {
@@ -59,13 +64,6 @@ function calPasteIns(session) {
         }
 
         if (insLen < medThreshold) continue;
-
-        // let countFlag = false;      // Account for multiple possible reasons
-        if (rate >= rateThreshold) {
-            evDesc.lvl = "high";
-            evDesc.tags.push("high rate");
-            // countFlag = true;
-        }
         
         if (insLen >= medThreshold && insLen < highThreshold) {
             evDesc.tags.push("large insertion");
@@ -74,6 +72,19 @@ function calPasteIns(session) {
             evDesc.tags.push("large insertion");
             evDesc.lvl = "high";
         }
+
+        // Tags
+        if (rate >= rateThreshold) {
+            evDesc.tags.push("high rate");
+        }
+        const dtThres = 6000;
+        if (dt > dtThres) {
+            evDesc.tags.push("long pause");
+        }
+        if (currentText.includes(ins)) {
+            evDesc.tags.push("in-doc paste")
+        }
+        currentText = currentText.slice(0, pos) + ins + currentText.slice(pos + delLen);  // update current text
 
         pasteIns.push(evDesc);
     }
