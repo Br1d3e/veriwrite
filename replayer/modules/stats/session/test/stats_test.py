@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import json
+import Levenshtein
 
 
 FILE1 = "test IR 5 first draft.json"
@@ -10,7 +11,6 @@ FILE3 = "long copy.json"
 FILE4 = "small copy.json"
 with open(f"/Users/br1d3e/Google Drive/My Drive/veriwrite-flightrecorder/sessions/{FILE1}", "r", encoding="utf-8") as f:
     record = dict(json.load(f))
-
 
 sessions = record["sessions"]
 
@@ -240,11 +240,120 @@ def session_linearity(SID):
     plt.plot(x_norm, x_norm, color='red', linestyle=":")    # y = x
     plt.show()    
 
+
+def session_revision_intensity(SID):
+    session = sessions[SID]
+
+    print(f"id: {session['id']}")
+
+    init = session["init"]
+    ev = session["ev"]
+    if len(ev) == 0:
+        return
+    ev = np.array(ev, dtype=object)
+
+    dt = np.array(ev[:, 0], dtype=np.int32)
+    ins = ev[:, 3]
+    pos = np.array(ev[:, 1], dtype=np.int32)
+    ins_lens = np.array([len(s) for s in ins], dtype=np.int32)
+    del_lens = np.array(ev[:, 2], dtype=np.int32)
+
+    # Revision = pure del + replace + backtrack ins
+    replace_ev = ev[np.logical_and(ins_lens > 0, del_lens > 0)]
+    pure_del_ev = ev[np.logical_and(ins_lens == 0, del_lens > 0)]
+
+    backtrack_ins_ev = []
+    # Define backtrack as a backward cursor movement that crosses at least one textual boundary
+    def text_boundary(text):
+        if len(text) == 0:
+            return False
+        BOUNDARY_CHARS = set(" \n\r,.?!@#$%^&*;:()[]{}\"'/-+~\\<>")
+        return any(ch in BOUNDARY_CHARS for ch in text)
+
+    current_text = init[:pos[0]] + ins[0] + init[pos[0] + del_lens[0]:]
+    for i in range(1, len(ev)):
+        prev_pos = pos[i - 1]
+        d_pos = prev_pos - pos[i]
+        bt_1 = d_pos > 0
+        is_pure_ins = ins_lens[i] > 0 and del_lens[i] == 0
+        bt_2 = False
+
+        if bt_1:
+            bt_2 = text_boundary(current_text[pos[i] : prev_pos])       
+
+        current_text = current_text[:pos[i]] + ins[i] + current_text[pos[i] + del_lens[i]:]     # Update displayed text
+
+        if bt_1 and bt_2 and is_pure_ins:
+            backtrack_ins_ev.append(ev[i])
+
+
+    backtrack_ins_ev = np.array(backtrack_ins_ev, dtype=object)
     
+    # Char based replace, del, ins stats
+    replaced_chars = np.sum(len(s) for s in replace_ev[:, 3])
+    pure_del_chars = np.sum(pure_del_ev[:, 2])
+    backtrack_ins_chars = np.sum(len(s) for s in backtrack_ins_ev[:, 3]) if len(backtrack_ins_ev) != 0 else 0
+
+
+    print(f"replaced_chars: {replaced_chars}")
+    print(f"pure_del_chars: {pure_del_chars}")
+    print(f"backtrack_ins_chars: {backtrack_ins_chars}")
+
+    # revision_ev = np.concatenate((pure_del_ev, replace_ev, backtrack_ins_ev))
+    revision_chars = replaced_chars + pure_del_chars + backtrack_ins_chars
+    print(f"revision_chars: {revision_chars}")
+
+
+    # writing process
+    process_texts = []
+    current_text = init
+    for i in range(len(ev)):
+        process_texts.append(current_text)
+        current_text = current_text[:pos[i]] + ins[i] + current_text[pos[i] + del_lens[i]:]
+    process_texts = np.array(process_texts, dtype=object)
+    product_text = current_text
+
+    product_process_sims = []
+    for i in range(1, 11):
+        sample_text = process_texts[np.ceil(len(process_texts) * i * 0.1).astype(np.int32) - 1]
+        product_process_sims.append(Levenshtein.ratio(sample_text, product_text))
+
+    product_process_sims = np.array(product_process_sims, dtype=np.float32)
+    sims_med = np.median(product_process_sims)
+    sims_p30 = np.percentile(product_process_sims, 30)
+    sims_p10 = np.percentile(product_process_sims, 10)
+    sim_init_final = Levenshtein.ratio(init, product_text)
+    early_gain = sims_p10 - sim_init_final
+    median_gain = sims_med - sim_init_final
+    print(f"sim_init_final: {np.round(sim_init_final, 3)}")
+    print(f"sims_med: {np.round(sims_med, 3)}")
+    print(f"sims_p30: {np.round(sims_p30, 3)}")
+    print(f"sims_p10: {np.round(sims_p10, 3)}")
+    print(f"early_gain: {np.round(early_gain, 3)}")
+    print(f"median_gain: {np.round(median_gain, 3)}")
+
+
+    
+    # Revision quantity
+    ins_lens_sum = max(np.sum(ins_lens), 1)
+    del_lens_sum = max(np.sum(del_lens), 1)
+    del_ins_ratio = np.sum(del_lens) / ins_lens_sum
+    replace_ratio = replaced_chars / ins_lens_sum
+    pure_del_ratio = pure_del_chars / (ins_lens_sum + del_lens_sum)
+    backtrack_ins_ratio = backtrack_ins_chars / ins_lens_sum
+    revision_ratio = revision_chars / (ins_lens_sum + del_lens_sum)
+    print(f"del_ins_ratio: {np.round(del_ins_ratio, 3)}")
+    print(f"replace_ratio: {np.round(replace_ratio, 3)}")
+    print(f"pure_del_ratio: {np.round(pure_del_ratio, 3)}")
+    print(f"backtrack_ins_ratio: {np.round(backtrack_ins_ratio, 3)}")
+    print(f"revision_ratio: {np.round(revision_ratio, 3)}")
+
+
 
 if __name__ == "__main__":
     for sid in range(0, len(sessions)):
-        # session_paste_info(sid + 1)
-        session_linearity(sid)
+        # session_paste_info(sid)
+        # session_linearity(sid)
+        session_revision_intensity(sid)
         # pass
-    # session_linearity(2)
+    # session_revision_intensity(2)

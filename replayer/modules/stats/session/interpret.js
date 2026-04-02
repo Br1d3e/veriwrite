@@ -13,7 +13,7 @@ export function calSessionInterpret(session, descStats) {
     let interpretStats = {
         pasteIns: calPasteIns(session),
         temporalLinearity: calFlow(session, descStats),
-        revisionIntensity: null
+        revisionIntensity: calRevisionIntensity(session) 
     }
     return interpretStats;
 }
@@ -93,7 +93,7 @@ function calPasteIns(session) {
  * Interprets writing flow, including progress linearity, smoothness, relative interruption, and time-chars graph statistics
  * @param {object} session 
  * @param {object} descStats
- * @returns {object} 
+ * @returns {object} flow
  */
 function calFlow(session, descStats) {
     if (!session) return;
@@ -235,6 +235,115 @@ function calFlow(session, descStats) {
     return flow;
 }
 
+/**
+ * Analyzes revision intensity data
+ * @param {object} session 
+ * @returns a RevisionIntensity object of revision ratios and product-process similarity metric
+ */
+function calRevisionIntensity(session) {
+    if (!session) return;
+
+    let revInt = {
+        revRatios: null,
+        productProcessSim: null
+    }
+
+    const ev = session.ev;
+    const init = session.init;
+    const pos = ev.map(e => e[1]);
+    const ins = ev.map(e => e[3]);
+    const insLen = ins.map(i => i.length);
+    const delLen = ev.map(e => e[2]);
+    
+    // Revision quantities & ratios
+    let insLenSum = 0;
+    let delLenSum = 0;
+    let replacedChars = 0;
+    let btInsChars = 0;
+    let pureDelChars = 0;
+
+    for (let i = 0; i < ev.length; i++) {
+        insLenSum += insLen[i];
+        delLenSum += delLen[i];
+
+        if (delLen[i] > 0 && insLen[i] > 0) {   // replace event
+            replacedChars += insLen[i];            
+        } else if (delLen[i] > 0 && insLen[i] == 0) {   // pure delete event
+            pureDelChars += delLen[i];
+        }
+    }
+    insLenSum = Math.max(insLenSum, 1);
+    delLenSum = Math.max(delLenSum, 1)
+    const totalEvSum = insLenSum + delLenSum;
+    
+    // del-ins, replace, pureDel
+    const delInsRatio = delLenSum / insLenSum;
+    const replaceRatio = replacedChars / insLenSum;
+    const pureDelRatio = pureDelChars / (totalEvSum);
+
+    // Count backtrack & pure insertion
+    let currentText = init.slice(0, pos[0]) + ins[0] + init.slice(pos[0] + delLen[0]);
+    for (let i = 1; i < ev.length; i++) {
+        const btMask1 = (pos[i - 1] > pos[i]);     // backtrack1: current pos is before previous position
+        const isPureIns = (delLen[i] === 0 && insLen[i] > 0);
+        let btMask2 = false;
+        if (btMask1) {
+            btMask2 = textBoundary(currentText.slice(pos[i], pos[i - 1]));  // backtrack2: crossed part contains textual boundary
+        }
+        currentText = currentText.slice(0, pos[i]) + ins[i] + currentText.slice(pos[i] + delLen[i]);    // Update displayed text
+        
+        if (btMask1 && btMask2 && isPureIns) {
+            btInsChars += insLen[i];
+        }
+    }
+    const btInsRatio = btInsChars / insLenSum;
+
+    // Total revision ratio 
+    const revChars = replacedChars + pureDelChars + btInsChars;
+    const revRatio = revChars / totalEvSum;
+
+    revInt.revRatios = {
+        delIns: delInsRatio,
+        replace: replaceRatio,
+        pureDel: pureDelRatio,
+        btIns: btInsRatio,
+        total: revRatio
+    }
+
+    // Product-process similarity using Levenshtein string distance
+    let processTexts = [];  // Cumulative textual progress of every event
+    currentText = init;
+    for (let i = 0; i < ev.length; i++) {
+        processTexts.push(currentText);
+        currentText = currentText.slice(0, pos[i]) + ins[i] + currentText.slice(pos[i] + delLen[i]);
+    }
+    let productText = currentText;  // End of session text
+
+    let productProcessSims = [];
+    // sample every 10%
+    let sampleText = ""
+    for (let i = 1; i < 11; i++) {
+        sampleText = processTexts[Math.ceil(0.1 * i * ev.length) - 1];
+        productProcessSims.push(1 - levenshtein(sampleText, productText) / (sampleText.length + productText.length));
+    }
+    // compute ercentiles
+    const simInitFinal = productProcessSims[0];
+    const simP10 = percentileHelper(productProcessSims, 10);
+    const simP30 = percentileHelper(productProcessSims, 30);
+    const simMed = percentileHelper(productProcessSims, 50);
+
+    revInt.productProcessSim = {
+        initFinal: simInitFinal,
+        p10: simP10,
+        p30: simP30,
+        med: simMed,
+        earlyGain: simP10 - simInitFinal,
+        lateGain: simMed - simP30
+    }
+
+    return revInt;
+}
+
 
 // np.diff
 function diffHelper(x) {
@@ -275,4 +384,44 @@ function arrayMax(arr) {
 
 function arrayMin(arr) {
     return arr.reduce((a, b) => Math.min(a, b), Infinity);
+}
+
+// Helper function for backtrack detection
+function textBoundary(text) {
+    if (!text.length || text.length === 0) return null;
+    // backtrack: backward cursor movement that crosses at least one textual boundary
+    const BOUNDARY_CHARS = new Set(" \n\r,.?!@#$%^&*;:()[]{}\"'/-+~\\<>");
+    for (let i = 0; i < text.length; i++) {
+        if (BOUNDARY_CHARS.has(text[i])) return true;
+    }
+    return false;
+}
+
+
+// Computes the levenshtei distance between two strings
+function levenshtein(a, b) {
+    if (a.length === 0) return b.length;
+    if (b.length === 0) return a.length;
+
+    let matrix = Array.from({length: a.length + 1}, () => Array(b.length + 1).fill(0));
+
+    // Initialize matrix (rightmost column and bottom row)
+    for (let i = 0; i <= a.length; i++) {
+        matrix[i][b.length] = a.length - i;
+    }
+    for (let j = 0; j <= b.length; j++) {
+        matrix[a.length][j] = b.length - j;
+    }
+
+    for (let i = a.length - 1; i >= 0; i--) {
+        for (let j = b.length - 1; j >= 0; j--) {
+            if (a[i] === b[j]) {
+                matrix[i][j] = matrix[i + 1][j + 1];
+            } else {
+                matrix[i][j] = 1 + Math.min(matrix[i + 1][j], matrix[i][j + 1], matrix[i + 1][j + 1]);
+            }        
+        }
+    }
+    
+    return matrix[0][0];
 }
