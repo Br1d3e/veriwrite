@@ -156,11 +156,11 @@ export function seekToSession(sid) {
 
     state.currentSession = sid;
     state.i = 0;
-    state.evCount = calculateTotalEv(state.currentSession + 1);
+    state.evCount = calculateTotalEv(state.currentSession);
     progressEl.value = calculateProgress();
     state.playTs = 0;
     sessionsEl.textContent = `Session: ${state.currentSession + 1} / ${state.sessions.length}`;
-    const init = state.sessions[state.currentSession].init;
+    const init = state.sessions[state.currentSession].init ?? "";
     state.docText = init;
     state.caretPos = state.docText.length;
     renderCursor();
