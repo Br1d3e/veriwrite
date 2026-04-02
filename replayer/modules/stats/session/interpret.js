@@ -12,7 +12,7 @@ export function calSessionInterpret(session, descStats) {
 
     let interpretStats = {
         pasteIns: calPasteIns(session),
-        temporalLinearity: calLinearity(session, descStats),
+        temporalLinearity: calFlow(session, descStats),
         revisionIntensity: null
     }
     return interpretStats;
@@ -90,36 +90,39 @@ function calPasteIns(session) {
 
 
 /**
- * Interprets linearity stats, including progress shape, smoothness, and relative interruption
+ * Interprets writing flow, including progress linearity, smoothness, relative interruption, and time-chars graph statistics
  * @param {object} session 
  * @param {object} descStats
  * @returns {object} 
  */
-function calLinearity(session, descStats) {
+function calFlow(session, descStats) {
     if (!session) return;
 
-    let shape = {
+    let linearity = {
+        score: 0,
         mad: 0,
         rmse: 0,
         maxDeviation: 0
     }
 
     let smoothness =  {
+        score: 0,
         mad1stDeri: 0,
         mse2ndDeri: 0
     }
 
-    let interruptRel = {
+    let interruptProfile = {
         ratio1x: 0,
         ratio2x: 0,
         ratio5x: 0,
         p95Score: 0
     }
 
-    let linearity = {
-        shape : shape,
+    let flow = {
+        linearity : linearity,
         smoothness: smoothness,
-        interruptRel: interruptRel
+        interruptProfile: interruptProfile,
+        graph: null
     }
 
     const ev = session.ev;
@@ -128,14 +131,14 @@ function calLinearity(session, descStats) {
     const insLen = ins.map(i => i.length);
 
     // Calculate cumulative insLen and continuous time
-    let y = new Uint32Array(insLen.length);     // Y-axis: insert length
+    let y = new Float64Array(insLen.length);     // Y-axis: insert length
     let totalLen = 0;
     for (let i = 0; i < insLen.length; i++) {
         totalLen += insLen[i];
         y[i] = totalLen;
     }
     
-    let x = new Uint32Array(dt.length);         // X-axis: continuous time
+    let x = new Float64Array(dt.length);         // X-axis: continuous time
     let totalTime = 0;
     for (let i = 0; i < dt.length; i++) {
         totalTime += dt[i];
@@ -156,18 +159,21 @@ function calLinearity(session, descStats) {
         yNorm[i] = (y[i] - yMin) / (yMax - yMin); 
     }
 
-    // A. Shape of progress: mean absolute deviation, RMSE, max absolute deviation
+    // A. Linearity of progress: mean absolute deviation, RMSE, max absolute deviation
     let ad = 0;      // absolute deviation
     for (let i = 0; i < xNorm.length; i++) {
         ad = Math.abs(xNorm[i] - yNorm[i]);
-        shape.mad += ad;
-        shape.rmse += ad * ad;
-        shape.maxDeviation = Math.max(shape.maxDeviation, ad);
+        linearity.mad += ad;
+        linearity.rmse += ad * ad;
+        linearity.maxDeviation = Math.max(linearity.maxDeviation, ad);
     }
-    shape.mad /= xNorm.length;
-    shape.rmse = Math.sqrt(shape.rmse / xNorm.length);
+    linearity.mad /= xNorm.length;
+    linearity.rmse = Math.sqrt(linearity.rmse / xNorm.length);
 
-    // Graph...
+    // Linearity score
+    const k = 5;
+    linearity.score = Math.exp(-k * linearity.rmse) * 100;
+
 
     // B. Smoothness of progress: 1st & 2nd derivatives
     // sample x, y
@@ -200,18 +206,33 @@ function calLinearity(session, descStats) {
         smoothness.mse2ndDeri += deri2nd[i] * deri2nd[i];
     }
     smoothness.mse2ndDeri /= deri2nd.length;
+    // Smoothness score / 100
+    smoothness.score = 1 / (1 + (Math.log(1 + smoothness.mse2ndDeri))) * 100;
+    
+
+    // Relative Interruption
+    const dtMed = Math.max(descStats.rhythm.dtMedian, 1);
+    const score = dt.filter(t => t > 0).map(t => Math.log(t / dtMed));   // s = log(dt / dtMed)
+    interruptProfile.ratio1x = score.filter(s => s > 1).length / score.length;
+    interruptProfile.ratio2x = score.filter(s => s > 2).length / score.length;
+    interruptProfile.ratio5x = score.filter(s => s > 5).length / score.length;
+    // Find score percentiles
+    interruptProfile.p95Score = percentileHelper(score, 95);
 
     
-    // Relative Interruption
-    const dtMed = descStats.rhythm.dtMedian;
-    const score = dt.map(t => Math.log(t / dtMed));   // s = log(dt / dtMed)
-    interruptRel.ratio1x = score.filter(s => s > 1).length / score.length;
-    interruptRel.ratio2x = score.filter(s => s > 2).length / score.length;
-    interruptRel.ratio5x = score.filter(s => s > 5).length / score.length;
-    // Find score percentiles
-    interruptRel.p95Score = percentileHelper(score, 95);
+    // Graph
+    flow.graph = {
+        raw: {
+            x: x,
+            y: y
+        },
+        normalized: {
+            x: xNorm,
+            y: yNorm
+        }
+    }
 
-    return linearity;
+    return flow;
 }
 
 
@@ -241,6 +262,7 @@ function derivativeHelper(y, x) {
 
 
 function percentileHelper(arr, per) {
+    if (!arr.length) return null;
     const arr_sorted = [...arr].sort((a, b) => a - b);
     const idx = Math.ceil(per / 100 * arr_sorted.length) - 1;
     return arr_sorted[idx];

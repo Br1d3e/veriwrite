@@ -8,7 +8,7 @@ FILE1 = "test IR 5 first draft.json"
 FILE2 = "fast typing english.json"
 FILE3 = "long copy.json"
 FILE4 = "small copy.json"
-with open(f"/Users/br1d3e/Google Drive/My Drive/veriwrite-flightrecorder/sessions/{FILE3}", "r", encoding="utf-8") as f:
+with open(f"/Users/br1d3e/Google Drive/My Drive/veriwrite-flightrecorder/sessions/{FILE1}", "r", encoding="utf-8") as f:
     record = dict(json.load(f))
 
 
@@ -121,6 +121,8 @@ def session_linearity(SID):
     print(f"id: {id}")
 
     ev = session["ev"]
+    if len(ev) == 0:
+        return
     ev = np.array(ev, dtype=object)
 
     dt = np.array(ev[:, 0], dtype=np.int32)
@@ -165,6 +167,14 @@ def session_linearity(SID):
     # CV = np.std(rate) / np.mean(rate)
     # print(f"CV: {round(CV, 3)}")
 
+    # c = 0.25
+    # linearity_1 = (1 - min(1, rmse / c)) * 100
+    k = 5
+    linearity_2 = 100 * (np.e ** (-k * rmse))
+    # linearity_3 = 0.8 * rmse + 0.2 * max_deviation
+    # linearity_3 = 1 / (1 + linearity_3) * 100
+    print(f"linearity score: {np.round(linearity_2, 3)}") 
+
     # 5. Derivatives
     # bin x, y
     SAMPLE_SIZE = 0.002
@@ -172,12 +182,16 @@ def session_linearity(SID):
     y_bin = np.interp(x_bin, x_norm, y_norm)
     diff_1st = np.diff(y_bin) / np.diff(x_bin)
     mad_1st = np.mean(np.abs(diff_1st - 1))    # 1 is ideal rate
-    print(f"1st derivative mean absolute deviation: {np.round(mad_1st, 3)}")
+    # print(f"1st derivative mean absolute deviation: {np.round(mad_1st, 3)}")
 
     # Second derivative smoothness (rate of change of writing speed)
     diff_2nd = np.diff(diff_1st)
     mse_2nd = np.mean(diff_2nd ** 2)
-    print(f"2nd derivative mse: {np.round(mse_2nd, 3)}")
+    # print(f"2nd derivative mse: {np.round(mse_2nd, 3)}")
+
+    # s1 = 1 / (1 + mad_1st) * 100
+    s2 = 1 / (1 + np.log(1 + mse_2nd)) * 100
+    print(f"Smoothness score: {np.round(s2, 3)}")
 
     # 6. low-growth ratio
     # alpha = 0.1
@@ -202,12 +216,12 @@ def session_linearity(SID):
     z_log_dt = (log_dt - log_dt_med) / log_dt_mad
 
     score = np.log(dt / np.median(dt))
-    print(np.median(dt))
+    # print(np.median(dt))
 
-    print(f"1x ratio: {np.mean(score > 1)}")
-    print(f"2x ratio: {np.mean(score > 2)}")
-    print(f"4x ratio: {np.mean(score > 4)}")
-    print(f"p95 score: {np.percentile(score, 95)}")
+    # print(f"1x ratio: {np.mean(score > 1)}")
+    # print(f"2x ratio: {np.mean(score > 2)}")
+    # print(f"4x ratio: {np.mean(score > 4)}")
+    # print(f"p95 score: {np.percentile(score, 95)}")
     
     # test core distribution
     # plt.title(f"Distribution of log(dt / dtMed): {id}")
