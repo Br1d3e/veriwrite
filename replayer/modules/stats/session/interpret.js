@@ -310,35 +310,70 @@ function calRevisionIntensity(session) {
         total: revRatio
     }
 
-    // Product-process similarity using Levenshtein string distance
+    // Product-process similarity using n-gram Jaccard distance
     let processTexts = [];  // Cumulative textual progress of every event
     currentText = init;
+    // sample every 5%
+    const SAMPLE_SIZE = 0.05;
     for (let i = 0; i < ev.length; i++) {
-        processTexts.push(currentText);
+        if (i % Math.ceil(ev.length * SAMPLE_SIZE) === 0) {
+            processTexts.push(currentText);
+        }
         currentText = currentText.slice(0, pos[i]) + ins[i] + currentText.slice(pos[i] + delLen[i]);
     }
     let productText = currentText;  // End of session text
 
     let productProcessSims = [];
-    // sample every 10%
     let sampleText = ""
-    for (let i = 1; i < 11; i++) {
-        sampleText = processTexts[Math.ceil(0.1 * i * ev.length) - 1];
-        productProcessSims.push(1 - levenshtein(sampleText, productText) / (sampleText.length + productText.length));
+    const productGram = wordBigram(productText);
+    for (let i = 0; i < processTexts.length; i++) {
+        sampleText = processTexts[i];
+        const sampleGram = wordBigram(sampleText);
+        const sim = jaccardSim(sampleGram, productGram);
+        productProcessSims.push(sim);
+        // productProcessSims.push(1 - levenshtein(sampleText, productText) / (sampleText.length + productText.length));
     }
-    // compute ercentiles
-    const simInitFinal = productProcessSims[0];
+    productProcessSims.push(1.0);      // Final point
+
+    // compute percentiles
+    const simInitFinal = jaccardSim(wordBigram(init), productGram);
     const simP10 = percentileHelper(productProcessSims, 10);
     const simP30 = percentileHelper(productProcessSims, 30);
     const simMed = percentileHelper(productProcessSims, 50);
 
+    const simDiff = diffHelper(productProcessSims);
+    const simInc = simDiff.filter(d => d > 0);      // Increasing similarities
+    const simDip = simDiff.filter(d => d < 0);      // Dipping sims
+    const maxDip = simDip.length === 0 ? 0 :Math.abs(arrayMin(simDip));
+    const totalDip = Math.abs(arraySum(simDip));
+    const totalInc = arraySum(simInc);
+    const dropRatio = totalDip / Math.max(totalInc, 1);
+
+
+    // Progress-similarity graph
+    let x = new Float64Array(productProcessSims.length);
+    let y = new Float64Array(productProcessSims.length);
+    for (let i = 0; i < productProcessSims.length; i++) {
+        x[i] = i / (productProcessSims.length - 1);
+        y[i] = productProcessSims[i];
+    }
+
     revInt.productProcessSim = {
-        initFinal: simInitFinal,
-        p10: simP10,
-        p30: simP30,
-        med: simMed,
-        earlyGain: simP10 - simInitFinal,
-        lateGain: simMed - simP30
+        metrics: {
+            initFinal: simInitFinal,
+            p10: simP10,
+            p30: simP30,
+            med: simMed,
+            earlyGain: simP10 - simInitFinal,
+            medianGain: simMed - simInitFinal,
+            maxDip: maxDip,
+            totalDip: totalDip,
+            dropRatio: dropRatio
+        },
+        graph: {
+            prog: x,
+            sim: y
+        }
     }
 
     return revInt;
@@ -386,6 +421,10 @@ function arrayMin(arr) {
     return arr.reduce((a, b) => Math.min(a, b), Infinity);
 }
 
+function arraySum(arr) {
+    return arr.reduce((a, b) => a + b, 0);
+}
+
 // Helper function for backtrack detection
 function textBoundary(text) {
     if (!text.length || text.length === 0) return null;
@@ -398,30 +437,58 @@ function textBoundary(text) {
 }
 
 
-// Computes the levenshtei distance between two strings
-function levenshtein(a, b) {
-    if (a.length === 0) return b.length;
-    if (b.length === 0) return a.length;
+// // Computes the levenshtein distance between two strings
+// function levenshtein(a, b) {
+//     if (a.length === 0) return b.length;
+//     if (b.length === 0) return a.length;
 
-    let matrix = Array.from({length: a.length + 1}, () => Array(b.length + 1).fill(0));
+//     let matrix = Array.from({length: a.length + 1}, () => Array(b.length + 1).fill(0));
 
-    // Initialize matrix (rightmost column and bottom row)
-    for (let i = 0; i <= a.length; i++) {
-        matrix[i][b.length] = a.length - i;
-    }
-    for (let j = 0; j <= b.length; j++) {
-        matrix[a.length][j] = b.length - j;
-    }
+//     // Initialize matrix (rightmost column and bottom row)
+//     for (let i = 0; i <= a.length; i++) {
+//         matrix[i][b.length] = a.length - i;
+//     }
+//     for (let j = 0; j <= b.length; j++) {
+//         matrix[a.length][j] = b.length - j;
+//     }
 
-    for (let i = a.length - 1; i >= 0; i--) {
-        for (let j = b.length - 1; j >= 0; j--) {
-            if (a[i] === b[j]) {
-                matrix[i][j] = matrix[i + 1][j + 1];
-            } else {
-                matrix[i][j] = 1 + Math.min(matrix[i + 1][j], matrix[i][j + 1], matrix[i + 1][j + 1]);
-            }        
+//     for (let i = a.length - 1; i >= 0; i--) {
+//         for (let j = b.length - 1; j >= 0; j--) {
+//             if (a[i] === b[j]) {
+//                 matrix[i][j] = matrix[i + 1][j + 1];
+//             } else {
+//                 matrix[i][j] = 1 + Math.min(matrix[i + 1][j], matrix[i][j + 1], matrix[i + 1][j + 1]);
+//             }        
+//         }
+//     }
+    
+//     return matrix[0][0];
+// }
+
+
+function wordBigram(text) {
+    // Preprocess text
+    text = text.toLowerCase();
+    const punc = new Set("\n\r,.?!@#$%^&*;:()[]{}\"'/-+~\\<>");
+    let newText = "";
+    for (let ch of text) {
+        if (punc.has(ch)) {
+            newText += " ";
+        } else {
+            newText += ch;
         }
     }
-    
-    return matrix[0][0];
+    const textList = newText.trim().split(/\s+/);
+    let bigram = [];
+    for (let j = 0; j < textList.length - 1; j++) {
+        bigram.push(textList[j] + " " + textList[j + 1]);
+    }
+
+    return new Set(bigram);
+}
+
+
+function jaccardSim(bigram1, bigram2) {
+    const sim = bigram1.intersection(bigram2).size / Math.max(bigram1.union(bigram2).size, 1);
+    return sim;
 }

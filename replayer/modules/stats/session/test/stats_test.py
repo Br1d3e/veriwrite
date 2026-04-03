@@ -244,7 +244,8 @@ def session_linearity(SID):
 def session_revision_intensity(SID):
     session = sessions[SID]
 
-    print(f"id: {session['id']}")
+    id = session['id']
+    print(f"id: {id}")
 
     init = session["init"]
     ev = session["ev"]
@@ -295,13 +296,13 @@ def session_revision_intensity(SID):
     backtrack_ins_chars = np.sum(len(s) for s in backtrack_ins_ev[:, 3]) if len(backtrack_ins_ev) != 0 else 0
 
 
-    print(f"replaced_chars: {replaced_chars}")
-    print(f"pure_del_chars: {pure_del_chars}")
-    print(f"backtrack_ins_chars: {backtrack_ins_chars}")
+    # print(f"replaced_chars: {replaced_chars}")
+    # print(f"pure_del_chars: {pure_del_chars}")
+    # print(f"backtrack_ins_chars: {backtrack_ins_chars}")
 
     # revision_ev = np.concatenate((pure_del_ev, replace_ev, backtrack_ins_ev))
     revision_chars = replaced_chars + pure_del_chars + backtrack_ins_chars
-    print(f"revision_chars: {revision_chars}")
+    # print(f"revision_chars: {revision_chars}")
 
 
     # writing process
@@ -314,24 +315,70 @@ def session_revision_intensity(SID):
     product_text = current_text
 
     product_process_sims = []
-    for i in range(1, 11):
-        sample_text = process_texts[np.ceil(len(process_texts) * i * 0.1).astype(np.int32) - 1]
-        product_process_sims.append(Levenshtein.ratio(sample_text, product_text))
+    # Levenshtein distance (unused)
+    # for i in range(1, 11):
+    #     sample_text = process_texts[np.ceil(len(process_texts) * i * 0.1).astype(np.int32) - 1]
+    #     product_process_sims.append(Levenshtein.ratio(sample_text, product_text))
+
+    # Word bigram
+    def word_bigram(text: str) -> set[str]:
+        # preprocess text
+        punc = set("\n\r,.?!@#$%^&*;:()[]{}\"'/-+~\\<>") 
+        text = text.lower()
+        for i in range(len(text)):
+            if text[i] in punc:
+                text = text[:i] + " " + text[i + 1 : ] if i < len(text) else text[:i] + " "
+
+        text_list = text.split()
+        n = len(text_list)
+        bigram = []
+        for j in range(0, n - 1):
+            bigram.append(text_list[j] + " " + text_list[j + 1])
+        return set(bigram)
+    
+    def jaccard_sim(text1: str, text2: str) -> float:
+        a = word_bigram(text1)
+        b = word_bigram(text2)
+        sim = len(a.intersection(b)) / len(a.union(b)) 
+        return sim
+
+    SAMPLE_SIZE = 0.05
+    for i in range(1, int(np.floor(1 / SAMPLE_SIZE) + 1)):
+        idx = int(np.ceil(i * SAMPLE_SIZE * len(process_texts)) - 1)
+        process_text = process_texts[idx]
+        sim = jaccard_sim(process_text, product_text)
+        product_process_sims.append(sim)
+
 
     product_process_sims = np.array(product_process_sims, dtype=np.float32)
+    sim_init_final = jaccard_sim(init, product_text)
     sims_med = np.median(product_process_sims)
     sims_p30 = np.percentile(product_process_sims, 30)
     sims_p10 = np.percentile(product_process_sims, 10)
-    sim_init_final = Levenshtein.ratio(init, product_text)
     early_gain = sims_p10 - sim_init_final
     median_gain = sims_med - sim_init_final
+    sim_diff = np.diff(product_process_sims)
+    sim_inc = sim_diff[sim_diff > 0]
+    sim_dip = sim_diff[sim_diff < 0]
+    max_dip = -np.max(sim_dip)
+    total_dip = -np.sum(sim_dip)
+    total_inc = np.sum(sim_inc)
+    drop_ratio = total_dip / total_inc
     print(f"sim_init_final: {np.round(sim_init_final, 3)}")
     print(f"sims_med: {np.round(sims_med, 3)}")
     print(f"sims_p30: {np.round(sims_p30, 3)}")
     print(f"sims_p10: {np.round(sims_p10, 3)}")
+    print(f"max_dip: {max_dip}")
+    print(f"total_dip: {total_dip}")
+    print(f"drop_ratio: {np.round(drop_ratio, 3)}")
     print(f"early_gain: {np.round(early_gain, 3)}")
     print(f"median_gain: {np.round(median_gain, 3)}")
 
+    plt.plot(product_process_sims)
+    plt.title(f"Product-process Similarity for session {id}")
+    plt.xlabel("Sample #") 
+    plt.ylabel("Similarity")
+    plt.show()
 
     
     # Revision quantity
