@@ -7,3 +7,4 @@ build/
 .vscode/
 replayer/modules/stats/session/test/output_*
 replayer/modules/stats/session/test/*.txt
+.vite
