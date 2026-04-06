@@ -1,6 +1,6 @@
 
-import { loadRecord, startPlaying, stopPlaying, resetStatus, changeSpeed, updateDOM, seekToSession, seekNextSession, seekPrevSession } from "./modules/player.js"
-import { cursorDOM } from "./modules/renderer.js";
+import { loadRecord, startPlaying, stopPlaying, resetStatus, changeSpeed, updateDOM, seekToSession, seekNextSession, seekPrevSession, getSession, seekToEvent, getDocText } from "./modules/player.js"
+import { cursorDOM, restoreCursor } from "./modules/renderer.js";
 import { checkStruct, processData } from "./modules/loader.js";
 import { calSession } from "./modules/stats/session/index.js";
 
@@ -26,6 +26,17 @@ const sessionBtns = document.getElementById("sessionBtns");
 const caretEl = document.getElementById("caret");
 const beforeEl = document.getElementById("before");
 const afterEl = document.getElementById("after");
+// Stats
+const sessionStatsEl = document.getElementById("sessionStats");
+const overviewEl = document.getElementById("overview");
+const sessionStartEl = document.getElementById("sessionStart");
+const sessionEndEl = document.getElementById("sessionEnd");
+const sesDurationEl = document.getElementById("sessionDuration");
+const insCharsEl = document.getElementById("insChars");
+const delCharsEl = document.getElementById("delChars");
+const netCharsEl = document.getElementById("netChars");
+const pasteEvEl = document.getElementById("pasteEv");
+
 
 
 // DOM Object transferred to recorder & player
@@ -101,8 +112,130 @@ function resetSessionBtns() {
   }
 }
 
+function generateMetricBox(label, value, id, color="black") {
+  const box = document.createElement("div");
+  box.className = "paste-box";
+  box.id = id;
+  const labelEl = document.createElement("span");
+  labelEl.className = "paste-label";
+  labelEl.id = id;
+  const valueEl = document.createElement("span");
+  valueEl.className = "paste-value";
+  valueEl.id = id;
+  labelEl.textContent = label;
+  valueEl.textContent = value;
+  valueEl.style = `color: ${color}`;
+  box.appendChild(labelEl);
+  box.appendChild(valueEl);
+  return box;
+}
 
+function generatePasteCards(pasteIns) {
+  for (let i = 0; i < pasteIns.length; i++) {
+    const evIdx = pasteIns[i].evIdx;
+    const ins = pasteIns[i].ins;
+    const rate = pasteIns[i].rate;
+    const tags = pasteIns[i].tags;
+    const lvl = pasteIns[i].lvl;
+
+    const text = ins.length <= 80 ? ins : ins.slice(0, 80) + "...";   // Omit excessive texts
+    const textBox = generateMetricBox("Text", text, i);
+
+    const lvlColor = lvl === "high" ? "red" : "rgb(255, 191, 0)";
+    const lvlBox = generateMetricBox("Level", lvl, i, lvlColor);
+    const rateBox = generateMetricBox("Rate (CPS)", rate, i);
+    const metaCard = document.createElement("div");
+    metaCard.className = "paste-meta";
+    metaCard.id = i;
+    metaCard.appendChild(lvlBox);
+    metaCard.appendChild(rateBox);
+
+    const tagsBox = generateMetricBox("Tags", tags.join(", "), i);
+
+    const cards = document.createElement("div");
+    cards.id = i;
+    cards.className = "paste-card";
+    cards.appendChild(textBox);
+    cards.appendChild(metaCard);
+    cards.appendChild(tagsBox);
+
+    pasteEvEl.appendChild(cards);
+  }
+}
+
+function updateStatsPanel(sessionStats) {
+  sessionStatsEl.hidden = false;
+  const desc = sessionStats.desc;
+  const interpret = sessionStats.interpret;
+
+  // Overview
+  const overview = desc.overview;
+  sessionStartEl.textContent = new Date(overview.start).toLocaleString();
+  const duration = new Date(overview.durationMs);
+  sesDurationEl.textContent = duration.getUTCHours() + " Hours " + duration.getMinutes() + " Minutes";
+  sessionEndEl.textContent = new Date(overview.end).toLocaleString();
+  insCharsEl.textContent = overview.insChars;
+  delCharsEl.textContent = overview.delChars;
+  netCharsEl.textContent = overview.netChars;
+
+  // Paste-like insertions
+  const pasteIns = interpret.pasteIns;
+  generatePasteCards(pasteIns);
+}
+
+function resetStatsPanel() {
+  sessionStatsEl.hidden = true;
+
+  while (pasteEvEl.firstChild) {
+    pasteEvEl.removeChild(pasteEvEl.firstChild);
+  }
+}
+
+let highlightSpan = null;
+// Display highlighted text in screen container
+function renderPasteHl (activePaste, text) {
+  if (!inspectMode || !activePaste) return;
+  const currentPos = text.length;
+  const startPos = activePaste.startPos;
+  const endPos = activePaste.endPos;
+  const lvl = activePaste.lvl;
+  const tags = activePaste.tags;
+
+  if (currentPos >= startPos && currentPos >= endPos) {
+    const start = text.slice(0, startPos);
+    const highlight = text.slice(startPos, endPos);
+    const end = text.slice(endPos);
+
+    screenEl.replaceChildren();
+    screenEl.append(document.createTextNode(start));
+
+    const span = document.createElement("span");
+    // Different display color for different levels/tags
+    if (tags.includes("in-doc paste")) {
+      span.className = "hl-low";
+    }
+    else if (lvl === "high") {
+      span.className = "hl";
+    } else if (lvl === "medium") {
+      span.className = "hl-med";
+    }
+
+    span.title = "highlighted";
+    span.textContent = highlight;
+    screenEl.append(span);
+
+    highlightSpan = span;
+
+    screenEl.append(document.createTextNode(end));
+  }
+}
+
+
+
+
+let sessionStats = null;
 updateDOM(DOM);
+let inspectMode = false;    // inspecting paste-like insertion
 
 // Upload file & Data Check 
 fileEl.addEventListener("change", async () => {
@@ -123,6 +256,7 @@ fileEl.addEventListener("change", async () => {
 
   enableButtons();
   resetSessionBtns();
+  resetStatsPanel();
 
   updateDOM(DOM);
   cursorDOM(DOM);
@@ -135,36 +269,77 @@ fileEl.addEventListener("change", async () => {
   // Generate session buttons
   genSessionBtns(flightRecord.sessions);
 
+  // Update session-level stats
+  sessionStats = calSession(getSession());
+  console.log(sessionStats);
+
   // Update HTML
   resetStatus();
 });
 
 
 // Event Listeners
-playBtn.addEventListener("click", startPlaying);
+playBtn.addEventListener("click", () => {
+  if (inspectMode) {
+    inspectMode = false;
+    restoreCursor(screenEl);
+  }
+  startPlaying();
+});
 pauseBtn.addEventListener("click", stopPlaying);
 resetBtn.addEventListener("click", resetStatus);
 speedSlider.addEventListener("change", () => {
   changeSpeed(Number(speedSlider.value))
   });
-// Switch sessions
+// Switch sessions and show session stats details
 sessionBtns.addEventListener("click", (e) => {
   if (e.target === null) return;
   const btnId = e.target.id;
 
   stopPlaying();
+  let session = null;
   switch (btnId) {
     case "prev":
-      seekPrevSession();
+      session = seekPrevSession();
       break;
     case "next":
-      seekNextSession();
+      session = seekNextSession();
       break
     default:
       const sid = Number(btnId);
-      const session = seekToSession(sid);
-      // test
-      console.log(calSession(session))
+      session = seekToSession(sid);
   }
+  // test
+  sessionStats = calSession(session);
+  console.log(sessionStats);
+  // Update HTML
+  resetStatsPanel();
+  updateStatsPanel(sessionStats);
+  restoreCursor(screenEl);
+
+})
+pasteEvEl.addEventListener("click", (e) => {
+  if (e.target.className === "paste" || e.target.className === null || e.target.id === null) return;
+  const pasteIdx = Number(e.target.id);
+
+  stopPlaying();
+  restoreCursor(screenEl);
+
+  const pasteIns = sessionStats.interpret.pasteIns;
+  const activePaste = pasteIns[pasteIdx];
+  const evIdx = activePaste.evIdx;
+  seekToEvent(evIdx);
+
+  inspectMode = true;
+
+  const text = getDocText();
+  renderPasteHl(activePaste, text);
+
+  // Auto scroll after highlighting text
+  highlightSpan.scrollIntoView({
+    behavior: "smooth",
+    block: "center",
+    inline: "center"
+  })
 })
 

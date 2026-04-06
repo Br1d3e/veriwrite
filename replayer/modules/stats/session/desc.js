@@ -66,6 +66,8 @@ function calOverview(session) {
     if (!session) return;
 
     let overview = {
+    start: 0,
+    end: 0,
     durationMs: 0,
     evCount: 0,
     insChars: 0,
@@ -76,6 +78,8 @@ function calOverview(session) {
 
     const ev = session.ev;
     
+    overview.start = session.t0;
+    overview.end = session.tn;
     overview.durationMs = session.tn - session.t0;
     overview.evCount = ev.length;
     

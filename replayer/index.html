@@ -6,7 +6,7 @@
   <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
-  <h2>VeriWrite Replayer</h2>
+  <h1 class="header">VeriWrite Replayer</h1>
   <input id="file" type="file" accept="application/json" />
   <span id="invalidInput" style="color: red;" hidden>Invalid file format</span>
   <div class="meta">
@@ -25,6 +25,47 @@
     <span id="speedLbl">Speed: 1x</span> 
     <input id="speedSlider" disabled type="range" min="0.1" max="20" step="0.1" value="1">
   </div>   
+
+  <!-- Session Stats panel -->
+  <div id="sessionStats" hidden>
+    <h2>Session Stats</h2>
+    <p>General and interpretive data analysis for each session.</p><br>
+
+    <h3>Overview</h3>
+    <div class="metrics" id="overview">
+        <div class="metric-box">
+          <span class="metric-label">Start</span>
+          <span class="metric-value" id="sessionStart"></span>
+        </div>
+        <div class="metric-box">
+          <span class="metric-label">End</span>
+          <span class="metric-value" id="sessionEnd"></span>
+        </div>
+        <div class="metric-box">
+          <span class="metric-label">Duration</span>
+          <span class="metric-value" id="sessionDuration"></span>
+        </div>
+        <div class="metric-box">
+          <span class="metric-label">Inserted Characters</span>
+          <span class="metric-value" id="insChars"></span>
+        </div>
+        <div class="metric-box">
+          <span class="metric-label">Deleted Characters</span>
+          <span class="metric-value" id="delChars"></span>
+        </div>
+        <div class="metric-box">
+          <span class="metric-label">Net Characters</span>
+          <span class="metric-value" id="netChars"></span>
+        </div>
+      </div>
+    <h3>Paste-like Insertion</h3><br>
+    <div class="paste" id="pasteEv"> 
+      <!-- generate paste events with script -->
+    </div>
+    <h3>Writing Flow</h3><br>
+
+    <h3>Revision</h3><br>
+  </div>
   <script type="module" src="./app.js"></script>
 </body>
 </html>
