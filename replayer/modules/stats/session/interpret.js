@@ -22,7 +22,7 @@ export function calSessionInterpret(session, descStats) {
 /**
  * Interprets paste-like insertion events
  * @param {object} session 
- * @returns pasteIns array of evDesc object: {lvl, evIdx, ins, dt, rate, tags}
+ * @returns pasteIns array of evDesc object: {lvl, evIdx, ins, dt, startPos, endPos, rate, tags}
  */
 function calPasteIns(session) {
     if (!session) return;
@@ -54,6 +54,8 @@ function calPasteIns(session) {
             evIdx: i,
             ins: ins,
             dt: dt,
+            startPos: pos,
+            endPos: pos + insLen,
             rate: rate,
             tags: []
         }
@@ -81,9 +83,10 @@ function calPasteIns(session) {
         }
         currentText = currentText.slice(0, pos) + ins + currentText.slice(pos + delLen);  // update current text
 
-        pasteIns.push(evDesc);
+        if (insLen >= medThreshold) {
+            pasteIns.push(evDesc);
+        }
     }
-
 
     return pasteIns;
 }
