@@ -68,6 +68,13 @@ export function changeSpeed(newSpeed) {
     speedLbl.textContent = `Speed: ${state.speed}x`;
 }
 
+export function getSession() {
+  return state.sessions[state.currentSession];
+}
+
+export function getDocText() {
+  return state.docText;
+}
 
 // Transfer necessary UI DOM from app.js
 export function updateDOM(DOM) {    // an object
@@ -116,6 +123,14 @@ function calculateTotalEv(totalS) {     // Total session numbers
 
 function calculateProgress() {
   return state.evCount / state.evTotal * 100;
+}
+
+function calculateTs(eventIdx) {
+  let totalTs = 0;
+  for (let i = 0; i < eventIdx; i++) {
+    totalTs += state.sessions[state.currentSession].ev[i][0];
+  }
+  return totalTs;
 }
 
 
@@ -170,15 +185,46 @@ export function seekToSession(sid) {
 
 export function seekNextSession() {
   if (state.currentSession >= state.sessions.length - 1) return;
-  seekToSession(state.currentSession + 1);
+  return seekToSession(state.currentSession + 1);
 }
 
 export function seekPrevSession() {
   if (state.currentSession <= 0) return;
-  seekToSession(state.currentSession - 1);
+  return seekToSession(state.currentSession - 1);
 }
 
 
+export function seekToEvent(eventIdx) {
+  if (eventIdx < 0 || eventIdx >= state.sessions[state.currentSession].ev.length) return;
+
+  state.i = 0;
+  // (falsely) skip events to eventIdx
+  const sessions = state.sessions[state.currentSession];
+  const ev = sessions.ev;
+  state.docText = sessions.init;
+  for (; state.i <= eventIdx; state.i++) {
+    const pos = ev[state.i][1];
+    const delLen = ev[state.i][2];
+    const ins = ev[state.i][3];
+
+    state.docText = state.docText.slice(0, pos) + ins + state.docText.slice(pos + delLen);
+  }
+
+  state.playTs = calculateTs(eventIdx);
+  state.playing = false;
+  state.evCount = eventIdx;
+  progressEl.value = calculateProgress();
+  eventsEl.textContent = `Events: ${state.i} /${state.sessions[state.currentSession].ev.length}`;
+  durationEl.textContent = `Session Time: ${convertTs()}`;
+
+  renderCursor();
+}
+
+
+// let onRender = null;
+// export function regOnRender(callback) {
+//   onRender = callback;
+// }
 
 /**
  * Runs events in a single session
@@ -203,6 +249,9 @@ function step(ev) {
   }
   state.lastFrameTs = performance.now();
 
+  // if (onRender) {
+  //   onRender();
+  // } 
 
   // Update meta & progress bar
   eventsEl.textContent = `Events: ${state.i} /${ev.length}`;
