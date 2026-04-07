@@ -29,6 +29,7 @@ const afterEl = document.getElementById("after");
 // Stats
 const sessionStatsEl = document.getElementById("sessionStats");
 const overviewEl = document.getElementById("overview");
+const overviewLblsEl = document.getElementsByClassName("metric-label");
 const sessionStartEl = document.getElementById("sessionStart");
 const sessionEndEl = document.getElementById("sessionEnd");
 const sesDurationEl = document.getElementById("sessionDuration");
@@ -168,7 +169,23 @@ function updateStatsPanel(sessionStats) {
   const desc = sessionStats.desc;
   const interpret = sessionStats.interpret;
 
+  // Auto-scroll to stats panel
+  overviewEl.scrollIntoView({
+    behavior: "smooth",
+    block: "end",
+    inline: "center"
+  })
+
   // Overview
+  // labels
+  const [startLbl, endLbl, durationLbl, insLbl, delLbl, netLbl] = overviewLblsEl;
+  startLbl.textContent = "Start Time";
+  endLbl.textContent = "End Time";
+  durationLbl.textContent = "Duration";
+  insLbl.textContent = "Insert Characters";
+  delLbl.textContent = "Delete Characters";
+  netLbl.textContent = "Net Characters";
+  // values
   const overview = desc.overview;
   sessionStartEl.textContent = new Date(overview.start).toLocaleString();
   const duration = new Date(overview.durationMs);
@@ -183,9 +200,20 @@ function updateStatsPanel(sessionStats) {
   generatePasteCards(pasteIns);
 }
 
-function resetStatsPanel() {
+export function resetStatsPanel() {
   sessionStatsEl.hidden = true;
 
+  // Overview
+  for (let label of overviewLblsEl) {
+    label.textContent = "";
+  }
+  sessionStartEl.textContent = "";
+  sesDurationEl.textContent = "";
+  sessionEndEl.textContent = "";
+  insCharsEl.textContent = "";
+  delCharsEl.textContent = "";
+  netCharsEl.textContent = "";
+  // Paste-like insertions
   while (pasteEvEl.firstChild) {
     pasteEvEl.removeChild(pasteEvEl.firstChild);
   }
