@@ -64,28 +64,30 @@
     </div>
     <h3>Writing Flow</h3><br>
     <div class="flow" id="flow">
-      <div class="flow-card" id="linearity">Linearity
+      <div class="flow-card" id="linearity">Linearity & Smoothness
         <div class="flow-box">
           <span class="flow-label">Linearity Score</span>
           <span class="flow-value" id="linearityVal"></span>
         </div>
-      </div>
-      <div class="flow-card" id="smoothness">Smoothness
         <div class="flow-box">
           <span class="flow-label">Smoothness Score</span>
           <span class="flow-value" id="smoothnessVal"></span>
+        </div>
+        <!-- linearity graph -->
+        <div class="flow-box">
+          <canvas id="linearityGraph"></canvas>
+        </div>
+        <div>
+          <!-- toggle percentage display -->
+          <input type="checkbox" id="norm-display" name="Display in percentage" />
         </div>
       </div>
       <div class="flow-card" id="interrupt">Interruptions
         <div class="flow-box">
           <span class="flow-label">Short Interrupts</span>
           <span class="flow-value" id="interrupt1x"></span>
-        </div>
-        <div class="flow-box">
           <span class="flow-label">Medium Interrupts</span>
           <span class="flow-value" id="interrupt2x"></span>
-        </div>
-        <div class="flow-box">
           <span class="flow-label">Long Interrupts</span>
           <span class="flow-value" id="interrupt5x"></span>
         </div>

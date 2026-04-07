@@ -4,6 +4,8 @@ import { cursorDOM, restoreCursor } from "./modules/renderer.js";
 import { checkStruct, processData } from "./modules/loader.js";
 import { calSession } from "./modules/stats/session/index.js";
 
+import { Chart } from "chart.js/auto";
+
 
 // HTML Elements
 const fileEl = document.getElementById("file");
@@ -41,12 +43,10 @@ const netCharsEl = document.getElementById("netChars");
 const pasteEvEl = document.getElementById("pasteEv");
 
 const flowEl = document.getElementById("flow");
-const flowLblsEl = document.getElementsByClassName("flow-label"); 
-const linearityCard = document.getElementById("linearity");
 const linearityValEl = document.getElementById("linearityVal");
-const smoothnessCard = document.getElementById("smoothness");
 const smoothnessValEl = document.getElementById("smoothnessVal");
-const interruptCard = document.getElementById("interrupt");
+const lineGraphEl = document.getElementById("linearityGraph");
+const normDisplayCb = document.getElementById("norm-display");
 const interrupt1xEl = document.getElementById("interrupt1x");
 const interrupt2xEl = document.getElementById("interrupt2x");
 const interrupt5xEl = document.getElementById("interrupt5x");
@@ -201,30 +201,130 @@ function genPasteCards(pasteIns) {
   }
 }
 
+function linearityGraph(flow, norm=false) {
+  const x = flow.graph.raw.x;
+  const y = flow.graph.raw.y;
+  const xNorm = flow.graph.normalized.x;
+  const yNorm = flow.graph.normalized.y;
+
+  const line = [];
+  const lineNorm = [];
+  for (let i = 0; i < x.length; i++) {
+    line.push({x: x[i], y: y[i]});
+    lineNorm.push({x: xNorm[i], y: yNorm[i]});
+  }
+
+
+  const data = {
+    datasets: [{
+      data: line,
+      fill: false,
+      borderColor: 'rgb(6, 149, 221)',
+      pointStyle: false,
+      tension: 0.1
+    }]
+  }
+
+  const plugins = {
+    title: {
+      display: true,
+      text: 'Writing Progress',
+      font: {
+        size: 20,
+        weight: "bold"
+      },
+      padding: {
+        top: 10,
+        bottom: 10
+      }
+    },
+    legend: {
+      display: false
+    }
+  }
+
+  const xScale = {
+    type: 'linear',
+    position: 'bottom',
+    title: {
+      display: true,
+      text: 'Writing Time (s)'
+    }
+  }
+
+  const xScaleNorm = {
+    type: 'linear',
+    position: 'bottom',
+    title: {
+      display: true,
+      text: 'Writing Time'
+    }
+  }  
+
+  const yScale = {
+    type: 'linear',
+    position: 'left',
+    title: {
+      display: true,
+      text: 'Total Inserted Characters'
+    }
+  }
+
+  const scales = {
+    x: xScale,
+    y: yScale
+  }
+
+  // y = x reference line
+  const refLine = {
+    data: [
+      {x: 0, y: 0}, 
+      {x: 1, y: 1}
+    ], 
+    fill: false,
+    borderColor: 'rgb(255, 21, 0)',
+    borderWidth: 2,
+    borderDash: [5, 5],
+    tension: 0.1
+  }
+
+  if (norm) {
+    data.datasets[0].data = lineNorm;
+    data.datasets.push(refLine);
+    scales.x = xScaleNorm;
+    plugins.title.text = 'Normalized Writing Progress';
+  }
+
+  new Chart(lineGraphEl, {
+    type: 'line',
+    data: data,
+    options: {
+      plugins: plugins,
+      scales: scales,
+    }
+  }
+)
+}
+  
+
 function genFlowUI(flow) {
   const linearity = flow.linearity;
   const smoothness = flow.smoothness;
   const interrupt = flow.interruptProfile;
 
-  // const [linearityLbl, smoothnessLbl, interruptLbl1, interruptLbl2, interruptLbl5] = flowLblsEl;
-  // linearityLbl.textContent = "Linearity Score";
-  // smoothnessLbl.textContent = "Smoothness Score";
-  // interruptLbl1.textContent = "Short Interrupts";
-  // interruptLbl2.textContent = "Medium Interrupts";
-  // interruptLbl5.textContent = "Long Interrupts";
   flowEl.hidden = false;
 
-
   // Linearity
-  // linearityCard.textContent = "Linearity";
   linearityValEl.textContent = `${Math.round(linearity.score)} / 100`;
 
   // Smoothness
-  // smoothnessCard.textContent = "Smoothness";
   smoothnessValEl.textContent = `${Math.round(smoothness.score)} / 100`;
 
+  // Line Graph: Total Characters - Time
+  linearityGraph(flow, normDisplayCb.checked);
+
+
   // Interrupt
-  // interruptCard.textContent = "Interrupt";
   interrupt1xEl.textContent = `${(interrupt.ratio1x * 100).toFixed(2)}%`;
   interrupt2xEl.textContent = `${(interrupt.ratio2x * 100).toFixed(2)}%`;
   interrupt5xEl.textContent = `${(interrupt.ratio5x * 100).toFixed(2)}%`;
@@ -272,16 +372,10 @@ export function resetStatsPanel() {
 
   // Writing flow
   flowEl.hidden = true;
-  
-  // for (let label of flowLblsEl) {
-  //   label.textContent = "";
-  // }
-  // for (let card of [linearityCard, smoothnessCard, interruptCard]) {
-  //   card.textContent = "";
-  // }
-  // for (let val of [linearityValEl, smoothnessValEl, interrupt1xEl, interrupt2xEl, interrupt5xEl]) {
-  //   val.textContent = "";
-  // }
+  const lineChart = Chart.getChart("linearityGraph");
+  if (lineChart) {
+    lineChart.destroy();
+  }
 }
 
 let highlightSpan = null;
@@ -431,5 +525,16 @@ pasteEvEl.addEventListener("click", (e) => {
     block: "center",
     inline: "center"
   })
+})
+
+normDisplayCb.addEventListener("change", () => {
+  const flow = sessionStats.interpret.flow;
+  // Remove previous graph
+  const prevGraph = Chart.getChart("linearityGraph");
+  if (prevGraph) {
+    prevGraph.destroy();
+  }
+
+  linearityGraph(flow, normDisplayCb.checked);
 })
 

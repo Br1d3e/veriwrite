@@ -226,7 +226,7 @@ function calFlow(session, descStats) {
     // Graph
     flow.graph = {
         raw: {
-            x: x,
+            x: x.map(t => Math.round(t / 1000)),
             y: y
         },
         normalized: {

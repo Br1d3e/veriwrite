@@ -180,7 +180,7 @@ body {
 }
 
 .flow-box {
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: 1fr 1fr;
   gap: 18px;
   padding-top: 10px;
   position: relative;
@@ -190,6 +190,7 @@ body {
   font-size: 0.65rem;
   text-transform: uppercase;
   color: rgba(0, 0, 0, 0.4);
+  margin-top: 5px;
   margin-bottom: 5px;
   display: block;
 }
