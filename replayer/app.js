@@ -28,6 +28,7 @@ const beforeEl = document.getElementById("before");
 const afterEl = document.getElementById("after");
 // Stats
 const sessionStatsEl = document.getElementById("sessionStats");
+
 const overviewEl = document.getElementById("overview");
 const overviewLblsEl = document.getElementsByClassName("metric-label");
 const sessionStartEl = document.getElementById("sessionStart");
@@ -36,7 +37,20 @@ const sesDurationEl = document.getElementById("sessionDuration");
 const insCharsEl = document.getElementById("insChars");
 const delCharsEl = document.getElementById("delChars");
 const netCharsEl = document.getElementById("netChars");
+
 const pasteEvEl = document.getElementById("pasteEv");
+
+const flowEl = document.getElementById("flow");
+const flowLblsEl = document.getElementsByClassName("flow-label"); 
+const linearityCard = document.getElementById("linearity");
+const linearityValEl = document.getElementById("linearityVal");
+const smoothnessCard = document.getElementById("smoothness");
+const smoothnessValEl = document.getElementById("smoothnessVal");
+const interruptCard = document.getElementById("interrupt");
+const interrupt1xEl = document.getElementById("interrupt1x");
+const interrupt2xEl = document.getElementById("interrupt2x");
+const interrupt5xEl = document.getElementById("interrupt5x");
+
 
 
 
@@ -113,70 +127,8 @@ function resetSessionBtns() {
   }
 }
 
-function generateMetricBox(label, value, id, color="black") {
-  const box = document.createElement("div");
-  box.className = "paste-box";
-  box.id = id;
-  const labelEl = document.createElement("span");
-  labelEl.className = "paste-label";
-  labelEl.id = id;
-  const valueEl = document.createElement("span");
-  valueEl.className = "paste-value";
-  valueEl.id = id;
-  labelEl.textContent = label;
-  valueEl.textContent = value;
-  valueEl.style = `color: ${color}`;
-  box.appendChild(labelEl);
-  box.appendChild(valueEl);
-  return box;
-}
-
-function generatePasteCards(pasteIns) {
-  for (let i = 0; i < pasteIns.length; i++) {
-    const evIdx = pasteIns[i].evIdx;
-    const ins = pasteIns[i].ins;
-    const rate = pasteIns[i].rate;
-    const tags = pasteIns[i].tags;
-    const lvl = pasteIns[i].lvl;
-
-    const text = ins.length <= 80 ? ins : ins.slice(0, 80) + "...";   // Omit excessive texts
-    const textBox = generateMetricBox("Text", text, i);
-
-    const lvlColor = lvl === "high" ? "red" : "rgb(255, 191, 0)";
-    const lvlBox = generateMetricBox("Level", lvl, i, lvlColor);
-    const rateBox = generateMetricBox("Rate (CPS)", rate, i);
-    const metaCard = document.createElement("div");
-    metaCard.className = "paste-meta";
-    metaCard.id = i;
-    metaCard.appendChild(lvlBox);
-    metaCard.appendChild(rateBox);
-
-    const tagsBox = generateMetricBox("Tags", tags.join(", "), i);
-
-    const cards = document.createElement("div");
-    cards.id = i;
-    cards.className = "paste-card";
-    cards.appendChild(textBox);
-    cards.appendChild(metaCard);
-    cards.appendChild(tagsBox);
-
-    pasteEvEl.appendChild(cards);
-  }
-}
-
-function updateStatsPanel(sessionStats) {
-  sessionStatsEl.hidden = false;
-  const desc = sessionStats.desc;
-  const interpret = sessionStats.interpret;
-
-  // Auto-scroll to stats panel
-  overviewEl.scrollIntoView({
-    behavior: "smooth",
-    block: "end",
-    inline: "center"
-  })
-
-  // Overview
+function genOverviewUI(desc) {
+  overviewEl.hidden = false;
   // labels
   const [startLbl, endLbl, durationLbl, insLbl, delLbl, netLbl] = overviewLblsEl;
   startLbl.textContent = "Start Time";
@@ -194,29 +146,142 @@ function updateStatsPanel(sessionStats) {
   insCharsEl.textContent = overview.insChars;
   delCharsEl.textContent = overview.delChars;
   netCharsEl.textContent = overview.netChars;
+}
+
+
+function genMetricBox(label, value, id, color="black") {
+  const box = document.createElement("div");
+  box.className = "paste-box";
+  box.id = id;
+  const labelEl = document.createElement("span");
+  labelEl.className = "paste-label";
+  labelEl.id = id;
+  const valueEl = document.createElement("span");
+  valueEl.className = "paste-value";
+  valueEl.id = id;
+  labelEl.textContent = label;
+  valueEl.textContent = value;
+  valueEl.style = `color: ${color}`;
+  box.appendChild(labelEl);
+  box.appendChild(valueEl);
+  return box;
+}
+
+function genPasteCards(pasteIns) {
+  pasteEvEl.hidden = false;
+  for (let i = 0; i < pasteIns.length; i++) {
+    const evIdx = pasteIns[i].evIdx;
+    const ins = pasteIns[i].ins;
+    const rate = pasteIns[i].rate;
+    const tags = pasteIns[i].tags;
+    const lvl = pasteIns[i].lvl;
+
+    const text = ins.length <= 80 ? ins : ins.slice(0, 80) + "...";   // Omit excessive texts
+    const textBox = genMetricBox("Text", text, i);
+
+    const lvlColor = lvl === "high" ? "red" : "rgb(255, 191, 0)";
+    const lvlBox = genMetricBox("Level", lvl, i, lvlColor);
+    const rateBox = genMetricBox("Rate (CPS)", rate, i);
+    const metaCard = document.createElement("div");
+    metaCard.className = "paste-meta";
+    metaCard.id = i;
+    metaCard.appendChild(lvlBox);
+    metaCard.appendChild(rateBox);
+
+    const tagsBox = genMetricBox("Tags", tags.join(", "), i);
+
+    const cards = document.createElement("div");
+    cards.id = i;
+    cards.className = "paste-card";
+    cards.appendChild(textBox);
+    cards.appendChild(metaCard);
+    cards.appendChild(tagsBox);
+
+    pasteEvEl.appendChild(cards);
+  }
+}
+
+function genFlowUI(flow) {
+  const linearity = flow.linearity;
+  const smoothness = flow.smoothness;
+  const interrupt = flow.interruptProfile;
+
+  // const [linearityLbl, smoothnessLbl, interruptLbl1, interruptLbl2, interruptLbl5] = flowLblsEl;
+  // linearityLbl.textContent = "Linearity Score";
+  // smoothnessLbl.textContent = "Smoothness Score";
+  // interruptLbl1.textContent = "Short Interrupts";
+  // interruptLbl2.textContent = "Medium Interrupts";
+  // interruptLbl5.textContent = "Long Interrupts";
+  flowEl.hidden = false;
+
+
+  // Linearity
+  // linearityCard.textContent = "Linearity";
+  linearityValEl.textContent = `${Math.round(linearity.score)} / 100`;
+
+  // Smoothness
+  // smoothnessCard.textContent = "Smoothness";
+  smoothnessValEl.textContent = `${Math.round(smoothness.score)} / 100`;
+
+  // Interrupt
+  // interruptCard.textContent = "Interrupt";
+  interrupt1xEl.textContent = `${(interrupt.ratio1x * 100).toFixed(2)}%`;
+  interrupt2xEl.textContent = `${(interrupt.ratio2x * 100).toFixed(2)}%`;
+  interrupt5xEl.textContent = `${(interrupt.ratio5x * 100).toFixed(2)}%`;
+} 
+
+
+function updateStatsPanel(sessionStats) {
+  sessionStatsEl.hidden = false;
+  const desc = sessionStats.desc;
+  const interpret = sessionStats.interpret;
+
+  // Overview
+  genOverviewUI(desc);
+  // Auto-scroll to stats panel
+  overviewEl.scrollIntoView({
+    behavior: "smooth",
+    block: "end",
+    inline: "end"
+  })
 
   // Paste-like insertions
-  const pasteIns = interpret.pasteIns;
-  generatePasteCards(pasteIns);
+  genPasteCards(interpret.pasteIns);
+
+  // Writing flow
+  genFlowUI(interpret.flow);
+
 }
 
 export function resetStatsPanel() {
   sessionStatsEl.hidden = true;
 
   // Overview
-  for (let label of overviewLblsEl) {
-    label.textContent = "";
-  }
-  sessionStartEl.textContent = "";
-  sesDurationEl.textContent = "";
-  sessionEndEl.textContent = "";
-  insCharsEl.textContent = "";
-  delCharsEl.textContent = "";
-  netCharsEl.textContent = "";
+  // for (let label of overviewLblsEl) {
+  //   label.textContent = "";
+  // }
+  // for (let val of [sessionStartEl, sesDurationEl, sessionEndEl, insCharsEl, delCharsEl, netCharsEl]) {
+  //   val.textContent = "";
+  // }
+  overviewEl.hidden = true;
   // Paste-like insertions
   while (pasteEvEl.firstChild) {
     pasteEvEl.removeChild(pasteEvEl.firstChild);
   }
+  pasteEvEl.hidden = true;
+
+  // Writing flow
+  flowEl.hidden = true;
+  
+  // for (let label of flowLblsEl) {
+  //   label.textContent = "";
+  // }
+  // for (let card of [linearityCard, smoothnessCard, interruptCard]) {
+  //   card.textContent = "";
+  // }
+  // for (let val of [linearityValEl, smoothnessValEl, interrupt1xEl, interrupt2xEl, interrupt5xEl]) {
+  //   val.textContent = "";
+  // }
 }
 
 let highlightSpan = null;
@@ -257,9 +322,6 @@ function renderPasteHl (activePaste, text) {
     screenEl.append(document.createTextNode(end));
   }
 }
-
-
-
 
 let sessionStats = null;
 updateDOM(DOM);

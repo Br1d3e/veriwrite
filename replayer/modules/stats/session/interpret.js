@@ -12,7 +12,7 @@ export function calSessionInterpret(session, descStats) {
 
     let interpretStats = {
         pasteIns: calPasteIns(session),
-        temporalLinearity: calFlow(session, descStats),
+        flow: calFlow(session, descStats),
         revisionIntensity: calRevisionIntensity(session) 
     }
     return interpretStats;

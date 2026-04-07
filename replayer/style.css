@@ -157,3 +157,46 @@ body {
   margin-bottom: 5px;
   color: #333;
 }
+
+
+.flow {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+  margin-bottom: 40px;
+}
+
+.flow-card {
+  border: 1px solid #e8e8e8;
+  border-radius: 20px;
+  box-shadow: 6px 9px 7px rgba(0, 0, 0, 0.22);
+  font-size: large;
+  padding-bottom: 15px;
+  padding-top: 10px;
+  padding-left: 15px;
+  padding-right: 15px;
+  position: relative;
+  display: grid;
+}
+
+.flow-box {
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 18px;
+  padding-top: 10px;
+  position: relative;
+}
+
+.flow-label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  color: rgba(0, 0, 0, 0.4);
+  margin-bottom: 5px;
+  display: block;
+}
+
+.flow-value {
+  font-size: 1.1rem;
+  font-weight: 400;
+  margin-bottom: 5px;
+  color: #333;
+}
