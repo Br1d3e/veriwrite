@@ -46,12 +46,11 @@ const flowEl = document.getElementById("flow");
 const linearityValEl = document.getElementById("linearityVal");
 const smoothnessValEl = document.getElementById("smoothnessVal");
 const lineGraphEl = document.getElementById("linearityGraph");
+const interruptPieEl = document.getElementById("interruptPie");
 const normDisplayCb = document.getElementById("norm-display");
-const interrupt1xEl = document.getElementById("interrupt1x");
-const interrupt2xEl = document.getElementById("interrupt2x");
-const interrupt5xEl = document.getElementById("interrupt5x");
-
-
+const interruptShortEl = document.getElementById("interrupt-short");
+const interruptMedEl = document.getElementById("interrupt-medium");
+const interruptLongEl = document.getElementById("interrupt-long");
 
 
 // DOM Object transferred to recorder & player
@@ -302,10 +301,41 @@ function linearityGraph(flow, norm=false) {
       plugins: plugins,
       scales: scales,
     }
-  }
-)
+  })
 }
   
+
+function pausePieChart(interrupt) {
+  const ratios = [interrupt.pause2sRatio, interrupt.pause5sRatio, interrupt.pause10sRatio];
+  const data = {
+    labels: ["Short Pauses", "Extended Pauses", "Long Interrupts"],
+    datasets: [{
+      data: ratios,
+      backgroundColor: ["rgba(29, 231, 7, 0.66)", "rgba(255, 191, 0, 0.69)", "rgba(255, 21, 0, 0.71)"],
+    }]
+  }
+  const plugins = {
+    title: {
+      display: true,
+      text: 'Writing Progress',
+      font: {
+        size: 20,
+        weight: "bold"
+      },
+      padding: {
+        bottom: 10
+      }
+    },
+  }
+
+  new Chart(interruptPieEl, {
+    type: 'pie',
+    data: data,
+    options: {
+      plugins: plugins,
+    }
+  })
+}
 
 function genFlowUI(flow) {
   const linearity = flow.linearity;
@@ -323,11 +353,12 @@ function genFlowUI(flow) {
   // Line Graph: Total Characters - Time
   linearityGraph(flow, normDisplayCb.checked);
 
-
   // Interrupt
-  interrupt1xEl.textContent = `${(interrupt.ratio1x * 100).toFixed(2)}%`;
-  interrupt2xEl.textContent = `${(interrupt.ratio2x * 100).toFixed(2)}%`;
-  interrupt5xEl.textContent = `${(interrupt.ratio5x * 100).toFixed(2)}%`;
+  interruptShortEl.textContent = `${(interrupt.pause2sRatio * 100).toFixed(2)}%`;
+  interruptMedEl.textContent = `${(interrupt.pause5sRatio * 100).toFixed(2)}%`;
+  interruptLongEl.textContent = `${(interrupt.pause10sRatio * 100).toFixed(2)}%`;
+
+  pausePieChart(interrupt);
 } 
 
 
@@ -375,6 +406,10 @@ export function resetStatsPanel() {
   const lineChart = Chart.getChart("linearityGraph");
   if (lineChart) {
     lineChart.destroy();
+  }
+  const pieChart = Chart.getChart("interruptPie");
+  if (pieChart) {
+    pieChart.destroy();
   }
 }
 

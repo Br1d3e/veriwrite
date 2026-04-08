@@ -64,32 +64,40 @@
     </div>
     <h3>Writing Flow</h3><br>
     <div class="flow" id="flow">
-      <div class="flow-card" id="linearity">Linearity & Smoothness
-        <div class="flow-box">
-          <span class="flow-label">Linearity Score</span>
-          <span class="flow-value" id="linearityVal"></span>
-        </div>
-        <div class="flow-box">
-          <span class="flow-label">Smoothness Score</span>
-          <span class="flow-value" id="smoothnessVal"></span>
+      <div class="flow-card" id="linearity">
+        <h4 id="linearity-title">Linearity & Smoothness</h4>
+        <div class="linearity-box">
+          <div class="flow-box">
+            <span class="flow-label">Linearity Score</span>
+            <span class="flow-value" id="linearityVal"></span>
+          </div>
+          <div class="flow-box">
+            <span class="flow-label">Smoothness Score</span>
+            <span class="flow-value" id="smoothnessVal"></span>
+          </div>
         </div>
         <!-- linearity graph -->
-        <div class="flow-box">
+        <div class="flow-box" style="position: relative; height: 80vh; width: 160vh">
           <canvas id="linearityGraph"></canvas>
         </div>
-        <div>
-          <!-- toggle percentage display -->
-          <input type="checkbox" id="norm-display" name="Display in percentage" />
+        <div style="padding-bottom: 10px"><!-- toggle percentage display -->
+          <input type="checkbox" id="norm-display" name="Display in percentage"/>Display in percentage
         </div>
       </div>
-      <div class="flow-card" id="interrupt">Interruptions
-        <div class="flow-box">
-          <span class="flow-label">Short Interrupts</span>
-          <span class="flow-value" id="interrupt1x"></span>
-          <span class="flow-label">Medium Interrupts</span>
-          <span class="flow-value" id="interrupt2x"></span>
-          <span class="flow-label">Long Interrupts</span>
-          <span class="flow-value" id="interrupt5x"></span>
+      <div class="flow-card" id="interrupt">
+        <h4 id="interrupt-title">Interruptions / Pauses</h3>
+        <div class="interrupt-box">
+          <div class="flow-box">
+            <span class="flow-label">Short Pauses</span>
+            <span class="flow-value" id="interrupt-short"></span>
+            <span class="flow-label">Extended Pauses</span>
+            <span class="flow-value" id="interrupt-medium"></span>
+            <span class="flow-label">Long Interrupts</span>
+            <span class="flow-value" id="interrupt-long"></span>
+          </div>
+          <div class="flow-box" style="position: relative; height: 45vh; width: 40vh">
+            <canvas id="interruptPie"></canvas>
+          </div>
         </div>
       </div>
     </div>

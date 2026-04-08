@@ -216,29 +216,47 @@ def session_linearity(SID):
     z_log_dt = (log_dt - log_dt_med) / log_dt_mad
 
     score = np.log(dt / np.median(dt))
-    # print(np.median(dt))
+    print(f"ref median dt: {np.median(dt)}")
 
-    # print(f"1x ratio: {np.mean(score > 1)}")
-    # print(f"2x ratio: {np.mean(score > 2)}")
-    # print(f"4x ratio: {np.mean(score > 4)}")
+    # print(f"1x({np.exp(1) * np.median(dt)}) ratio: {np.mean(score > 1)}")
+    # print(f"2x({np.exp(2) * np.median(dt)}) ratio: {np.mean(score > 2)}")
+    # print(f"3x({np.exp(3) * np.median(dt)}) ratio: {np.mean(score > 3)}")
+    # print(f"5x({np.exp(5) * np.median(dt)}) ratio: {np.mean(score > 5)}")
+    normal_flow = dt[dt < 2000]
+    short_pause = dt[np.logical_and(dt >= 2000, dt < 5000)]
+    med_pause = dt[np.logical_and(dt >= 5000, dt < 10000)]
+    long_pause = dt[dt >= 10000]
+    print(f"2s pause time ratio: {np.mean(np.logical_and(dt >= 2000, dt < 5000))}")
+    print(f"5s pause time ratio: {np.mean(np.logical_and(dt >= 5000, dt < 10000))}")
+    print(f"10s pause time ratio: {np.mean(dt >= 10000)}")
+
     # print(f"p95 score: {np.percentile(score, 95)}")
     
     # test core distribution
-    # plt.title(f"Distribution of log(dt / dtMed): {id}")
-    # plt.xlabel("Score")
+    x = ["short", "medium", "long"]
+    y = np.array([len(short_pause), len(med_pause), len(long_pause)])
+
+    # plt.title(f"Distribution of dt for session: {id}")
+    # plt.xlabel("dt / s")
     # plt.ylabel("Count")
-    # plt.hist(score, bins=50)
+    # plt.bar(x, y)
     # plt.show()
+
+    # pie chart
+    plt.pie(y, labels=x, autopct='%1.1f%%')
+    plt.title(f"Distribution of dt for session: {id}")
+    plt.show()
+
 
     # k, b = np.polyfit(x_norm, y_norm, 1)
 
-    plt.plot(x_norm, y_norm)
-    plt.title(f"Temporal linearity for session {id}")
-    plt.xlabel("Time / s")
-    plt.ylabel("Total Characters")
-    # plt.plot(x_norm, k * x_norm + b, color='red', linestyle=":")
-    plt.plot(x_norm, x_norm, color='red', linestyle=":")    # y = x
-    plt.show()    
+    # plt.plot(x_norm, y_norm)
+    # plt.title(f"Temporal linearity for session {id}")
+    # plt.xlabel("Time / s")
+    # plt.ylabel("Total Characters")
+    # # plt.plot(x_norm, k * x_norm + b, color='red', linestyle=":")
+    # plt.plot(x_norm, x_norm, color='red', linestyle=":")    # y = x
+    # plt.show()    
 
 
 def session_revision_intensity(SID):
@@ -400,7 +418,7 @@ def session_revision_intensity(SID):
 if __name__ == "__main__":
     for sid in range(0, len(sessions)):
         # session_paste_info(sid)
-        # session_linearity(sid)
-        session_revision_intensity(sid)
+        session_linearity(sid)
+        # session_revision_intensity(sid)
         # pass
     # session_revision_intensity(2)

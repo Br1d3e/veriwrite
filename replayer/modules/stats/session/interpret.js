@@ -115,10 +115,13 @@ function calFlow(session, descStats) {
     }
 
     let interruptProfile = {
-        ratio1x: 0,
-        ratio2x: 0,
-        ratio5x: 0,
-        p95Score: 0
+        // ratio1x: 0,
+        // ratio2x: 0,
+        // ratio5x: 0,
+        // p95Score: 0,
+        pause2sRatio: 0,
+        pause5sRatio: 0,
+        pause10sRatio: 0
     }
 
     let flow = {
@@ -213,15 +216,20 @@ function calFlow(session, descStats) {
     smoothness.score = 1 / (1 + (Math.log(1 + smoothness.mse2ndDeri))) * 100;
     
 
-    // Relative Interruption
-    const dtMed = Math.max(descStats.rhythm.dtMedian, 1);
-    const score = dt.filter(t => t > 0).map(t => Math.log(t / dtMed));   // s = log(dt / dtMed)
-    interruptProfile.ratio1x = score.filter(s => s > 1).length / score.length;
-    interruptProfile.ratio2x = score.filter(s => s > 2).length / score.length;
-    interruptProfile.ratio5x = score.filter(s => s > 5).length / score.length;
-    // Find score percentiles
-    interruptProfile.p95Score = percentileHelper(score, 95);
-
+    // Relative Interruption （uunused)
+    // const dtMed = Math.max(descStats.rhythm.dtMedian, 1);
+    // const score = dt.filter(t => t > 0).map(t => Math.log(t / dtMed));   // s = log(dt / dtMed)
+    // interruptProfile.ratio1x = score.filter(s => s > 1).length / score.length;
+    // interruptProfile.ratio2x = score.filter(s => s > 2).length / score.length;
+    // interruptProfile.ratio5x = score.filter(s => s > 5).length / score.length;
+    // // Find score percentiles
+    // interruptProfile.p95Score = percentileHelper(score, 95);
+    const dtPause2s = dt.filter(t => t >= 2000 && t < 5000);
+    const dtPause5s = dt.filter(t => t >= 5000 && t < 10000);
+    const dtPause10s = dt.filter(t => t >= 10000);
+    interruptProfile.pause2sRatio = dtPause2s.length / dt.length;
+    interruptProfile.pause5sRatio = dtPause5s.length / dt.length;
+    interruptProfile.pause10sRatio = dtPause10s.length / dt.length;
     
     // Graph
     flow.graph = {

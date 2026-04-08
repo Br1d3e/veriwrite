@@ -171,12 +171,17 @@ body {
   border-radius: 20px;
   box-shadow: 6px 9px 7px rgba(0, 0, 0, 0.22);
   font-size: large;
-  padding-bottom: 15px;
-  padding-top: 10px;
   padding-left: 15px;
   padding-right: 15px;
   position: relative;
   display: grid;
+}
+
+.linearity-box{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  position: relative;
 }
 
 .flow-box {
@@ -201,3 +206,24 @@ body {
   margin-bottom: 5px;
   color: #333;
 }
+
+.interrupt-box{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10vh;
+}
+
+/* .interrupt-card {
+  border: 1px solid #e8e8e8;
+  border-radius: 20px;
+  box-shadow: 6px 9px 7px rgba(0, 0, 0, 0.22);
+  font-size: large;
+  padding-bottom: 15px;
+  padding-top: 10px;
+  padding-left: 15px;
+  padding-right: 15px;
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+} */
