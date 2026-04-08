@@ -103,6 +103,38 @@
     </div>
 
     <h3>Revision</h3><br>
+    <div class="revision" id="revision">
+      <div class="revision-card" id="intensity">
+        <h4 id="intensity-title">Intensity</h4>
+        <div class="intensity-box">
+          <div class="revision-box">
+            <span class="revision-label" title="Total deleted characters / total inserted characters">Delete-insert Ratio</span>
+            <span class="revision-value" id="delInsVal"></span>
+            <span class="revision-label" title="Total revised characters / total modified characters">Revision Ratio</span>
+            <span class="revision-value" id="revRatioVal"></span> 
+          </div>
+          <div class="revision-box" style="position: relative; height: 45vh; width: 40vh">
+            <canvas id="intensity-pie"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="revision-card" id="progress">
+        <h4 id="progress-title">Progress</h4>
+        <div class="prog-box">
+          <div class="revision-box">
+            <span class="revision-label">Early Gained Progress</span>
+            <span class="revision-value" id="earlyGainVal"></span>
+          </div>
+          <div class="revision-box"> 
+            <span class="revision-label">Late Gained Progress</span>
+            <span class="revision-value" id="lateGainVal"></span>
+          </div>
+          <div class="revision-box" style="position: relative; height: 80vh; width: 150vh">
+            <canvas id="prog-graph"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
   <script type="module" src="./app.js"></script>
 </body>

@@ -52,6 +52,14 @@ const interruptShortEl = document.getElementById("interrupt-short");
 const interruptMedEl = document.getElementById("interrupt-medium");
 const interruptLongEl = document.getElementById("interrupt-long");
 
+const revisionEl = document.getElementById("revision");
+const delInsValEl = document.getElementById("delInsVal");
+const revRatioValEl = document.getElementById("revRatioVal");
+const intensityPieEl = document.getElementById("intensity-pie");
+const earlyGainValEl = document.getElementById("earlyGainVal");
+const lateGainValEl = document.getElementById("lateGainVal");
+const progGraphEl = document.getElementById("prog-graph");
+
 
 // DOM Object transferred to recorder & player
 const DOM = {
@@ -361,6 +369,129 @@ function genFlowUI(flow) {
   pausePieChart(interrupt);
 } 
 
+function revIntPieChart(revRatios) {
+  const ratios = [revRatios.replace, revRatios.pureDel, revRatios.btIns];
+  const data = {
+    labels: ["Replace", "Pure Deletes", "Backtrack Inserts"],
+    datasets: [{
+      data: ratios,
+      backgroundColor: ["rgba(7, 164, 231, 0.66)", "rgba(255, 191, 0, 0.69)", "rgba(255, 21, 0, 0.71)"]
+    }]
+  }
+
+  const plugins = {
+    title: {
+      display: true,
+      text: 'Revision Operation Types',
+      font: {
+        size: 20,
+        weight: "bold"
+      },
+      padding: {
+        bottom: 10
+      }
+    },
+  }
+
+  new Chart(intensityPieEl, {
+    type: 'pie',
+    data: data,
+    options: {
+      plugins: plugins,
+      cutout: '40%'
+    }
+  });
+}
+
+function progSimGraph(progGraphData) {
+  const prog = progGraphData.prog;
+  const sim = progGraphData.sim;
+  const line = [];
+  for (let i = 0; i < prog.length; i++) {
+    line.push({x: Math.round(prog[i] * 100), y: Math.round(sim[i] * 100)});
+  }
+
+  const data = {
+    datasets: [{
+      data: line,
+      fill: false,
+      borderColor: 'rgb(6, 149, 221)',
+      pointStyle: false,
+      tension: 0.1
+    }]
+  }
+
+    const plugins = {
+    title: {
+      display: true,
+      text: 'Product-process Similarity',
+      font: {
+        size: 20,
+        weight: "bold"
+      },
+      padding: {
+        top: 10,
+        bottom: 10
+      }
+    },
+    legend: {
+      display: false
+    }
+  }
+
+  const xScale = {
+    type: 'linear',
+    position: 'bottom',
+    title: {
+      display: true,
+      text: 'Writing Process (%)'
+    }
+  }
+
+  const yScale = {
+    type: 'linear',
+    position: 'left',
+    title: {
+      display: true,
+      text: 'Similarity (%)'
+    }
+  }
+
+  const scales = {
+    x: xScale,
+    y: yScale
+  }
+
+  new Chart(progGraphEl, {
+    type: 'line',
+    data: data,
+    options: {
+      plugins: plugins,
+      scales: scales,
+    }
+  })
+}
+
+function genRevisionUI(revInt) {
+  revisionEl.hidden = false;
+
+  // intensity metrics
+  const revRatios = revInt.revRatios;
+  const progSim = revInt.productProcessSim;
+  delInsValEl.textContent = `${(revRatios.delIns * 100).toFixed(2)}%`;
+  revRatioValEl.textContent = `${(revRatios.total * 100).toFixed(2)}%`;
+  // Donut chart for revision operation types
+  revIntPieChart(revRatios);
+
+  // product process similarity
+  const progMetrics = progSim.metrics;
+  const progGraphData = progSim.graph;
+  earlyGainValEl.textContent = `${(progMetrics.earlyGain * 100).toFixed(2)}%`;
+  lateGainValEl.textContent = `${(progMetrics.medianGain * 100).toFixed(2)}%`;
+  // Line graph for product-process similarity
+  progSimGraph(progGraphData);
+}
+
 
 function updateStatsPanel(sessionStats) {
   sessionStatsEl.hidden = false;
@@ -381,6 +512,9 @@ function updateStatsPanel(sessionStats) {
 
   // Writing flow
   genFlowUI(interpret.flow);
+
+  // Revision Intensity
+  genRevisionUI(interpret.revisionIntensity);
 
 }
 
@@ -410,6 +544,17 @@ export function resetStatsPanel() {
   const pieChart = Chart.getChart("interruptPie");
   if (pieChart) {
     pieChart.destroy();
+  }
+
+  // Revision Intensity
+  revisionEl.hidden = true;
+  const intensityPie = Chart.getChart("intensity-pie");
+  if (intensityPie) {
+    intensityPie.destroy();
+  }
+  const progGraph = Chart.getChart("prog-graph");
+  if (progGraph) {
+    progGraph.destroy();
   }
 }
 
