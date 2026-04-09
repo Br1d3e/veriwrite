@@ -45,6 +45,14 @@ const pasteEvEl = document.getElementById("pasteEv");
 const flowEl = document.getElementById("flow");
 const linearityValEl = document.getElementById("linearityVal");
 const smoothnessValEl = document.getElementById("smoothnessVal");
+const linearityAdvCb = document.getElementById("linearity-adv-cb");
+const linearityAdvEl = document.getElementById("linearity-adv");
+const madValEl = document.getElementById("madVal");
+const rmseValEl = document.getElementById("rmseVal");
+const maxDevValEl = document.getElementById("maxDevVal");
+const mad1stValEl = document.getElementById("mad1stVal");
+const mse2ndValEl = document.getElementById("mse2ndVal");
+
 const lineGraphEl = document.getElementById("linearityGraph");
 const interruptPieEl = document.getElementById("interruptPie");
 const normDisplayCb = document.getElementById("norm-display");
@@ -352,11 +360,22 @@ function genFlowUI(flow) {
 
   flowEl.hidden = false;
 
+  console.log(linearityAdvEl.hidden);
+
   // Linearity
   linearityValEl.textContent = `${Math.round(linearity.score)} / 100`;
 
   // Smoothness
   smoothnessValEl.textContent = `${Math.round(smoothness.score)} / 100`;
+
+  // advanced metrics
+  if (linearityAdvCb.checked) {
+    madValEl.textContent = `${linearity.mad.toFixed(4)}s`;
+    rmseValEl.textContent = `${linearity.rmse.toFixed(4)}s`;
+    maxDevValEl.textContent = `${linearity.maxDeviation.toFixed(4)}s`;
+    mad1stValEl.textContent = `${smoothness.mad1stDeri.toFixed(4)}s`;
+    mse2ndValEl.textContent = `${smoothness.mse2ndDeri.toFixed(4)}s`;
+  }
 
   // Line Graph: Total Characters - Time
   linearityGraph(flow, normDisplayCb.checked);
@@ -537,6 +556,7 @@ export function resetStatsPanel() {
 
   // Writing flow
   flowEl.hidden = true;
+  linearityAdvEl.hidden = true;
   const lineChart = Chart.getChart("linearityGraph");
   if (lineChart) {
     lineChart.destroy();
@@ -716,5 +736,17 @@ normDisplayCb.addEventListener("change", () => {
   }
 
   linearityGraph(flow, normDisplayCb.checked);
+})
+
+linearityAdvCb.addEventListener("change", () => {
+  const flow = sessionStats.interpret.flow;
+  
+  linearityAdvEl.hidden = !linearityAdvCb.checked;
+  
+  const prevGraph = Chart.getChart("linearityGraph");
+  if (prevGraph) {
+    prevGraph.destroy();
+  }
+  genFlowUI(flow);
 })
 

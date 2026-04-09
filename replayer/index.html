@@ -76,7 +76,26 @@
             <span class="flow-value" id="smoothnessVal"></span>
           </div>
         </div>
-        <!-- linearity graph -->
+        <div style="padding-top: 10px; padding-bottom: 5px"><!-- toggle advanced metrics -->
+          <input type="checkbox" id="linearity-adv-cb" name="Show Advanced"/>Show Advanced Metrics<!-- advanced metrics input -->
+        </div>
+        <div class="linearity-box" id="linearity-adv" hidden>
+            <div class="flow-box">
+              <span class="flow-label" title="Mean Absolute Deviation">MAD</span>
+              <span class="flow-value" id="madVal"></span>
+              <span class="flow-label" title="Root Mean Square Error">RMSE</span>
+              <span class="flow-value" id="rmseVal"></span>
+              <span class="flow-label" title="Max Deviation">Max Deviation</span>
+              <span class="flow-value" id="maxDevVal"></span>
+            </div>
+            <div class="flow-box">
+              <span class="flow-label" title="1st Derivative Mean Absolute Deviation">1st Derivative MAD</span>
+              <span class="flow-value" id="mad1stVal"></span>
+              <span class="flow-label" title="2nd Derivative Mean Square Error">2nd Derivative MSE</span>
+              <span class="flow-value" id="mse2ndVal"></span>
+            </div>
+        </div>
+          <!-- linearity graph -->
         <div class="flow-box" style="position: relative; height: 80vh; width: 160vh">
           <canvas id="linearityGraph"></canvas>
         </div>
