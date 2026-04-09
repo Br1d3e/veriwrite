@@ -63,7 +63,8 @@ const interruptLongEl = document.getElementById("interrupt-long");
 const revisionEl = document.getElementById("revision");
 const delInsValEl = document.getElementById("delInsVal");
 const revRatioValEl = document.getElementById("revRatioVal");
-const intensityPieEl = document.getElementById("intensity-pie");
+const revIntPieEl = document.getElementById("intensity-pie");
+const revOpTypesPieEl = document.getElementById("rev-op-types-pie");
 const earlyGainValEl = document.getElementById("earlyGainVal");
 const lateGainValEl = document.getElementById("lateGainVal");
 const progGraphEl = document.getElementById("prog-graph");
@@ -360,8 +361,6 @@ function genFlowUI(flow) {
 
   flowEl.hidden = false;
 
-  console.log(linearityAdvEl.hidden);
-
   // Linearity
   linearityValEl.textContent = `${Math.round(linearity.score)} / 100`;
 
@@ -388,7 +387,41 @@ function genFlowUI(flow) {
   pausePieChart(interrupt);
 } 
 
+
 function revIntPieChart(revRatios) {
+  const ratio = [revRatios.total, 1 - revRatios.total];
+  const data = {
+    labels: ["Revision", "Normal Flow"],
+    datasets: [{
+      data: ratio,
+      backgroundColor: ["rgba(7, 164, 231, 0.66)", "rgba(0, 255, 208, 0.66)"]
+    }]
+  }
+
+  const plugins = {
+    title: {
+      display: true,
+      text: 'Revision Intensity',
+      font: {
+        size: 20,
+        weight: "bold"
+      },
+      padding: {
+        bottom: 10
+      }
+    }
+  }
+
+  new Chart(revIntPieEl, {
+    type: 'pie',
+    data: data,
+    options: {
+      plugins: plugins,
+    }
+  });
+}
+
+function revOpTypesPieChart(revRatios) {
   const ratios = [revRatios.replace, revRatios.pureDel, revRatios.btIns];
   const data = {
     labels: ["Replace", "Pure Deletes", "Backtrack Inserts"],
@@ -412,7 +445,7 @@ function revIntPieChart(revRatios) {
     },
   }
 
-  new Chart(intensityPieEl, {
+  new Chart(revOpTypesPieEl, {
     type: 'pie',
     data: data,
     options: {
@@ -499,8 +532,11 @@ function genRevisionUI(revInt) {
   const progSim = revInt.productProcessSim;
   delInsValEl.textContent = `${(revRatios.delIns * 100).toFixed(2)}%`;
   revRatioValEl.textContent = `${(revRatios.total * 100).toFixed(2)}%`;
-  // Donut chart for revision operation types
+
+  // Pie chart for revision intensity
   revIntPieChart(revRatios);
+  // Donut chart for revision operation types
+  revOpTypesPieChart(revRatios);
 
   // product process similarity
   const progMetrics = progSim.metrics;
@@ -572,6 +608,10 @@ export function resetStatsPanel() {
   if (intensityPie) {
     intensityPie.destroy();
   }
+  const opTypesPie = Chart.getChart("rev-op-types-pie");
+  if (opTypesPie) {
+    opTypesPie.destroy();
+   }
   const progGraph = Chart.getChart("prog-graph");
   if (progGraph) {
     progGraph.destroy();
