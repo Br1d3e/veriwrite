@@ -146,10 +146,32 @@
           <div class="revision-box">
             <span class="revision-label">Early Gained Progress</span>
             <span class="revision-value" id="earlyGainVal"></span>
-          </div>
-          <div class="revision-box"> 
             <span class="revision-label">Late Gained Progress</span>
             <span class="revision-value" id="lateGainVal"></span>
+          </div>
+          <!-- TODO: Drop -->
+          <div class="revision-box" id="prog-dip">
+            <span class="revision-label" title="Total percentage of product-process similarity dip">Total Dip</span>
+            <span class="revision-value" id="totalDipVal"></span>
+            <span class="revision-label" title="Max percentage of product-process similarity dip">Max Dip</span>
+            <span class="revision-value" id="maxDipVal"></span>
+            <span class="revision-label" title="Similarity drop / Similarity increase (%)">Drop Ratio</span>
+            <span class="revision-value" id="dropRatioVal"></span>
+          </div>
+        </div>
+        <div style="padding-top: 10px; padding-bottom: 5px"><!-- toggle advanced metrics -->
+          <input type="checkbox" id="prog-adv-cb"/>Show Advanced Metrics<!-- advanced metrics input -->
+        </div>
+        <div class="prog-box" id="prog-adv" hidden>
+          <div class="revision-box">
+            <span class="revision-label" title="Similarity between final and start states of current session">Final-start Similarity</span>
+            <span class="revision-value" id="initFinalVal"></span>
+            <span class="revision-label" title="Similarity at 10th Percentile">Similarity P10</span>
+            <span class="revision-value" id="simP10Val"></span>
+            <span class="revision-label" title="Similarity at 30th Percentile">Similarity P30</span>
+            <span class="revision-value" id="simP30Val"></span>
+            <span class="revision-label" title="Median Similarity">Median Similarity</span>
+            <span class="revision-value" id="simMedVal"></span>
           </div>
         </div>
         <div class="revision-box" style="padding-top: 20px; position: relative; height: 80vh; width: 150vh">

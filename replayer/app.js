@@ -67,6 +67,18 @@ const revIntPieEl = document.getElementById("intensity-pie");
 const revOpTypesPieEl = document.getElementById("rev-op-types-pie");
 const earlyGainValEl = document.getElementById("earlyGainVal");
 const lateGainValEl = document.getElementById("lateGainVal");
+const progDipEl = document.getElementById("prog-dip");
+const totalDipValEl = document.getElementById("totalDipVal");
+const maxDipValEl = document.getElementById("maxDipVal");
+const dropRatioValEl = document.getElementById("dropRatioVal");
+
+const progAdvCb = document.getElementById("prog-adv-cb");
+const progAdvEl = document.getElementById("prog-adv");
+const initFinalValEl = document.getElementById("initFinalVal");
+const simP10ValEl = document.getElementById("simP10Val");
+const simP30ValEl = document.getElementById("simP30Val");
+const simMedValEl = document.getElementById("simMedVal");
+
 const progGraphEl = document.getElementById("prog-graph");
 
 
@@ -533,16 +545,37 @@ function genRevisionUI(revInt) {
   delInsValEl.textContent = `${(revRatios.delIns * 100).toFixed(2)}%`;
   revRatioValEl.textContent = `${(revRatios.total * 100).toFixed(2)}%`;
 
-  // Pie chart for revision intensity
-  revIntPieChart(revRatios);
-  // Donut chart for revision operation types
-  revOpTypesPieChart(revRatios);
-
   // product process similarity
   const progMetrics = progSim.metrics;
   const progGraphData = progSim.graph;
   earlyGainValEl.textContent = `${(progMetrics.earlyGain * 100).toFixed(2)}%`;
   lateGainValEl.textContent = `${(progMetrics.medianGain * 100).toFixed(2)}%`;
+
+  // Show dip/drop metrics only when revision dip > 0
+  const totalDip = progMetrics.totalDip;
+  const maxDip = progMetrics.maxDip;
+  const dropRatio = progMetrics.dropRatio;
+
+  if (totalDip > 0) {
+    progDipEl.hidden = false;
+    totalDipValEl.textContent = `${(totalDip * 100).toFixed(2)}%`;
+    maxDipValEl.textContent = `${(maxDip * 100).toFixed(2)}%`;
+    dropRatioValEl.textContent = `${(dropRatio * 100).toFixed(2)}%`;
+  }
+
+  // advanced metrics
+  if (progAdvCb.checked) {
+    initFinalValEl.textContent = `${(progMetrics.initFinal * 100).toFixed(2)}%`;
+    simP10ValEl.textContent = `${(progMetrics.p10 * 100).toFixed(2)}%`;
+    simP30ValEl.textContent = `${(progMetrics.p30 * 100).toFixed(2)}%`;
+    simMedValEl.textContent = `${(progMetrics.med * 100).toFixed(2)}%`;
+  }
+
+  // Pie chart for revision intensity
+  revIntPieChart(revRatios);
+  // Donut chart for revision operation types
+  revOpTypesPieChart(revRatios);
+
   // Line graph for product-process similarity
   progSimGraph(progGraphData);
 }
@@ -604,6 +637,8 @@ export function resetStatsPanel() {
 
   // Revision Intensity
   revisionEl.hidden = true;
+  progDipEl.hidden = true;
+  progAdvEl.hidden = true;
   const intensityPie = Chart.getChart("intensity-pie");
   if (intensityPie) {
     intensityPie.destroy();
@@ -790,3 +825,22 @@ linearityAdvCb.addEventListener("change", () => {
   genFlowUI(flow);
 })
 
+progAdvCb.addEventListener("change", () => {
+  const revInt = sessionStats.interpret.revisionIntensity;
+  
+  progAdvEl.hidden = !progAdvCb.checked;
+  
+  const progGraph = Chart.getChart("prog-graph");
+  const intensityPie = Chart.getChart("intensity-pie");
+  const opTypesPie = Chart.getChart("rev-op-types-pie");
+  if (progGraph) {
+    progGraph.destroy();
+  }
+  if (intensityPie) {
+    intensityPie.destroy();
+  }
+  if (opTypesPie) {
+    opTypesPie.destroy();
+  }
+  genRevisionUI(revInt);
+})
