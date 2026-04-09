@@ -264,5 +264,6 @@ body {
 .prog-box{
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 5vh;
+  gap: 18px;
+  position: relative;
 }
