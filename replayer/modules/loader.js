@@ -26,11 +26,31 @@ function sort(sessions) {
     return sessions;
 }
 
+// Escape Microsoft Word Chars
+function normalizeLines(s) {
+    return String(s)
+    .replace(/\r\n/g, "\n")  
+    .replace(/\r/g, '\n')   // Hard Break
+    .replace(/\u000b/g, '\n')   // Soft Break
+}
+
+
+function normalizeRecord(sessions) {
+    for (let i = 0; i < sessions.length; i++) {
+        sessions[i].init = normalizeLines(sessions[i].init);
+        for (let j = 0; j < sessions[i].ev.length; j++) {
+            sessions[i].ev[j][3] = normalizeLines(sessions[i].ev[j][3]);
+        }
+    }
+    return sessions;
+}
+
 export function processData(flightRecord) {
-    const newRecord = flightRecord;
+    let newRecord = flightRecord;
     let sessions = newRecord.sessions;
     sessions = dedupe(sessions);
     sessions = sort(sessions);
+    sessions = normalizeRecord(sessions)
     return newRecord;
 }
 

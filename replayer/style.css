@@ -4,10 +4,19 @@ body {
     background: #f4f4f9;
 }
 
+.header {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
 #screen {
     background: white;
     white-space: pre-wrap;
+    height: 40vh;
     overflow-x: auto;
+    overflow-y: auto;
     font-family: monospace; 
     font-size: 14px;
     line-height: 1.5;
@@ -40,4 +49,226 @@ body {
     }
 }
 
+[hidden] {
+  display: none !important;
+}
 
+
+#sessionBtns {
+    gap: 10px;
+    display: flex;
+    justify-content: center;
+}
+
+.hl {
+    color: rgb(255, 25, 0);
+    font-style: italic, bold;
+}
+
+.hl-med {
+    color: rgb(255, 191, 0);
+    font-style: oblique, bold;
+}
+
+.hl-low {
+    color:rgb(4, 202, 17);
+    font-style: italic, bold;
+}
+
+
+/* design from https://uiverse.io/chase2k25/spicy-panther-38 */
+.metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 18px;
+  margin-bottom: 40px;
+}
+
+.metric-box {
+  border-left: 1px solid rgba(0, 0, 0, 0.05);
+  padding-left: 15px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.metric-label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  color: rgba(0, 0, 0, 0.4);
+  margin-bottom: 5px;
+  display: block;
+}
+
+.metric-value {
+  font-size: 1.1rem;
+  font-weight: 400;
+  margin-bottom: 5px;
+  color: #333;
+}
+
+.paste {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 50px;
+  margin-bottom: 40px;
+  padding: 20px;
+  backdrop-filter: blur(6px);
+  cursor: pointer;
+  transition: all 0.5s;
+}
+
+/* https://uiverse.io/SteveBloX/dangerous-warthog-85 */
+.paste-card {
+  border: 1px solid #e8e8e8;
+  border-radius: 20px;
+  box-shadow: 12px 17px 15px rgba(0, 0, 0, 0.22);
+  padding-bottom: 15px;
+  padding-top: 15px;
+  position: relative;
+  display: grid;
+  transition: transform 0.2s ease;
+}
+
+.paste-card:hover {
+  border: 1px solid black;
+  transform: scale(1.02);
+}
+
+.paste-card:active {
+  transform: scale(0.97) rotateZ(1.2deg);
+}
+
+.paste-box {
+  border-left: 1px solid rgba(0, 0, 0, 0.05);
+  padding-left: 15px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+
+.paste-label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  color: rgba(0, 0, 0, 0.4);
+  margin-bottom: 5px;
+  display: block;
+}
+
+.paste-value {
+  font-size: 1.1rem;
+  font-weight: 400;
+  margin-bottom: 5px;
+  color: #333;
+}
+
+
+.flow {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+  margin-bottom: 40px;
+}
+
+.flow-card {
+  border: 1px solid #e8e8e8;
+  border-radius: 20px;
+  box-shadow: 6px 9px 7px rgba(0, 0, 0, 0.22);
+  font-size: large;
+  padding-left: 15px;
+  padding-right: 15px;
+  position: relative;
+  display: grid;
+}
+
+.linearity-box{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  position: relative;
+}
+
+.flow-box {
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  padding-top: 10px;
+  position: relative;
+}
+
+.flow-label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  color: rgba(0, 0, 0, 0.4);
+  margin-top: 5px;
+  margin-bottom: 5px;
+  display: block;
+}
+
+.flow-value {
+  font-size: 1.1rem;
+  font-weight: 400;
+  margin-bottom: 5px;
+  color: #333;
+}
+
+.interrupt-box{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10vh;
+}
+
+.revision {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+  margin-bottom: 40px;
+}
+
+.revision-card {
+  border: 1px solid #e8e8e8;
+  border-radius: 20px;
+  box-shadow: 6px 9px 7px rgba(0, 0, 0, 0.22);
+  font-size: large;
+  padding-left: 15px;
+  padding-right: 15px;
+  position: relative;
+  display: grid;
+}
+
+.intensity-box{
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 18px;
+  position: relative;
+}
+
+.revision-box {
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  padding-top: 10px;
+  position: relative;
+}
+
+.revision-label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  color: rgba(0, 0, 0, 0.4);
+  margin-top: 5px;
+  margin-bottom: 5px;
+  display: block;
+}
+
+.revision-value {
+  font-size: 1.1rem;
+  font-weight: 400;
+  margin-bottom: 5px;
+  color: #333;
+}
+
+.prog-box{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  position: relative;
+}

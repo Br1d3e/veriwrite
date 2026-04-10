@@ -1,0 +1,834 @@
+id: s2
+med: 2.0
+p90: 3.0
+p95: 4.0
+p99: 6.0
+large insert counts: [  6   6   6   6   6   7   9   9  10  15 156 156 208 507]
+len: 6
+dt: 237
+rate: 25.32 kps
+text: lving 
+
+len: 208
+dt: 12443
+rate: 16.72 kps
+text: a Chinese invasion of Taiwan (image of a scary Chinese fighter plane), financial markets in "free fall," "500 regional banks have shuttered their doors" (endless lines of depositors made penniless by Biden); 
+
+len: 9
+dt: 20993
+rate: 0.43 kps
+text: (Pierson)
+
+len: 6
+dt: 247
+rate: 24.29 kps
+text: ies gl
+
+len: 156
+dt: 277249
+rate: 0.56 kps
+text: A deepfake posted to Trump's Truth Social account depicts Florida Governor Ron DeSantis riding a rhinoceros (i.e., "RINO," i.e., "Republican In Name Only").
+
+len: 156
+dt: 30471
+rate: 5.12 kps
+text: A deepfake posted to Trump's Truth Social account depicts Florida Governor Ron DeSantis riding a rhinoceros (i.e., "RINO," i.e., "Republican In Name Only").
+
+len: 507
+dt: 33322
+rate: 15.22 kps
+text: Social media platforms claim that they restrict deepfakes. Facebook has announced that it will remove deepfakes, but Business Insider says Facebook's policy has "loopholes." YouTube says that it takes down deepfakes, but the platform allows content claiming that the 2020 election was stolen. Twitter labels deepfakes and prohibits sharing of "misleading media" which "deceive or confuse people and lead to harm." In any event, YouTube, TikTok, and Facebook are working on their own generative-AI platforms.
+
+len: 7
+dt: 31789
+rate: 0.22 kps
+text: (Clegg)
+
+len: 15
+dt: 19492
+rate: 0.77 kps
+text: (Barari et al.)
+
+len: 10
+dt: 45315
+rate: 0.22 kps
+text: (Rascius) 
+
+len: 9
+dt: 353
+rate: 25.5 kps
+text: (Rascius)
+
+len: 6
+dt: 59462
+rate: 0.1 kps
+text: (Mani)
+
+len: 6
+dt: 714
+rate: 8.4 kps
+text: (Mani)
+
+len: 6
+dt: 351
+rate: 17.09 kps
+text: (Mani)
+
+id: s3
+med: 2.0
+p90: 3.0
+p95: 4.0
+p99: 12.090000000000032
+large insert counts: [ 13  33  38  56  62  72 344 558]
+len: 558
+dt: 386
+rate: 1445.6 kps
+text: (Social media platforms claim that they restrict deepfakes. Facebook has announced that it will remove deepfakes, but Business Insider says Facebook's policy has "loopholes." YouTube says that it takes down deepfakes, but the platform allows content claiming that the 2020 election was stolen. Twitter labels deepfakes and prohibits sharing of "misleading media" which "deceive or confuse people and lead to harm." In any event, YouTube, TikTok, and Facebook are working on their own generative-AI platforms.) used for consequence, original source (Pierson)
+
+len: 344
+dt: 36129
+rate: 9.52 kps
+text: In 2021, China's Cyberspace Administration took regulatory measures on social networking software to address emerging risks associated with this technology. However, by 2023, online fraud rates remained high, with some perpetrators using Deepfake technology to conduct online transactions, successfully defrauding victims of over 2 million RMB.
+
+len: 62
+dt: 687
+rate: 90.25 kps
+text: "Implementation Outline for a Rule of Law Society (2020-2025) 
+
+len: 33
+dt: 359
+rate: 91.92 kps
+text:  Data Security Management Measure
+
+len: 38
+dt: 11861
+rate: 3.2 kps
+text: The Cyberspace Administration of China
+
+len: 56
+dt: 1067
+rate: 52.48 kps
+text: Departments like The Cyberspace Administration of China
+
+len: 13
+dt: 1736
+rate: 7.49 kps
+text: ). President 
+
+len: 72
+dt: 1154
+rate: 62.39 kps
+text: President Xi highlights to recognize the tendency in AI’s development, 
+
+id: s3
+med: 2.0
+p90: 3.0
+p95: 4.0
+p99: 12.090000000000032
+large insert counts: [ 13  33  38  56  62  72 344 558]
+len: 558
+dt: 386
+rate: 1445.6 kps
+text: (Social media platforms claim that they restrict deepfakes. Facebook has announced that it will remove deepfakes, but Business Insider says Facebook's policy has "loopholes." YouTube says that it takes down deepfakes, but the platform allows content claiming that the 2020 election was stolen. Twitter labels deepfakes and prohibits sharing of "misleading media" which "deceive or confuse people and lead to harm." In any event, YouTube, TikTok, and Facebook are working on their own generative-AI platforms.) used for consequence, original source (Pierson)
+
+len: 344
+dt: 36129
+rate: 9.52 kps
+text: In 2021, China's Cyberspace Administration took regulatory measures on social networking software to address emerging risks associated with this technology. However, by 2023, online fraud rates remained high, with some perpetrators using Deepfake technology to conduct online transactions, successfully defrauding victims of over 2 million RMB.
+
+len: 62
+dt: 687
+rate: 90.25 kps
+text: "Implementation Outline for a Rule of Law Society (2020-2025) 
+
+len: 33
+dt: 359
+rate: 91.92 kps
+text:  Data Security Management Measure
+
+len: 38
+dt: 11861
+rate: 3.2 kps
+text: The Cyberspace Administration of China
+
+len: 56
+dt: 1067
+rate: 52.48 kps
+text: Departments like The Cyberspace Administration of China
+
+len: 13
+dt: 1736
+rate: 7.49 kps
+text: ). President 
+
+len: 72
+dt: 1154
+rate: 62.39 kps
+text: President Xi highlights to recognize the tendency in AI’s development, 
+
+id: s5
+med: 2.0
+p90: 3.0
+p95: 4.0
+p99: 5.0
+large insert counts: [5 5 5 5 5 7]
+len: 5
+dt: 236
+rate: 21.19 kps
+text: hiel 
+
+len: 5
+dt: 243
+rate: 20.58 kps
+text: s of 
+
+len: 5
+dt: 233
+rate: 21.46 kps
+text: ment 
+
+len: 5
+dt: 251
+rate: 19.92 kps
+text: tivel
+
+len: 5
+dt: 251
+rate: 19.92 kps
+text: Lack 
+
+len: 5
+dt: 244
+rate: 20.49 kps
+text: ts in
+
+id: s6
+med: 2.0
+p90: 3.0
+p95: 4.0
+p99: 5.0
+large insert counts: [  5   5   5   5   5   5   5   5   6   6   6   6   7   8   8   9  31 127
+ 127 127 127]
+len: 6
+dt: 254
+rate: 23.62 kps
+text: that  
+
+len: 5
+dt: 245
+rate: 20.41 kps
+text: sprea
+
+len: 6
+dt: 398
+rate: 15.08 kps
+text: (Mani)
+
+len: 5
+dt: 249
+rate: 20.08 kps
+text: ntion
+
+len: 8
+dt: 352
+rate: 22.73 kps
+text: ey have 
+
+len: 5
+dt: 239
+rate: 20.92 kps
+text: ther 
+
+len: 31
+dt: 914
+rate: 33.92 kps
+text: people can easily get access to
+
+len: 6
+dt: 246
+rate: 24.39 kps
+text: – a po
+
+len: 5
+dt: 243
+rate: 20.58 kps
+text: ation
+
+len: 5
+dt: 245
+rate: 20.41 kps
+text: ment.
+
+len: 5
+dt: 233
+rate: 21.46 kps
+text: ignht
+
+len: 8
+dt: 338
+rate: 23.67 kps
+text: irstly, 
+
+len: 5
+dt: 228
+rate: 21.93 kps
+text: tions
+
+len: 127
+dt: 390
+rate: 325.64 kps
+text: A deepfake of Biden in a wheelchair made to suggest that Biden is too old and infirm to be president would deceive many people.
+
+len: 127
+dt: 667
+rate: 190.4 kps
+text: A deepfake of Biden in a wheelchair made to suggest that Biden is too old and infirm to be president would deceive many people.
+
+len: 127
+dt: 867
+rate: 146.48 kps
+text: A deepfake of Biden in a wheelchair made to suggest that Biden is too old and infirm to be president would deceive many people.
+
+len: 127
+dt: 2283
+rate: 55.63 kps
+text: A deepfake of Biden in a wheelchair made to suggest that Biden is too old and infirm to be president would deceive many people.
+
+len: 5
+dt: 248
+rate: 20.16 kps
+text: tion 
+
+len: 5
+dt: 592
+rate: 8.45 kps
+text: ertai
+
+len: 5
+dt: 240
+rate: 20.83 kps
+text: forma
+
+len: 5
+dt: 353
+rate: 14.16 kps
+text: tify 
+
+id: s7
+med: 2.0
+p90: 4.0
+p95: 5.0
+p99: 12.0
+large insert counts: [13 13]
+len: 13
+dt: 248
+rate: 52.42 kps
+text: – watermark /
+
+len: 13
+dt: 259
+rate: 50.19 kps
+text: Practicality 
+
+id: s8
+med: 2.0
+p90: 3.0
+p95: 4.0
+p99: 5.0
+large insert counts: [  5   5   5   5   5   5   5   5   5   5   6   6   6   6   6   8   9   9
+  11  20  22 146 153 159 165 219 274]
+len: 5
+dt: 243
+rate: 20.58 kps
+text:  the 
+
+len: 5
+dt: 256
+rate: 19.53 kps
+text: tions
+
+len: 5
+dt: 248
+rate: 20.16 kps
+text: ion o
+
+len: 5
+dt: 239
+rate: 20.92 kps
+text: ries 
+
+len: 5
+dt: 382
+rate: 13.09 kps
+text: ocal 
+
+len: 6
+dt: 242
+rate: 24.79 kps
+text: ment s
+
+len: 5
+dt: 241
+rate: 20.75 kps
+text: tatio
+
+len: 5
+dt: 244
+rate: 20.49 kps
+text: ation
+
+len: 6
+dt: 260
+rate: 23.08 kps
+text: ther r
+
+len: 219
+dt: 25551
+rate: 8.57 kps
+text: Implementation Outline for a Rule of Law Society (2020-2025)” emphasized regulation on AI media, and the draft “Data Security Management Measure” made labeling deepfakes on social media a mandatory requirement (Wang). 
+
+len: 5
+dt: 246
+rate: 20.33 kps
+text: le of
+
+len: 5
+dt: 234
+rate: 21.37 kps
+text: lishe
+
+len: 22
+dt: 1353
+rate: 16.26 kps
+text:  ”, published in China
+
+len: 5
+dt: 540
+rate: 9.26 kps
+text: t 0f 
+
+len: 5
+dt: 266
+rate: 18.8 kps
+text: ical 
+
+len: 5
+dt: 245
+rate: 20.41 kps
+text: ution
+
+len: 5
+dt: 574
+rate: 8.71 kps
+text: ds to
+
+len: 5
+dt: 255
+rate: 19.61 kps
+text: uring
+
+len: 6
+dt: 261
+rate: 22.99 kps
+text: iring 
+
+len: 5
+dt: 797
+rate: 6.27 kps
+text: ocial
+
+len: 5
+dt: 457
+rate: 10.94 kps
+text: eithe
+
+len: 5
+dt: 264
+rate: 18.94 kps
+text: pefka
+
+len: 5
+dt: 235
+rate: 21.28 kps
+text: dn’t’
+
+len: 5
+dt: 245
+rate: 20.41 kps
+text: his m
+
+len: 5
+dt: 232
+rate: 21.55 kps
+text: thod 
+
+len: 5
+dt: 250
+rate: 20.0 kps
+text:  and 
+
+len: 5
+dt: 342
+rate: 14.62 kps
+text: aftin
+
+id: s8
+med: 2.0
+p90: 3.0
+p95: 4.0
+p99: 5.0
+large insert counts: [  5   5   5   5   5   5   5   5   5   5   6   6   6   6   6   8   9   9
+  11  20  22 146 153 159 165 219 274]
+len: 5
+dt: 243
+rate: 20.58 kps
+text:  the 
+
+len: 5
+dt: 256
+rate: 19.53 kps
+text: tions
+
+len: 5
+dt: 248
+rate: 20.16 kps
+text: ion o
+
+len: 5
+dt: 239
+rate: 20.92 kps
+text: ries 
+
+len: 5
+dt: 382
+rate: 13.09 kps
+text: ocal 
+
+len: 6
+dt: 242
+rate: 24.79 kps
+text: ment s
+
+len: 5
+dt: 241
+rate: 20.75 kps
+text: tatio
+
+len: 5
+dt: 244
+rate: 20.49 kps
+text: ation
+
+len: 6
+dt: 260
+rate: 23.08 kps
+text: ther r
+
+len: 219
+dt: 25551
+rate: 8.57 kps
+text: Implementation Outline for a Rule of Law Society (2020-2025)” emphasized regulation on AI media, and the draft “Data Security Management Measure” made labeling deepfakes on social media a mandatory requirement (Wang). 
+
+len: 5
+dt: 246
+rate: 20.33 kps
+text: le of
+
+len: 5
+dt: 234
+rate: 21.37 kps
+text: lishe
+
+len: 22
+dt: 1353
+rate: 16.26 kps
+text:  ”, published in China
+
+len: 5
+dt: 540
+rate: 9.26 kps
+text: t 0f 
+
+len: 5
+dt: 266
+rate: 18.8 kps
+text: ical 
+
+len: 5
+dt: 245
+rate: 20.41 kps
+text: ution
+
+len: 5
+dt: 574
+rate: 8.71 kps
+text: ds to
+
+len: 5
+dt: 255
+rate: 19.61 kps
+text: uring
+
+len: 6
+dt: 261
+rate: 22.99 kps
+text: iring 
+
+len: 5
+dt: 797
+rate: 6.27 kps
+text: ocial
+
+len: 5
+dt: 457
+rate: 10.94 kps
+text: eithe
+
+len: 5
+dt: 264
+rate: 18.94 kps
+text: pefka
+
+len: 5
+dt: 235
+rate: 21.28 kps
+text: dn’t’
+
+len: 5
+dt: 245
+rate: 20.41 kps
+text: his m
+
+len: 5
+dt: 232
+rate: 21.55 kps
+text: thod 
+
+len: 5
+dt: 250
+rate: 20.0 kps
+text:  and 
+
+len: 5
+dt: 342
+rate: 14.62 kps
+text: aftin
+
+id: s10
+med: 2.0
+p90: 4.0
+p95: 4.0
+p99: 5.0
+large insert counts: [ 5  5  5  5  5  5  5  5  6  6  7  7  9 12 93 93]
+len: 5
+dt: 245
+rate: 20.41 kps
+text: in th
+
+len: 5
+dt: 244
+rate: 20.49 kps
+text: ely s
+
+len: 5
+dt: 451
+rate: 11.09 kps
+text: ments
+
+len: 5
+dt: 251
+rate: 19.92 kps
+text: etail
+
+len: 5
+dt: 247
+rate: 20.24 kps
+text: tinos
+
+len: 93
+dt: 7206
+rate: 12.91 kps
+respondents on the Lucid survey research platform
+
+len: 93
+dt: 851
+rate: 109.28 kps
+respondents on the Lucid survey research platform
+
+len: 7
+dt: 510
+rate: 13.73 kps
+text: losion 
+
+len: 5
+dt: 378
+rate: 13.23 kps
+text: iece 
+
+len: 5
+dt: 258
+rate: 19.38 kps
+text: epfak
+
+len: 5
+dt: 630
+rate: 7.94 kps
+text:  and 
+
+len: 5
+dt: 370
+rate: 13.51 kps
+text: istin
+
+len: 5
+dt: 235
+rate: 21.28 kps
+text: tion 
+
+len: 5
+dt: 240
+rate: 20.83 kps
+text: tions
+
+len: 5
+dt: 237
+rate: 21.1 kps
+text: maple
+
+len: 5
+dt: 250
+rate: 20.0 kps
+text: cant 
+
+id: s11
+med: 1.0
+p90: 3.0
+p95: 3.3999999999999986
+p99: 5.439999999999991
+large insert counts: [7]
+len: 7
+dt: 252
+rate: 27.78 kps
+text: Others’
+
+id: s12
+med: 2.0
+p90: 3.0
+p95: 4.0
+p99: 5.0
+large insert counts: [ 5  5  5  5  5  5  6  6  6  6  6  7  7  7  8  8  8 11]
+len: 11
+dt: 243
+rate: 45.27 kps
+text: Understood 
+
+len: 7
+dt: 242
+rate: 28.93 kps
+text: Didn’t 
+
+len: 5
+dt: 345
+rate: 14.49 kps
+text: conte
+
+len: 6
+dt: 344
+rate: 17.44 kps
+text: tos of
+
+len: 5
+dt: 237
+rate: 21.1 kps
+text: ation
+
+len: 5
+dt: 242
+rate: 20.66 kps
+text: late 
+
+len: 5
+dt: 702
+rate: 7.12 kps
+text: epfak
+
+len: 5
+dt: 552
+rate: 9.06 kps
+text: chian
+
+len: 5
+dt: 240
+rate: 20.83 kps
+text: hinad
+
+len: 5
+dt: 254
+rate: 19.69 kps
+text: epfak
+
+len: 5
+dt: 243
+rate: 20.58 kps
+text: lable
+
+len: 8
+dt: 260
+rate: 30.77 kps
+text: – China 
+
+len: 6
+dt: 244
+rate: 24.59 kps
+text: tion a
+
+len: 5
+dt: 253
+rate: 19.76 kps
+text: mple 
+
+len: 6
+dt: 242
+rate: 24.79 kps
+text: cial m
+
+len: 8
+dt: 244
+rate: 32.79 kps
+text: Found ou
+
+len: 5
+dt: 272
+rate: 18.38 kps
+text: Form 
+
+len: 6
+dt: 244
+rate: 24.59 kps
+text: arch, 
+
+id: s13
+med: 2.0
+p90: 3.0
+p95: 4.0
+p99: 62.12000000000057
+large insert counts: [ 110  110  126 1992]
+len: 1992
+dt: 887
+rate: 2245.77 kps
+“ChatGPT Usage and Adoption Patterns at Work.” Openai.com, OpenAI, 2026, openai.com/business/guides-and-resources/chatgpt-usage-and-adoption-patterns-at-wClegg, Nick. “What We Saw on Our Platforms during 2024’S Global Elections | Meta.” Meta, 3 Dec. 2024, about.fb.com/news/2024/12/2024-global-elections-metaLiu, Guozhu. “深度伪造与国家安全:基于总体国家安全观的视角.” 国际安全研究, vol. 40, no. 3, Apr. 2022, https://doi.org/10.14093/j.cnki.cn10-1132/d.2022.03.0Mani, Eshann. “Shaping Robust AI Regulation: Lessons from India’s ‘Deepfake’ Election - Harvard Political Review.” Harvard Political Review, 6 Dec. 2024, Pierson, Charles. “AI and the 2024 Presidential Election.” CounterPunch, Counterpunch, June 2023, p. 20, research.ebsco.com/linkprocessor/plink?id=2a66e40Rascius, Brendan. “Don’t Get Fooled This Election Season — Here’s How You Can Spot Deepfake Political Ads.” Charlotte Observer, 20 Feb. 2024, www.charlott“The Definition of Deepfake.” Time.com, TIME USA, LLC, 3 Apr. 2025, p. N.PAG-N.PAG, research.ebsco.com/linkprocessor/plink?id=161a9e1460be33dc8331228a0ed8Wang, Xinzhi. “A Comparative Study of Deepfake Policy in the United States and China.” International Journal of Frontiers in Sociology, vol. 7, no. 4, FraZhao, Qiuyue. “系好人工智能竞速发展‘安全带’-新华网.” News.cn, 2025, www.news.cn/tech/20250530/bbeaae05635e455eac48ab99cbd3398a/c.html. Accessed 4 Mar. 2026.
+
+len: 126
+dt: 2155
+rate: 58.47 kps
+text: The Indian National Congress, the country’s major opposition party committed the largest spread of deepfakes on social media. 
+
+len: 110
+dt: 3326
+rate: 33.07 kps
+text: , which prohibits impact of political deepfakes.  (The United Nation could also engage in drafting policies …)
+
+len: 110
+dt: 4463
+rate: 24.65 kps
+text: , which prohibits impact of political deepfakes.  (The United Nation could also engage in drafting policies …)

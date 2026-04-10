@@ -1,0 +1,242 @@
+id: s2
+med: 2.0
+p90: 3.0
+p95: 4.0
+p99: 6.0
+large dt: [16224 16228 17752 19082 19396 19492 19886 19935 20993 21150 30174 30471
+ 30993 31789 33322 41206 44523 45315 47238 48357 54216 59462 65280 88630
+ 95694 172471 277249]
+small dt: [218 221 221 221 223 223 223 224 224 224 224 224 224 224 224 225 225 225
+ 225 226 226 226 226 226 226 226 226]
+large insert counts: [  6   6   6   6   6   7   9   9  10  15 156 156 208 507]
+
+=====Both large texts and long dt=====
+
+len: 9
+dt: 20993
+rate: 0.43 kps
+text: (Pierson)
+
+len: 156
+dt: 277249
+rate: 0.56 kps
+text: A deepfake posted to Trump's Truth Social account depicts Florida Governor Ron DeSantis riding a rhinoceros (i.e., "RINO," i.e., "Republican In Name Only").
+
+len: 156
+dt: 30471
+rate: 5.12 kps
+text: A deepfake posted to Trump's Truth Social account depicts Florida Governor Ron DeSantis riding a rhinoceros (i.e., "RINO," i.e., "Republican In Name Only").
+
+len: 507
+dt: 33322
+rate: 15.22 kps
+text: Social media platforms claim that they restrict deepfakes. Facebook has announced that it will remove deepfakes, but Business Insider says Facebook's policy has "loopholes." YouTube says that it takes down deepfakes, but the platform allows content claiming that the 2020 election was stolen. Twitter labels deepfakes and prohibits sharing of "misleading media" which "deceive or confuse people and lead to harm." In any event, YouTube, TikTok, and Facebook are working on their own generative-AI platforms.
+
+len: 7
+dt: 31789
+rate: 0.22 kps
+text: (Clegg)
+
+len: 15
+dt: 19492
+rate: 0.77 kps
+text: (Barari et al.)
+
+len: 10
+dt: 45315
+rate: 0.22 kps
+text: (Rascius) 
+
+len: 6
+dt: 59462
+rate: 0.1 kps
+text: (Mani)
+
+id: s3
+med: 2.0
+p90: 3.0
+p95: 4.0
+p99: 12.090000000000032
+large dt: [20897 21663 23383 24155 26940 28681 32524 34092 36129 36618 38229 55982
+ 91793 138846 266903 796995]
+small dt: [224 224 225 226 226 226 227 227 227 227 227 228 228 228 228 228]
+large insert counts: [ 13  33  38  56  62  72 344 558]
+
+=====Both large texts and long dt=====
+
+len: 344
+dt: 36129
+rate: 9.52 kps
+text: In 2021, China's Cyberspace Administration took regulatory measures on social networking software to address emerging risks associated with this technology. However, by 2023, online fraud rates remained high, with some perpetrators using Deepfake technology to conduct online transactions, successfully defrauding victims of over 2 million RMB.
+
+id: s3
+med: 2.0
+p90: 3.0
+p95: 4.0
+p99: 12.090000000000032
+large dt: [20897 21663 23383 24155 26940 28681 32524 34092 36129 36618 38229 55982
+ 91793 138846 266903 796995]
+small dt: [224 224 225 226 226 226 227 227 227 227 227 228 228 228 228 228]
+large insert counts: [ 13  33  38  56  62  72 344 558]
+
+=====Both large texts and long dt=====
+
+len: 344
+dt: 36129
+rate: 9.52 kps
+text: In 2021, China's Cyberspace Administration took regulatory measures on social networking software to address emerging risks associated with this technology. However, by 2023, online fraud rates remained high, with some perpetrators using Deepfake technology to conduct online transactions, successfully defrauding victims of over 2 million RMB.
+
+id: s5
+med: 2.0
+p90: 3.0
+p95: 4.0
+p99: 5.0
+large dt: [16814 16936 18344 22422 31520 32539 36274 41194 42984 91924 135395 513460]
+small dt: [221 225 225 225 226 226 226 226 226 227 227 227]
+large insert counts: [5 5 5 5 5 7]
+
+=====Both large texts and long dt=====
+
+id: s6
+med: 2.0
+p90: 3.0
+p95: 4.0
+p99: 5.0
+large dt: [11005 11600 11777 11900 11983 12482 13033 13413 15688 15773 16315 16499
+ 17527 18482 19182 20217 21499 22454 23020 25428 28719 28907 30977 33221
+ 35602 36362 36949 37210 38202 40579 42499 42549 43774 50814 54182 60537
+ 64123 77761 119920 132136 176630 207868 251858]
+small dt: [222 223 223 224 224 225 225 225 225 225 226 226 226 226 227 227 227 227
+ 227 227 227 227 227 228 228 228 228 228 228 228 228 228 228 228 228 228
+ 228 228 228 228 228 229 229]
+large insert counts: [  5   5   5   5   5   5   5   5   6   6   6   6   7   8   8   9  31 127
+ 127 127 127]
+
+=====Both large texts and long dt=====
+
+id: s7
+med: 2.0
+p90: 4.0
+p95: 5.0
+p99: 12.0
+large dt: [6852 7598 7861 15610 23550]
+small dt: [229 231 231 231 231]
+large insert counts: [13 13]
+
+=====Both large texts and long dt=====
+
+id: s8
+med: 2.0
+p90: 3.0
+p95: 4.0
+p99: 5.0
+large dt: [13113 13199 13486 13497 13521 13725 14150 14407 14465 14920 15046 15201
+ 15780 15970 17437 17979 18229 18254 18379 18604 19093 22893 23067 23509
+ 23633 24427 24639 25349 25431 25551 28258 29213 29904 30606 31909 34236
+ 35180 36795 37303 38749 39706 43254 46318 46650 50932 58035 61076 61985
+ 63043 63269 92631 99928 130852 291077]
+small dt: [221 221 222 224 224 224 224 225 225 225 225 225 225 226 226 226 226 226
+ 226 226 226 226 226 226 226 226 226 226 227 227 227 227 227 227 227 227
+ 227 227 227 227 227 227 227 228 228 228 228 228 228 228 228 228 228 228]
+large insert counts: [  5   5   5   5   5   5   5   5   5   5   6   6   6   6   6   8   9   9
+  11  20  22 146 153 159 165 219 274]
+
+=====Both large texts and long dt=====
+
+len: 219
+dt: 25551
+rate: 8.57 kps
+text: Implementation Outline for a Rule of Law Society (2020-2025)” emphasized regulation on AI media, and the draft “Data Security Management Measure” made labeling deepfakes on social media a mandatory requirement (Wang). 
+
+len: 274
+dt: 50932
+rate: 5.38 kps
+text: In China, deepfake detection is strictly prioritized for national security, social media platforms are mandatorily required to detect and label AI gIn United States, regulation of deepfakes focuses on election fairness and isn’t unified as a whole country 
+
+id: s8
+med: 2.0
+p90: 3.0
+p95: 4.0
+p99: 5.0
+large dt: [13113 13199 13486 13497 13521 13725 14150 14407 14465 14920 15046 15201
+ 15780 15970 17437 17979 18229 18254 18379 18604 19093 22893 23067 23509
+ 23633 24427 24639 25349 25431 25551 28258 29213 29904 30606 31909 34236
+ 35180 36795 37303 38749 39706 43254 46318 46650 50932 58035 61076 61985
+ 63043 63269 92631 99928 130852 291077]
+small dt: [221 221 222 224 224 224 224 225 225 225 225 225 225 226 226 226 226 226
+ 226 226 226 226 226 226 226 226 226 226 227 227 227 227 227 227 227 227
+ 227 227 227 227 227 227 227 228 228 228 228 228 228 228 228 228 228 228]
+large insert counts: [  5   5   5   5   5   5   5   5   5   5   6   6   6   6   6   8   9   9
+  11  20  22 146 153 159 165 219 274]
+
+=====Both large texts and long dt=====
+
+len: 219
+dt: 25551
+rate: 8.57 kps
+text: Implementation Outline for a Rule of Law Society (2020-2025)” emphasized regulation on AI media, and the draft “Data Security Management Measure” made labeling deepfakes on social media a mandatory requirement (Wang). 
+
+len: 274
+dt: 50932
+rate: 5.38 kps
+text: In China, deepfake detection is strictly prioritized for national security, social media platforms are mandatorily required to detect and label AI gIn United States, regulation of deepfakes focuses on election fairness and isn’t unified as a whole country 
+
+id: s10
+med: 2.0
+p90: 4.0
+p95: 4.0
+p99: 5.0
+large dt: [13602 14160 14163 14330 15077 16528 16812 16927 17567 18372 18690 20439
+ 21057 23180 23307 23745 28406 29394 32750 33156 33957 33965 34603 38587
+ 42358 48602 53101 56140 73325 123706 228264 370678 389652]
+small dt: [219 219 222 223 223 225 225 225 226 226 226 227 227 227 227 227 227 227
+ 228 228 228 228 228 228 228 228 228 229 229 229 229 229 229]
+large insert counts: [ 5  5  5  5  5  5  5  5  6  6  7  7  9 12 93 93]
+
+=====Both large texts and long dt=====
+
+len: 12
+dt: 42358
+rate: 0.28 kps
+text: (“基本情况_新华社”)
+
+id: s11
+med: 1.0
+p90: 3.0
+p95: 3.3999999999999986
+p99: 5.439999999999991
+large dt: [44979]
+small dt: [228]
+large insert counts: [7]
+
+=====Both large texts and long dt=====
+
+id: s12
+med: 2.0
+p90: 3.0
+p95: 4.0
+p99: 5.0
+large dt: [8576 8636 9163 9233 9955 10507 10601 10904 11227 11356 11686 12232 12872
+ 13228 13710 13758 14354 14672 15068 16527 16738 16969 17025 17305 18070
+ 19406 21517 25580 27330 30811 32271 33575 37835 40669 69213]
+small dt: [223 223 225 225 225 225 225 225 225 225 225 226 226 226 226 226 226 227
+ 227 227 227 227 227 227 228 228 228 228 228 228 228 228 228 228 228]
+large insert counts: [ 5  5  5  5  5  5  6  6  6  6  6  7  7  7  8  8  8 11]
+
+=====Both large texts and long dt=====
+
+len: 5
+dt: 30811
+rate: 0.16 kps
+text: that 
+
+id: s13
+med: 2.0
+p90: 3.0
+p95: 4.0
+p99: 62.12000000000057
+large dt: [31460 35126 35382 36329 38418 43579 57213 76800]
+small dt: [221 224 227 227 227 227 228 228]
+large insert counts: [ 110  110  126 1992]
+
+=====Both large texts and long dt=====

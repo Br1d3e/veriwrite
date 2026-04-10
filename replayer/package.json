@@ -1,0 +1,21 @@
+{
+  "name": "replayer",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "keywords": [],
+  "author": "",
+  "private": true,
+  "license": "ISC",
+  "devDependencies": {
+    "vite": "^8.0.3"
+  },
+  "dependencies": {
+    "chart.js": "^4.5.1"
+  }
+}

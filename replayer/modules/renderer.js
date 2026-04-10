@@ -34,7 +34,7 @@ export function updateState(newState) {
 export function applyPatch(eventArr) {
     const pos = eventArr[1];
     const delLen = eventArr[2]
-    const ins = normalizeLines(eventArr[3]);
+    const ins = eventArr[3];
     
     const prev = state.docText;
     state.docText = prev.slice(0, pos) + ins + prev.slice(pos + delLen);
@@ -46,8 +46,6 @@ export function applyPatch(eventArr) {
       state.caretPos = pos + ins.length;
     }
 
-    // docText = text.slice(0, caretPos) + caretEl.textContent + text.slice(caretPos);  // Animate cursor
-    // screenEl.textContent = docText;
     renderCursor();
 }
 
@@ -55,18 +53,15 @@ export function renderCursor() {
     caretEl.hidden = false;
     beforeEl.textContent = state.docText.slice(0, state.caretPos);
     afterEl.textContent = state.docText.slice(state.caretPos);
+    caretEl.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+        inline: "center"
+    })
 }
 
-// Escape Microsoft Word Chars
-export function normalizeLines(s) {
-    return String(s)
-    .replace(/\r\n/g, "\n")  
-    .replace(/\r/g, '\n')   // Hard Break
-    .replace(/\u000b/g, '\n')   // Soft Break
 
-    // .replace(/&/g, '&amp;')
-    // .replace(/</g, '&lt;')
-    // .replace(/>/g, '&gt;')
-    // .replace(/"/g, '&quot;')
-    // .replace(/'/g, '&#39;')
+export function restoreCursor(screenEl) {
+    screenEl.replaceChildren(beforeEl, caretEl, afterEl);
+    renderCursor();
 }

@@ -3,8 +3,9 @@
 // Output: Player Class used by app.js
 
 
-import { processData } from "./loader.js";
-import { applyPatch, normalizeLines, updateState, renderCursor } from "./renderer.js";
+// import { processData } from "./loader.js";
+import { applyPatch, updateState, renderCursor } from "./renderer.js";
+import { resetStatsPanel } from "../app.js";
 
 
 // Global Variables & State Machine
@@ -39,9 +40,6 @@ let sessionsEl = null;
 // Interface with app.js
 // Load record from app.js
 export function loadRecord(flightRecord) {
-
-    // Normalize data using loading.js
-    processData(flightRecord);
     state.record = flightRecord
     state.sessions = flightRecord.sessions;
 
@@ -71,6 +69,13 @@ export function changeSpeed(newSpeed) {
     speedLbl.textContent = `Speed: ${state.speed}x`;
 }
 
+export function getSession() {
+  return state.sessions[state.currentSession];
+}
+
+export function getDocText() {
+  return state.docText;
+}
 
 // Transfer necessary UI DOM from app.js
 export function updateDOM(DOM) {    // an object
@@ -96,7 +101,7 @@ export function resetStatus() {
       titleEl.textContent = `Title: ${state.record.m.title}`;
       sessionsEl.textContent = `Session: ${state.currentSession + 1} / ${state.sessions.length}`;
       eventsEl.textContent = `Events: 0 /${state.sessions[0].ev.length}`;
-      state.docText = normalizeLines(state.sessions[0].init);   // Start with first session's init text
+      state.docText = state.sessions[0].init;   // Start with first session's init text
       durationEl.textContent = "Session Time: 00:00:00";
       state.evTotal = calculateTotalEv(state.sessions.length);
       progressEl.value = calculateProgress();
@@ -106,6 +111,8 @@ export function resetStatus() {
 
       updateState(state);
       renderCursor();
+
+      resetStatsPanel();
   }
 
 
@@ -119,6 +126,14 @@ function calculateTotalEv(totalS) {     // Total session numbers
 
 function calculateProgress() {
   return state.evCount / state.evTotal * 100;
+}
+
+function calculateTs(eventIdx) {
+  let totalTs = 0;
+  for (let i = 0; i < eventIdx; i++) {
+    totalTs += state.sessions[state.currentSession].ev[i][0];
+  }
+  return totalTs;
 }
 
 
@@ -138,7 +153,7 @@ function runSessions() {
     // Stop playing when finished all
     if (state.currentSession >= state.sessions.length - 1) {
       console.log(`Finished All Sessions`);
-      resetStatus();
+      // resetStatus();
       return;
     }
 
@@ -148,35 +163,71 @@ function runSessions() {
   requestAnimationFrame(runSessions);
 }
 
-
-// Switch to destinated session with sid
-export function seekToSession(sid) {    // sid starts from 0
+/**
+ * Switch to destinated session with sid
+ * @param {number} sid session id starting from 0
+ * @returns current session
+ */
+export function seekToSession(sid) {
     // validate sid
     if (typeof sid !== "number" || sid < 0 || sid >= state.sessions.length) return;
 
     state.currentSession = sid;
     state.i = 0;
-    state.evCount = calculateTotalEv(state.currentSession + 1);
+    state.evCount = calculateTotalEv(state.currentSession);
     progressEl.value = calculateProgress();
     state.playTs = 0;
     sessionsEl.textContent = `Session: ${state.currentSession + 1} / ${state.sessions.length}`;
-    const init = state.sessions[state.currentSession].init;
-    state.docText = normalizeLines(init);
+    const init = state.sessions[state.currentSession].init ?? "";
+    state.docText = init;
     state.caretPos = state.docText.length;
     renderCursor();
+
+    return state.sessions[state.currentSession];   
 }
 
 export function seekNextSession() {
   if (state.currentSession >= state.sessions.length - 1) return;
-  seekToSession(state.currentSession + 1);
+  return seekToSession(state.currentSession + 1);
 }
 
 export function seekPrevSession() {
   if (state.currentSession <= 0) return;
-  seekToSession(state.currentSession - 1);
+  return seekToSession(state.currentSession - 1);
 }
 
 
+export function seekToEvent(eventIdx) {
+  if (eventIdx < 0 || eventIdx >= state.sessions[state.currentSession].ev.length) return;
+
+  state.i = 0;
+  // (falsely) skip events to eventIdx
+  const sessions = state.sessions[state.currentSession];
+  const ev = sessions.ev;
+  state.docText = sessions.init;
+  for (; state.i <= eventIdx; state.i++) {
+    const pos = ev[state.i][1];
+    const delLen = ev[state.i][2];
+    const ins = ev[state.i][3];
+
+    state.docText = state.docText.slice(0, pos) + ins + state.docText.slice(pos + delLen);
+  }
+
+  state.playTs = calculateTs(eventIdx);
+  state.playing = false;
+  state.evCount = eventIdx;
+  progressEl.value = calculateProgress();
+  eventsEl.textContent = `Events: ${state.i} /${state.sessions[state.currentSession].ev.length}`;
+  durationEl.textContent = `Session Time: ${convertTs()}`;
+
+  renderCursor();
+}
+
+
+// let onRender = null;
+// export function regOnRender(callback) {
+//   onRender = callback;
+// }
 
 /**
  * Runs events in a single session
@@ -201,20 +252,14 @@ function step(ev) {
   }
   state.lastFrameTs = performance.now();
 
+  // if (onRender) {
+  //   onRender();
+  // } 
 
   // Update meta & progress bar
   eventsEl.textContent = `Events: ${state.i} /${ev.length}`;
   durationEl.textContent = `Session Time: ${convertTs()}`;
   progressEl.value = calculateProgress();
-
-
-  // if (state.i >= ev.length) {
-  //   console.log(`Event ${state.i + 1} Finished`)
-  //   // state.playing = false;
-  //   return;
-  // }
-
-  // requestAnimationFrame(step)   // Next frame
 }
 
 
