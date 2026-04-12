@@ -42,10 +42,10 @@ export function calTimeline(record) {
     
     const timeline = {
         sessionCount: sessionCount,
-        docStart: new Date(docStartTs),
-        docEnd: new Date(docEndTs),
-        docSpan: new Date(docSpanTs),
-        durationTs: new Date(durationTs),
+        docStartTs: docStartTs,
+        docEndTs: docEndTs,
+        docSpanTs: docSpanTs,
+        durationTs: durationTs,
         activeDays: activeDays,
         durationsGraph: durationsGraph
     }
@@ -59,7 +59,7 @@ function sessionDurationsGraph(sessions) {
     for (let i = 0; i < sessions.length; i++) {
         const session = sessions[i];
         sid.push(i + 1);
-        sessionTimes.push(new Date(session.tn - session.t0));
+        sessionTimes.push(session.tn - session.t0);
     }
 
     return {
