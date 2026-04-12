@@ -81,6 +81,9 @@ function calPasteIns(session) {
         if (currentText.includes(ins)) {
             evDesc.tags.push("in-doc paste")
         }
+        if (delLen > 0) {
+            evDesc.tags.push("replacement");
+        }
         currentText = currentText.slice(0, pos) + ins + currentText.slice(pos + delLen);  // update current text
 
         if (insLen >= medThreshold) {

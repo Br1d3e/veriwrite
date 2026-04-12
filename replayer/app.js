@@ -1,8 +1,9 @@
 
 import { loadRecord, startPlaying, stopPlaying, resetStatus, changeSpeed, updateDOM, seekToSession, seekNextSession, seekPrevSession, getSession, seekToEvent, getDocText } from "./modules/player.js"
-import { cursorDOM, restoreCursor } from "./modules/renderer.js";
+import { cursorDOM, restoreCursor} from "./modules/renderer.js";
 import { checkStruct, processData } from "./modules/loader.js";
 import { calSession } from "./modules/stats/session/index.js";
+import { calDocStats } from "./modules/stats/doc/index.js";
 
 import { Chart } from "chart.js/auto";
 
@@ -673,7 +674,7 @@ function renderPasteHl (activePaste, text) {
 
     const span = document.createElement("span");
     // Different display color for different levels/tags
-    if (tags.includes("in-doc paste")) {
+    if (tags.includes("in-doc paste") || tags.includes("replacement")) {
       span.className = "hl-low";
     }
     else if (lvl === "high") {
@@ -727,6 +728,10 @@ fileEl.addEventListener("change", async () => {
 
   // Generate session buttons
   genSessionBtns(flightRecord.sessions);
+
+  // test doc-level stats
+  const docStats = calDocStats(flightRecord);
+  console.log(docStats);
 
   // Update session-level stats
   sessionStats = calSession(getSession());
