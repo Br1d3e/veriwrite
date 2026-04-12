@@ -65,3 +65,10 @@ export function restoreCursor(screenEl) {
     screenEl.replaceChildren(beforeEl, caretEl, afterEl);
     renderCursor();
 }
+
+
+// // test
+// export function seekCaretTo(pos) {
+//     state.caretPos = pos;
+//     renderCursor();
+// }

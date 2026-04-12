@@ -27,7 +27,8 @@ export function calContinuity(record) {
     const gaps = detectGaps(sessions);
 
     const continuity = {
-        gaps: gaps
+        gaps: gaps,
+        offlineTextRatio: calOfflineTextRatio(sessions, gaps)
     }
     return continuity;
 }
@@ -57,37 +58,41 @@ function detectGaps(sessions) {
         if (currentInit !== prevEndText) {
             // Detected a gap with offline edits
             // positional stats
-            const gapBefore = i - 1;
-            const gapAfter = i;
+            const gapBefore = i;
+            const gapAfter = i + 1;
             // gap time metrics
             const prevEndTs = sessions[i-1].tn;
             const currStartTs = session.t0;
             const gapDuration = currStartTs - prevEndTs;
 
-            const textPatch = dmp.patch_make(prevEndText, currentInit);
-            // an insertion (1), a deletion (-1) or an equality (0)
-            
+            const textDiff = dmp.diff_main(prevEndText, currentInit);
+            dmp.diff_cleanupSemantic(textDiff);
 
-            const charsDiff = textPatch.length;
-            // const wordDiff = wordCount(textDiff);
-            
-            const majorThres = 50;     // major difference = 50+ words
-            // const majorDiff = wordDiff >= majorThres;
+            const textPatch = dmp.patch_make(prevEndText, textDiff);
+
+            // an insertion (1), a deletion (-1) or an equality (0)
+            let charsDiff = 0;
+            for (let [op, text] of textDiff) {
+                charsDiff += Math.abs(text.length * op);
+            }
+        
+            const majorThres = 50;     // major difference = 50+ chars
+            const majorDiff = charsDiff >= majorThres;
 
             const gap = {
                 prevSession: gapBefore,
                 nextSession: gapAfter,
-                gapDuration: new Date(gapDuration),
+                gapMs: gapDuration,
                 textPatch: textPatch,
-                // charsDiff: charsDiff,
-                // wordDiff: wordDiff,
-                // majorDiff: majorDiff
+                charsDiff: charsDiff,
+                majorDiff: majorDiff
             }
             gaps.push(gap);
         }
         
 
         // update next prevEndText based on current session's ev
+        prevEndText = currentInit;
         if (ev.length > 0) {
             for (let j = 0; j < ev.length; j++) {
                 const pos = ev[j][1];
@@ -100,8 +105,91 @@ function detectGaps(sessions) {
     return gaps;
 }
 
+function getSegFromPos(textSeg, pos) {
+    let segStart = 0;
+    let segEnd = 0;
+    let segIdx = 0;
+    for (let i = 0; i < textSeg.length; i++) {
+        segStart = segEnd;
+        segEnd += textSeg[i].text.length;
+        if (segStart <= pos && pos < segEnd) {
+            segIdx = i;
+            break;
+        }
+    } 
+    const segPos = pos - segStart;
+    return [segIdx, segPos];
+}
 
-function calOfflineTextRatio(sessions) {
+function sumTextSegLen(textSeg) {
+    let sum = 0;
+    for (let seg of textSeg) {
+        sum += seg.text.length;
+    }
+    return sum;
+}
+
+function editTextSeg(textSeg, pos, ins, delLen, type="recorded") {
+    // Delete
+    let [segIdx, segPos] = getSegFromPos(textSeg, pos);
+    let toDelete = delLen;
+    while (toDelete > 0 && segIdx < textSeg.length) {
+        let text = textSeg[segIdx].text;
+        if (toDelete < text.length - segPos) {
+            textSeg[segIdx].text = text.slice(0, segPos) + text.slice(segPos + toDelete);
+            break;
+        }
+        if (segPos === 0) {     // delete entire text seg
+            textSeg.splice(segIdx, 1);
+            toDelete -= text.length;
+        } else if (segPos > 0){     // conserve seg the left side, del right part
+            textSeg[segIdx].text = text.slice(0, segPos);
+            toDelete -= text.length - segPos;
+            segIdx++;
+        }
+        segPos = 0;
+    }
+
+    // Insert
+    if (ins.length > 0) {
+        if (sumTextSegLen(textSeg) === pos) {     // append to the end
+            textSeg.push({
+                text: ins,
+                type: type
+            });
+        } else {
+             // split current text segment
+            [segIdx, segPos] = getSegFromPos(textSeg, pos);
+            
+            // on the left of seg
+            if (segPos == 0) {
+                textSeg.splice(segIdx, 0, {
+                    text: ins,
+                    type: type
+                });
+            } else if (segPos === textSeg[segIdx].text.length) {    // on the right of seg
+                textSeg.splice(segIdx + 1, 0, {
+                    text: ins,
+                    type: type
+                });
+            } else {    // in the middle of seg
+                const leftText = textSeg[segIdx].text.slice(0, segPos);
+                const rightText = textSeg[segIdx].text.slice(segPos);
+                textSeg[segIdx].text = leftText;
+                textSeg.splice(segIdx + 1, 0, {
+                    text: ins,
+                    type: type
+                });
+                textSeg.splice(segIdx + 2, 0, {
+                    text: rightText,
+                    type: textSeg[segIdx].type
+                });
+            }
+        }
+    }
+}
+
+function calOfflineTextRatio(sessions, gaps) {
     const initText = sessions[0].init;
     let textSeg = [];
     textSeg.push({
@@ -109,18 +197,74 @@ function calOfflineTextRatio(sessions) {
         type: "offline"
     });
 
-    for (let session of sessions) {
-        const ev = session.ev;
+    for (let i = 0; i < sessions.length; i++) {
+        const ev = sessions[i].ev;
+
+        // let currentText = sessions[i].init;     // debug
+
         if (ev.length > 0) {
             for (let j = 0; j < ev.length; j++) {
                 const pos = ev[j][1];
                 const ins = ev[j][3];
                 const delLen = ev[j][2];
 
-                // TODO
-                // Insert: set text at textSeg[pos+1]
+                editTextSeg(textSeg, pos, ins, delLen, "recorded");
+
+                // currentText = currentText.slice(0, pos) + ins + currentText.slice(pos + delLen);
+            }
+        }
+
+        // let joinedText = "";
+        // for (let seg of textSeg) {
+        //     joinedText += seg.text;
+        // }
+        // if (joinedText !== currentText) {
+        //     console.log(`error at session ${i + 1}`)
+        //     console.log("joinedText\n", joinedText);
+        //     console.log("currentText\n", currentText);
+        //     console.log("diff\n", dmp.diff_main(joinedText, currentText));
+        // }
+
+
+        // Session gaps
+        for (let j = 0; j < gaps.length; j++) {    // Search for gap in gaps array
+            if (gaps[j].prevSession === i + 1) {
+                const gap = gaps[j];
+                const textPatch = gap.textPatch;
+
+                for (let patch of textPatch) {
+                    let startPos = patch.start1;
+                    const diffs = patch.diffs;
+                    for (let diff of diffs) {
+                        const op = diff[0];
+                        const text = diff[1];
+
+                        const ins = op === 1 ? text : "";
+                        const delLen = op === -1 ? text.length : 0;
+
+                        editTextSeg(textSeg, startPos, ins, delLen, "offline");
+                        
+                        if (op === 0 || op === 1) {
+                            startPos += text.length;
+                        }
+                    }    
+                }
             }
         }
     }
 
+    // Compute ratio
+    let offlineChars = 0;
+    let recordedChars = 0;
+    for (let seg of textSeg) {
+        if (seg.type === "offline") {
+            offlineChars += seg.text.length;
+        } else if (seg.type === "recorded") {
+            recordedChars += seg.text.length;
+        }
+    }
+    const offlineTextRatio = offlineChars / (recordedChars + offlineChars);
+
+
+    return offlineTextRatio;
 }

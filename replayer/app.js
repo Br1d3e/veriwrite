@@ -1,6 +1,6 @@
 
 import { loadRecord, startPlaying, stopPlaying, resetStatus, changeSpeed, updateDOM, seekToSession, seekNextSession, seekPrevSession, getSession, seekToEvent, getDocText } from "./modules/player.js"
-import { cursorDOM, restoreCursor} from "./modules/renderer.js";
+import { cursorDOM, renderCursor, restoreCursor, seekCaretTo} from "./modules/renderer.js";
 import { checkStruct, processData } from "./modules/loader.js";
 import { calSession } from "./modules/stats/session/index.js";
 import { calDocStats } from "./modules/stats/doc/index.js";
@@ -735,7 +735,7 @@ fileEl.addEventListener("change", async () => {
 
   // Update session-level stats
   sessionStats = calSession(getSession());
-  console.log(sessionStats);
+  // console.log(sessionStats);
 
   // Update HTML
   resetStatus();
@@ -849,3 +849,19 @@ progAdvCb.addEventListener("change", () => {
   }
   genRevisionUI(revInt);
 })
+
+
+
+// Test: skip caret to pos
+// const testPosInputEl = document.getElementById("test-pos-input");
+// testPosInputEl.addEventListener("change", () => {
+//   const pos = Number(testPosInputEl.value);
+//   seekCaretTo(pos);
+// })
+
+// const lastEventBtn = document.getElementById("last-event");
+// lastEventBtn.addEventListener("click", () => {
+//   const session = getSession();
+//   seekToEvent(session.ev.length - 1);
+//   renderCursor();
+// })
