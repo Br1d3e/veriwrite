@@ -1088,7 +1088,7 @@ fileEl.addEventListener("change", async () => {
 
   // test doc-level stats
   docStats = calDocStats(flightRecord);
-  console.log(docStats);
+  // console.log(docStats);
   updateDocUI(docStats);
 
   // Update session-level stats
