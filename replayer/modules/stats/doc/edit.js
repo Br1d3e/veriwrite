@@ -46,7 +46,7 @@ export function calEditStats(record, timeline) {
 
     // Edit time heatmap
     const activeDays = timeline.activeDays;
-    editHeatmap(sessions, activeDays);
+    const heatmap = editHeatmap(sessions, activeDays);
 
     const editStats = {
         insertedChars: docInsChars,
@@ -54,7 +54,8 @@ export function calEditStats(record, timeline) {
         netChars: docNetChars,
         wordCount: docWordCount,
         pasteOriginRatio: pasteOriginRatio,
-        insCharsGraph: insCharsGraph
+        insCharsGraph: insCharsGraph,
+        heatmap: heatmap
     };
 
     return editStats;

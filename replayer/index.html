@@ -30,6 +30,87 @@
     <input id="speedSlider" disabled type="range" min="0.1" max="20" step="0.1" value="1">
   </div>   
 
+  <!-- Document Stats panel -->
+  <div id="document-stats" hidden>
+    <h2>Document Stats</h2>
+    <p>Document-level timeline, edit, and continuity analysis across all sessions.</p><br>
+
+    <h3>Timeline</h3>
+    <div class="doc-card" id="doc-timeline">
+      <div class="metrics">
+        <div class="metric-box">
+          <span class="metric-label">Document Start</span>
+          <span class="metric-value" id="docStart"></span>
+        </div>
+        <div class="metric-box">
+          <span class="metric-label">Document End</span>
+          <span class="metric-value" id="docEnd"></span>
+        </div>
+        <div class="metric-box">
+          <span class="metric-label">Document Span</span>
+          <span class="metric-value" id="docSpan"></span>
+        </div>
+        <div class="metric-box">
+          <span class="metric-label">Active Writing Time</span>
+          <span class="metric-value" id="docDuration"></span>
+        </div>
+        <div class="metric-box">
+          <span class="metric-label">Active Writing Days</span>
+          <span class="metric-value" id="docActiveDays"></span>
+        </div>
+        <div class="metric-box">
+          <span class="metric-label">Session Count</span>
+          <span class="metric-value" id="docSessionCount"></span>
+        </div>
+      </div>
+      <div class="doc-chart-box">
+        <canvas id="docDurationsGraph"></canvas>
+      </div>
+    </div>
+
+    <h3>Edit</h3>
+    <div class="doc-card" id="doc-edit">
+      <div class="metrics">
+        <div class="metric-box">
+          <span class="metric-label">Inserted Characters</span>
+          <span class="metric-value" id="docInsertedChars"></span>
+        </div>
+        <div class="metric-box">
+          <span class="metric-label">Deleted Characters</span>
+          <span class="metric-value" id="docDeletedChars"></span>
+        </div>
+        <div class="metric-box">
+          <span class="metric-label">Net Characters</span>
+          <span class="metric-value" id="docNetChars"></span>
+        </div>
+        <div class="metric-box">
+          <span class="metric-label">Word Count</span>
+          <span class="metric-value" id="docWordCount"></span>
+        </div>
+        <div class="metric-box">
+          <span class="metric-label">Paste Origin Ratio</span>
+          <span class="metric-value" id="docPasteOriginRatio"></span>
+        </div>
+      </div>
+      <h4>Edit Time Heatmap</h4>
+      <div class="doc-heatmap" id="docEditHeatmap"></div>
+      <div class="doc-chart-box">
+        <canvas id="docInsertCharsGraph"></canvas>
+      </div>
+    </div>
+
+    <h3>Continuity</h3>
+    <div class="doc-card" id="doc-continuity">
+      <div class="metrics">
+        <div class="metric-box">
+          <span class="metric-label">Offline Text Ratio</span>
+          <span class="metric-value" id="docOfflineTextRatio"></span>
+        </div>
+      </div>
+      <div class="doc-gaps" id="docGaps"></div>
+    </div>
+  </div>
+
   <!-- Session Stats panel -->
   <div id="sessionStats" hidden>
     <h2>Session Stats</h2>

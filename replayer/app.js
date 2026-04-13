@@ -30,10 +30,28 @@ const caretEl = document.getElementById("caret");
 const beforeEl = document.getElementById("before");
 const afterEl = document.getElementById("after");
 // Stats
+const docStatsEl = document.getElementById("document-stats");
+const docStartEl = document.getElementById("docStart");
+const docEndEl = document.getElementById("docEnd");
+const docSpanEl = document.getElementById("docSpan");
+const docDurationEl = document.getElementById("docDuration");
+const docActiveDaysEl = document.getElementById("docActiveDays");
+const docSessionCountEl = document.getElementById("docSessionCount");
+const docDurationsGraphEl = document.getElementById("docDurationsGraph");
+const docInsertedCharsEl = document.getElementById("docInsertedChars");
+const docDeletedCharsEl = document.getElementById("docDeletedChars");
+const docNetCharsEl = document.getElementById("docNetChars");
+const docWordCountEl = document.getElementById("docWordCount");
+const docPasteOriginRatioEl = document.getElementById("docPasteOriginRatio");
+const docEditHeatmapEl = document.getElementById("docEditHeatmap");
+const docInsertCharsGraphEl = document.getElementById("docInsertCharsGraph");
+const docOfflineTextRatioEl = document.getElementById("docOfflineTextRatio");
+const docGapsEl = document.getElementById("docGaps");
+
 const sessionStatsEl = document.getElementById("sessionStats");
 
 const overviewEl = document.getElementById("overview");
-const overviewLblsEl = document.getElementsByClassName("metric-label");
+const overviewLblsEl = overviewEl.getElementsByClassName("metric-label");
 const sessionStartEl = document.getElementById("sessionStart");
 const sessionEndEl = document.getElementById("sessionEnd");
 const sesDurationEl = document.getElementById("sessionDuration");
@@ -194,6 +212,160 @@ function genMetricBox(label, value, id, color="black") {
   box.appendChild(labelEl);
   box.appendChild(valueEl);
   return box;
+}
+
+function formatDuration(ms) {
+  const totalMinutes = Math.max(0, Math.floor(ms / 60000));
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return `${hours} Hours ${minutes} Minutes`;
+}
+
+function resetChart(canvasId) {
+  const chart = Chart.getChart(canvasId);
+  if (chart) chart.destroy();
+}
+
+function barChart(canvasEl, title, labels, values, yLabel) {
+  resetChart(canvasEl.id);
+  new Chart(canvasEl, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        data: values,
+        backgroundColor: 'rgba(6, 149, 221, 0.66)'
+      }]
+    },
+    options: {
+      plugins: {
+        title: {
+          display: true,
+          text: title,
+          font: {
+            size: 20,
+            weight: "bold"
+          },
+          padding: {
+            top: 10,
+            bottom: 10
+          }
+        },
+        legend: {
+          display: false
+        }
+      },
+      scales: {
+        y: {
+          title: {
+            display: true,
+            text: yLabel
+          }
+        }
+      }
+    }
+  });
+}
+
+function genPatchBox(textPatch, id) {
+  const box = document.createElement("div");
+  box.className = "paste-box doc-patch-preview";
+  box.id = id;
+
+  const labelEl = document.createElement("span");
+  labelEl.className = "paste-label";
+  labelEl.textContent = "Text Patch";
+
+  const valueEl = document.createElement("span");
+  valueEl.className = "paste-value";
+  valueEl.id = id;
+
+  let charCount = 0;
+  const maxChars = 240;
+  for (let patch of textPatch) {
+    for (let [op, text] of patch.diffs) {
+      if (op === 0) continue;
+
+      const normalized = text.replace(/\s+/g, " ").trim();
+      if (!normalized) continue;
+
+      const prefix = op === 1 ? "+ " : "- ";
+      const patchLine = prefix + normalized;
+      const remaining = maxChars - charCount;
+      if (remaining <= 0) break;
+
+      const span = document.createElement("span");
+      span.className = op === 1 ? "doc-patch-add" : "doc-patch-del";
+      span.textContent = patchLine.length <= remaining ? patchLine : patchLine.slice(0, remaining) + "...";
+      valueEl.appendChild(span);
+      valueEl.appendChild(document.createElement("br"));
+      charCount += span.textContent.length;
+    }
+  }
+
+  if (valueEl.childNodes.length === 0) {
+    valueEl.textContent = "No visible text patch";
+  }
+
+  box.append(labelEl, valueEl);
+  return box;
+}
+
+function getPatchHighlightRange(textPatch, textLength) {
+  for (let patch of textPatch) {
+    let pos = patch.start2;
+    let start = null;
+    let end = pos;
+
+    for (let [op, text] of patch.diffs) {
+      if (op === 0) {
+        pos += text.length;
+        continue;
+      }
+
+      if (start === null) start = pos;
+
+      if (op === 1) {
+        pos += text.length;
+        end = pos;
+      } else {
+        end = Math.max(end, pos);
+      }
+    }
+
+    if (start !== null) {
+      start = Math.max(0, Math.min(start, textLength));
+      end = Math.max(start, Math.min(end, textLength));
+      return { start, end };
+    }
+  }
+  return { start: 0, end: 0 };
+}
+
+function renderGapHl(gap) {
+  const text = getDocText();
+  const { start, end } = getPatchHighlightRange(gap.textPatch, text.length);
+  const before = text.slice(0, start);
+  const highlight = text.slice(start, end);
+  const after = text.slice(end);
+
+  screenEl.replaceChildren();
+  screenEl.append(document.createTextNode(before));
+
+  const span = document.createElement("span");
+  span.className = gap.majorDiff ? "hl" : "hl-med";
+  span.title = "offline text patch";
+  span.textContent = highlight || "[offline deletion]";
+  screenEl.append(span);
+
+  highlightSpan = span;
+  screenEl.append(document.createTextNode(after));
+
+  highlightSpan.scrollIntoView({
+    behavior: "smooth",
+    block: "center",
+    inline: "center"
+  });
 }
 
 function genPasteCards(pasteIns) {
@@ -411,6 +583,7 @@ function revIntPieChart(revRatios) {
     }]
   }
 
+
   const plugins = {
     title: {
       display: true,
@@ -581,8 +754,172 @@ function genRevisionUI(revInt) {
   progSimGraph(progGraphData);
 }
 
+function genTimelineUI(timeline) {
+  docStartEl.textContent = new Date(timeline.docStartTs).toLocaleString();
+  docEndEl.textContent = new Date(timeline.docEndTs).toLocaleString();
+  docSpanEl.textContent = formatDuration(timeline.docSpanTs);
+  docDurationEl.textContent = formatDuration(timeline.durationTs);
+  docActiveDaysEl.textContent = timeline.activeDays.size;
+  docSessionCountEl.textContent = timeline.sessionCount;
 
-function updateStatsPanel(sessionStats) {
+  barChart(
+    docDurationsGraphEl,
+    "Session Durations",
+    timeline.durationsGraph.x,
+    timeline.durationsGraph.y.map(ms => Math.round(ms / 60000)),
+    "Minutes"
+  );
+}
+
+function genEditHeatmapUI(heatmap, activeDays) {
+  while (docEditHeatmapEl.firstChild) {
+    docEditHeatmapEl.removeChild(docEditHeatmapEl.firstChild);
+  }
+
+  const days = Array.from(activeDays);
+  docEditHeatmapEl.style.gridTemplateColumns = `repeat(${days.length + 1}, minmax(28px, 1fr))`;
+
+  const empty = document.createElement("div");
+  empty.className = "heatmap-label";
+  docEditHeatmapEl.appendChild(empty);
+
+  for (let day of days) {
+    const label = document.createElement("div");
+    label.className = "heatmap-label";
+    label.textContent = day.slice(5);
+    label.title = day;
+    docEditHeatmapEl.appendChild(label);
+  }
+
+  let maxValue = 0;
+  for (let hour = 0; hour < heatmap.length; hour++) {
+    for (let dayIdx = 0; dayIdx < heatmap[hour].length; dayIdx++) {
+      maxValue = Math.max(maxValue, heatmap[hour][dayIdx]);
+    }
+  }
+
+  for (let hour = 0; hour < 24; hour++) {
+    const hourLabel = document.createElement("div");
+    hourLabel.className = "heatmap-label";
+    hourLabel.textContent = `${hour}:00`;
+    docEditHeatmapEl.appendChild(hourLabel);
+
+    for (let dayIdx = 0; dayIdx < days.length; dayIdx++) {
+      const value = heatmap[hour]?.[dayIdx] ?? 0;
+      const intensity = maxValue > 0 ? value / maxValue : 0;
+      const cell = document.createElement("div");
+      cell.className = "heatmap-cell";
+      cell.style.backgroundColor = `rgba(6, 149, 221, ${0.08 + intensity * 0.82})`;
+      cell.textContent = value ? value.toFixed(1) : "";
+      cell.title = `${days[dayIdx]} ${hour}:00 - ${value.toFixed(1)} minutes`;
+      docEditHeatmapEl.appendChild(cell);
+    }
+  }
+}
+
+function genEditUI(edit, timeline) {
+  docInsertedCharsEl.textContent = edit.insertedChars;
+  docDeletedCharsEl.textContent = edit.deletedChars;
+  docNetCharsEl.textContent = edit.netChars;
+  docWordCountEl.textContent = edit.wordCount;
+  docPasteOriginRatioEl.textContent = `${(edit.pasteOriginRatio * 100).toFixed(2)}%`;
+
+  genEditHeatmapUI(edit.heatmap, timeline.activeDays);
+
+  barChart(
+    docInsertCharsGraphEl,
+    "Inserted Characters by Session",
+    edit.insCharsGraph.x,
+    edit.insCharsGraph.y,
+    "Characters"
+  );
+}
+
+function genContinuityUI(continuity) {
+  docOfflineTextRatioEl.textContent = `${(continuity.offlineTextRatio * 100).toFixed(2)}%`;
+
+  while (docGapsEl.firstChild) {
+    docGapsEl.removeChild(docGapsEl.firstChild);
+  }
+
+  if (continuity.gaps.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "metric-box";
+    const label = document.createElement("span");
+    label.className = "metric-label";
+    label.textContent = "Gaps";
+    const value = document.createElement("span");
+    value.className = "metric-value";
+    value.textContent = "No offline continuity gaps detected";
+    empty.append(label, value);
+    docGapsEl.appendChild(empty);
+    return;
+  }
+
+  for (let i = 0; i < continuity.gaps.length; i++) {
+    const gap = continuity.gaps[i];
+    const card = document.createElement("div");
+    card.className = "doc-gap-card";
+    card.id = i;
+    card.title = "Click to jump to the patch location";
+
+    const content = document.createElement("div");
+    content.className = "doc-gap-metrics";
+
+    const title = document.createElement("div");
+    title.className = "doc-gap-title";
+    title.textContent = `Between session ${gap.prevSession} and ${gap.nextSession}`;
+
+    const durationBox = genMetricBox("Gap Duration", formatDuration(gap.gapMs), i);
+    const charsBox = genMetricBox("Chars Diff", gap.charsDiff, i, gap.majorDiff ? "red" : "black");
+    if (gap.majorDiff) charsBox.classList.add("doc-gap-major");
+    const patchBox = genPatchBox(gap.textPatch, i);
+
+    content.append(title, durationBox, charsBox, patchBox);
+    card.appendChild(content);
+    docGapsEl.appendChild(card);
+  }
+}
+
+function updateDocUI(docStats) {
+  docStatsEl.hidden = false;
+  genTimelineUI(docStats.timeline);
+  genEditUI(docStats.edit, docStats.timeline);
+  genContinuityUI(docStats.continuity);
+}
+
+function resetDocUI() {
+  docStatsEl.hidden = true;
+  for (let val of [
+    docStartEl,
+    docEndEl,
+    docSpanEl,
+    docDurationEl,
+    docActiveDaysEl,
+    docSessionCountEl,
+    docInsertedCharsEl,
+    docDeletedCharsEl,
+    docNetCharsEl,
+    docWordCountEl,
+    docPasteOriginRatioEl,
+    docOfflineTextRatioEl
+  ]) {
+    val.textContent = "";
+  }
+
+  while (docEditHeatmapEl.firstChild) {
+    docEditHeatmapEl.removeChild(docEditHeatmapEl.firstChild);
+  }
+  while (docGapsEl.firstChild) {
+    docGapsEl.removeChild(docGapsEl.firstChild);
+  }
+
+  resetChart("docDurationsGraph");
+  resetChart("docInsertCharsGraph");
+}
+
+
+function updateSessionStatsPanel(sessionStats) {
   sessionStatsEl.hidden = false;
   const desc = sessionStats.desc;
   const interpret = sessionStats.interpret;
@@ -627,31 +964,16 @@ export function resetStatsPanel() {
   // Writing flow
   flowEl.hidden = true;
   linearityAdvEl.hidden = true;
-  const lineChart = Chart.getChart("linearityGraph");
-  if (lineChart) {
-    lineChart.destroy();
-  }
-  const pieChart = Chart.getChart("interruptPie");
-  if (pieChart) {
-    pieChart.destroy();
-  }
+  resetChart("linearityGraph");
+  resetChart("interruptPie");
 
   // Revision Intensity
   revisionEl.hidden = true;
   progDipEl.hidden = true;
   progAdvEl.hidden = true;
-  const intensityPie = Chart.getChart("intensity-pie");
-  if (intensityPie) {
-    intensityPie.destroy();
-  }
-  const opTypesPie = Chart.getChart("rev-op-types-pie");
-  if (opTypesPie) {
-    opTypesPie.destroy();
-   }
-  const progGraph = Chart.getChart("prog-graph");
-  if (progGraph) {
-    progGraph.destroy();
-  }
+  resetChart("intensity-pie");
+  resetChart("rev-op-types-pie");
+  resetChart("prog-graph");
 }
 
 let highlightSpan = null;
@@ -694,6 +1016,7 @@ function renderPasteHl (activePaste, text) {
 }
 
 let sessionStats = null;
+let docStats = null;
 updateDOM(DOM);
 let inspectMode = false;    // inspecting paste-like insertion
 
@@ -717,6 +1040,7 @@ fileEl.addEventListener("change", async () => {
   enableButtons();
   resetSessionBtns();
   resetStatsPanel();
+  resetDocUI();
 
   updateDOM(DOM);
   cursorDOM(DOM);
@@ -730,8 +1054,9 @@ fileEl.addEventListener("change", async () => {
   genSessionBtns(flightRecord.sessions);
 
   // test doc-level stats
-  const docStats = calDocStats(flightRecord);
+  docStats = calDocStats(flightRecord);
   console.log(docStats);
+  updateDocUI(docStats);
 
   // Update session-level stats
   sessionStats = calSession(getSession());
@@ -778,7 +1103,7 @@ sessionBtns.addEventListener("click", (e) => {
   console.log(sessionStats);
   // Update HTML
   resetStatsPanel();
-  updateStatsPanel(sessionStats);
+  updateSessionStatsPanel(sessionStats);
   restoreCursor(screenEl);
 
 })
@@ -805,6 +1130,23 @@ pasteEvEl.addEventListener("click", (e) => {
     block: "center",
     inline: "center"
   })
+})
+
+docGapsEl.addEventListener("click", (e) => {
+  const card = e.target.closest(".doc-gap-card");
+  if (!card || !docStats) return;
+
+  const gap = docStats.continuity.gaps[Number(card.id)];
+  if (!gap) return;
+
+  stopPlaying();
+  restoreCursor(screenEl);
+  const session = seekToSession(gap.nextSession - 1);
+  sessionStats = calSession(session);
+  resetStatsPanel();
+  updateSessionStatsPanel(sessionStats);
+  renderGapHl(gap);
+  inspectMode = true;
 })
 
 normDisplayCb.addEventListener("change", () => {
@@ -853,15 +1195,19 @@ progAdvCb.addEventListener("change", () => {
 
 
 // Test: skip caret to pos
-// const testPosInputEl = document.getElementById("test-pos-input");
-// testPosInputEl.addEventListener("change", () => {
-//   const pos = Number(testPosInputEl.value);
-//   seekCaretTo(pos);
-// })
+const testPosInputEl = document.getElementById("test-pos-input");
+if (testPosInputEl) {
+  testPosInputEl.addEventListener("change", () => {
+    const pos = Number(testPosInputEl.value);
+    seekCaretTo(pos);
+  })
+}
 
-// const lastEventBtn = document.getElementById("last-event");
-// lastEventBtn.addEventListener("click", () => {
-//   const session = getSession();
-//   seekToEvent(session.ev.length - 1);
-//   renderCursor();
-// })
+const lastEventBtn = document.getElementById("last-event");
+if (lastEventBtn) {
+  lastEventBtn.addEventListener("click", () => {
+    const session = getSession();
+    seekToEvent(session.ev.length - 1);
+    renderCursor();
+  })
+}

@@ -67,8 +67,8 @@ export function restoreCursor(screenEl) {
 }
 
 
-// // test
-// export function seekCaretTo(pos) {
-//     state.caretPos = pos;
-//     renderCursor();
-// }
+// test
+export function seekCaretTo(pos) {
+    state.caretPos = pos;
+    renderCursor();
+}
