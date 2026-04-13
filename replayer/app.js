@@ -47,8 +47,12 @@ const docEditHeatmapEl = document.getElementById("docEditHeatmap");
 const docInsertCharsGraphEl = document.getElementById("docInsertCharsGraph");
 const docOfflineTextRatioEl = document.getElementById("docOfflineTextRatio");
 const docGapsEl = document.getElementById("docGaps");
+const docStatsToggleEl = document.getElementById("docStatsToggle");
+const docStatsBodyEl = document.getElementById("docStatsBody");
 
 const sessionStatsEl = document.getElementById("sessionStats");
+const sessionStatsToggleEl = document.getElementById("sessionStatsToggle");
+const sessionStatsBodyEl = document.getElementById("sessionStatsBody");
 
 const overviewEl = document.getElementById("overview");
 const overviewLblsEl = overviewEl.getElementsByClassName("metric-label");
@@ -224,6 +228,12 @@ function formatDuration(ms) {
 function resetChart(canvasId) {
   const chart = Chart.getChart(canvasId);
   if (chart) chart.destroy();
+}
+
+function setStatsCollapsed(bodyEl, toggleEl, collapsed) {
+  bodyEl.hidden = collapsed;
+  toggleEl.textContent = collapsed ? "+" : "-";
+  toggleEl.setAttribute("aria-expanded", String(!collapsed));
 }
 
 function barChart(canvasEl, title, labels, values, yLabel) {
@@ -754,6 +764,7 @@ function genRevisionUI(revInt) {
   progSimGraph(progGraphData);
 }
 
+// Document level stats
 function genTimelineUI(timeline) {
   docStartEl.textContent = new Date(timeline.docStartTs).toLocaleString();
   docEndEl.textContent = new Date(timeline.docEndTs).toLocaleString();
@@ -883,6 +894,7 @@ function genContinuityUI(continuity) {
 
 function updateDocUI(docStats) {
   docStatsEl.hidden = false;
+  setStatsCollapsed(docStatsBodyEl, docStatsToggleEl, false);
   genTimelineUI(docStats.timeline);
   genEditUI(docStats.edit, docStats.timeline);
   genContinuityUI(docStats.continuity);
@@ -890,6 +902,7 @@ function updateDocUI(docStats) {
 
 function resetDocUI() {
   docStatsEl.hidden = true;
+  setStatsCollapsed(docStatsBodyEl, docStatsToggleEl, false);
   for (let val of [
     docStartEl,
     docEndEl,
@@ -921,6 +934,7 @@ function resetDocUI() {
 
 function updateSessionStatsPanel(sessionStats) {
   sessionStatsEl.hidden = false;
+  setStatsCollapsed(sessionStatsBodyEl, sessionStatsToggleEl, false);
   const desc = sessionStats.desc;
   const interpret = sessionStats.interpret;
 
@@ -946,6 +960,7 @@ function updateSessionStatsPanel(sessionStats) {
 
 export function resetStatsPanel() {
   sessionStatsEl.hidden = true;
+  setStatsCollapsed(sessionStatsBodyEl, sessionStatsToggleEl, false);
 
   // Overview
   // for (let label of overviewLblsEl) {
@@ -1068,6 +1083,14 @@ fileEl.addEventListener("change", async () => {
 
 
 // Event Listeners
+docStatsToggleEl.addEventListener("click", () => {
+  setStatsCollapsed(docStatsBodyEl, docStatsToggleEl, !docStatsBodyEl.hidden);
+})
+
+sessionStatsToggleEl.addEventListener("click", () => {
+  setStatsCollapsed(sessionStatsBodyEl, sessionStatsToggleEl, !sessionStatsBodyEl.hidden);
+})
+
 playBtn.addEventListener("click", () => {
   if (inspectMode) {
     inspectMode = false;

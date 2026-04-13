@@ -273,6 +273,34 @@ body {
   position: relative;
 }
 
+.stats-header {
+  align-items: flex-start;
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.stats-header h2 {
+  margin-bottom: 8px;
+}
+
+.stats-toggle {
+  border: 1px solid #d4d4d4;
+  border-radius: 999px;
+  background: white;
+  color: #333;
+  cursor: pointer;
+  font-size: 1.25rem;
+  height: 34px;
+  line-height: 1;
+  margin-top: 18px;
+  width: 34px;
+}
+
+.stats-toggle:hover {
+  border-color: black;
+}
+
 .doc-card {
   border: 1px solid #e8e8e8;
   border-radius: 20px;

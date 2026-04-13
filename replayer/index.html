@@ -32,8 +32,14 @@
 
   <!-- Document Stats panel -->
   <div id="document-stats" hidden>
-    <h2>Document Stats</h2>
-    <p>Document-level timeline, edit, and continuity analysis across all sessions.</p><br>
+    <div class="stats-header">
+      <div>
+        <h2>Document Stats</h2>
+        <p>Document-level timeline, edit, and continuity analysis across all sessions.</p>
+      </div>
+      <button class="stats-toggle" id="docStatsToggle" type="button" aria-expanded="true" aria-controls="docStatsBody">-</button>
+    </div>
+    <div id="docStatsBody">
 
     <h3>Timeline</h3>
     <div class="doc-card" id="doc-timeline">
@@ -109,12 +115,19 @@
       </div>
       <div class="doc-gaps" id="docGaps"></div>
     </div>
+    </div>
   </div>
 
   <!-- Session Stats panel -->
   <div id="sessionStats" hidden>
-    <h2>Session Stats</h2>
-    <p>General and interpretive data analysis for each session.</p><br>
+    <div class="stats-header">
+      <div>
+        <h2>Session Stats</h2>
+        <p>General and interpretive data analysis for each session.</p>
+      </div>
+      <button class="stats-toggle" id="sessionStatsToggle" type="button" aria-expanded="true" aria-controls="sessionStatsBody">-</button>
+    </div>
+    <div id="sessionStatsBody">
 
     <h3>Overview</h3>
     <div class="metrics" id="overview">
@@ -263,6 +276,7 @@
           <canvas id="prog-graph"></canvas>
         </div>
       </div>
+    </div>
     </div>
   </div>
   <script type="module" src="./app.js"></script>
