@@ -8,3 +8,4 @@ build/
 replayer/modules/stats/session/test/output_*
 replayer/modules/stats/session/test/*.txt
 .vite
+__pycache__

@@ -51,6 +51,7 @@ const docOfflineTextRatioEl = document.getElementById("docOfflineTextRatio");
 const docGapsEl = document.getElementById("docGaps");
 const docStatsToggleEl = document.getElementById("docStatsToggle");
 const docStatsBodyEl = document.getElementById("docStatsBody");
+const docReportEl = document.getElementById("docReport");
 
 const sessionStatsEl = document.getElementById("sessionStats");
 const sessionStatsToggleEl = document.getElementById("sessionStatsToggle");
@@ -236,6 +237,36 @@ function setStatsCollapsed(bodyEl, toggleEl, collapsed) {
   bodyEl.hidden = collapsed;
   toggleEl.textContent = collapsed ? "+" : "-";
   toggleEl.setAttribute("aria-expanded", String(!collapsed));
+}
+
+function genReportSection(sectionName, section) {
+  const wrapper = document.createElement("section");
+  wrapper.className = "docReport-section";
+
+  const title = document.createElement("h4");
+  title.textContent = section?.title || sectionName;
+
+  const analysis = document.createElement("p");
+  analysis.textContent = section?.analysis || "";
+
+  wrapper.append(title, analysis);
+  return wrapper;
+}
+
+function renderDocReport(report) {
+  if (!report) {
+    docReportEl.hidden = true;
+    docReportEl.replaceChildren();
+    return;
+  }
+
+  docReportEl.replaceChildren(
+    genReportSection("Overview", report.overview),
+    genReportSection("Timeline", report.timeline),
+    genReportSection("Edit", report.edit),
+    genReportSection("Continuity", report.continuity)
+  );
+  docReportEl.hidden = false;
 }
 
 function barChart(canvasEl, title, labels, values, yLabel) {
@@ -908,6 +939,47 @@ function genContinuityUI(continuity) {
   }
 }
 
+async function getDocReport(docStats) {
+  const statusEl = document.getElementById("docReportStatus");
+
+  try {
+    statusEl.textContent = "Generating";
+    renderDocReport(null);
+
+    const res = await fetch("/api/doc-report", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        documentStats: docStats
+      })
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(errorText || `HTTP ${res.status}`);
+    }
+
+    const data = await res.json();
+    renderDocReport(data);
+    statusEl.textContent = "Done";
+
+    return data;
+
+  } catch(e) {
+    statusEl.textContent = "Error";
+    renderDocReport({
+      overview: {
+        title: "Report Error",
+        analysis: e.message
+      }
+    });
+    console.error(e);
+  }
+
+}
+
 function updateDocUI(docStats) {
   docStatsEl.hidden = false;
   setStatsCollapsed(docStatsBodyEl, docStatsToggleEl, false);
@@ -942,6 +1014,7 @@ function resetDocUI() {
   while (docGapsEl.firstChild) {
     docGapsEl.removeChild(docGapsEl.firstChild);
   }
+  renderDocReport(null);
 
   resetChart("docDurationsGraph");
   resetChart("docInsertCharsGraph");
@@ -1234,21 +1307,27 @@ progAdvCb.addEventListener("change", () => {
 })
 
 
+const genDocReportBtn = document.getElementById("genDocReport");
+genDocReportBtn.addEventListener("click", () => {
+  if (!docStats) return;
+  getDocReport(docStats);
+})
 
-// Test: skip caret to pos
-const testPosInputEl = document.getElementById("test-pos-input");
-if (testPosInputEl) {
-  testPosInputEl.addEventListener("change", () => {
-    const pos = Number(testPosInputEl.value);
-    seekCaretTo(pos);
-  })
-}
 
-const lastEventBtn = document.getElementById("last-event");
-if (lastEventBtn) {
-  lastEventBtn.addEventListener("click", () => {
-    const session = getSession();
-    seekToEvent(session.ev.length - 1);
-    renderCursor();
-  })
-}
+// // Test: skip caret to pos
+// const testPosInputEl = document.getElementById("test-pos-input");
+// if (testPosInputEl) {
+//   testPosInputEl.addEventListener("change", () => {
+//     const pos = Number(testPosInputEl.value);
+//     seekCaretTo(pos);
+//   })
+// }
+
+// const lastEventBtn = document.getElementById("last-event");
+// if (lastEventBtn) {
+//   lastEventBtn.addEventListener("click", () => {
+//     const session = getSession();
+//     seekToEvent(session.ev.length - 1);
+//     renderCursor();
+//   })
+// }

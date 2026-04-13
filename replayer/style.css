@@ -33,6 +33,40 @@ body {
     word-break: keep-all;
 }
 
+.docReport {
+    background: white;
+    white-space: pre-wrap;
+    overflow-x: auto;
+    overflow-y: auto;
+    font-size: 14px;
+    line-height: 1.5;
+    border: 1px solid #ccc;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    min-height: 80px;
+    padding: 20px;
+    margin-top: 10px;
+    margin-bottom: 10px;
+    word-wrap: break-word;
+    word-break: keep-all;
+}
+
+.docReport h4 {
+    margin-top: 0;
+    margin-bottom: 10px;
+}
+
+.docReport p {
+    margin: 0;
+}
+
+.docReport-section {
+    margin-bottom: 18px;
+}
+
+.docReport-section:last-child {
+    margin-bottom: 0;
+}
+
 #caret {
     display: inline-block; 
     width: 0;  
