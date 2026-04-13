@@ -37,6 +37,7 @@ const docSpanEl = document.getElementById("docSpan");
 const docDurationEl = document.getElementById("docDuration");
 const docActiveDaysEl = document.getElementById("docActiveDays");
 const docSessionCountEl = document.getElementById("docSessionCount");
+const docDurationsGraphBoxEl = document.getElementById("docDurationsGraphBox");
 const docDurationsGraphEl = document.getElementById("docDurationsGraph");
 const docInsertedCharsEl = document.getElementById("docInsertedChars");
 const docDeletedCharsEl = document.getElementById("docDeletedChars");
@@ -44,6 +45,7 @@ const docNetCharsEl = document.getElementById("docNetChars");
 const docWordCountEl = document.getElementById("docWordCount");
 const docPasteOriginRatioEl = document.getElementById("docPasteOriginRatio");
 const docEditHeatmapEl = document.getElementById("docEditHeatmap");
+const docInsertCharsGraphBoxEl = document.getElementById("docInsertCharsGraphBox");
 const docInsertCharsGraphEl = document.getElementById("docInsertCharsGraph");
 const docOfflineTextRatioEl = document.getElementById("docOfflineTextRatio");
 const docGapsEl = document.getElementById("docGaps");
@@ -773,6 +775,13 @@ function genTimelineUI(timeline) {
   docActiveDaysEl.textContent = timeline.activeDays.size;
   docSessionCountEl.textContent = timeline.sessionCount;
 
+  if (timeline.sessionCount <= 1) {
+    docDurationsGraphBoxEl.hidden = true;
+    resetChart("docDurationsGraph");
+    return;
+  }
+
+  docDurationsGraphBoxEl.hidden = false;
   barChart(
     docDurationsGraphEl,
     "Session Durations",
@@ -837,6 +846,13 @@ function genEditUI(edit, timeline) {
 
   genEditHeatmapUI(edit.heatmap, timeline.activeDays);
 
+  if (timeline.sessionCount <= 1) {
+    docInsertCharsGraphBoxEl.hidden = true;
+    resetChart("docInsertCharsGraph");
+    return;
+  }
+
+  docInsertCharsGraphBoxEl.hidden = false;
   barChart(
     docInsertCharsGraphEl,
     "Inserted Characters by Session",
@@ -929,6 +945,8 @@ function resetDocUI() {
 
   resetChart("docDurationsGraph");
   resetChart("docInsertCharsGraph");
+  docDurationsGraphBoxEl.hidden = false;
+  docInsertCharsGraphBoxEl.hidden = false;
 }
 
 
