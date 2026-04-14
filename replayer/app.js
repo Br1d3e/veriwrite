@@ -52,6 +52,7 @@ const docGapsEl = document.getElementById("docGaps");
 const docStatsToggleEl = document.getElementById("docStatsToggle");
 const docStatsBodyEl = document.getElementById("docStatsBody");
 const docReportEl = document.getElementById("docReport");
+const genDocReportBtn = document.getElementById("genDocReport");
 
 const sessionStatsEl = document.getElementById("sessionStats");
 const sessionStatsToggleEl = document.getElementById("sessionStatsToggle");
@@ -247,7 +248,7 @@ function genReportSection(sectionName, section) {
   title.textContent = section?.title || sectionName;
 
   const analysis = document.createElement("p");
-  analysis.textContent = section?.observation || "";
+  analysis.textContent = section?.observation || section?.analysis || "";
 
   wrapper.append(title, analysis);
   return wrapper;
@@ -256,12 +257,10 @@ function genReportSection(sectionName, section) {
 function renderDocReport(report) {
   if (!report) {
     docReportEl.hidden = true;
-    genDocReportBtn.disabled = false;
     docReportEl.replaceChildren();
     return;
   }
 
-  genDocReportBtn.disabled = true;
   docReportEl.replaceChildren(
     genReportSection("Overview", report.overview),
     genReportSection("Timeline", report.timeline),
@@ -942,11 +941,15 @@ function genContinuityUI(continuity) {
 }
 
 async function getDocReport(docStats) {
+  if (docReportLoading || !docStats) return;
+
   const statusEl = document.getElementById("docReportStatus");
+  const requestId = ++docReportRequestId;
+  docReportLoading = true;
+  genDocReportBtn.disabled = true;
 
   try {
     statusEl.textContent = "Generating...";
-    genDocReportBtn.disabled = true;
     renderDocReport(null);
 
     const res = await fetch("/api/doc-report", {
@@ -965,23 +968,40 @@ async function getDocReport(docStats) {
     }
 
     const data = await res.json();
+    if (requestId !== docReportRequestId) return data;
+
     renderDocReport(data);
     statusEl.textContent = "Done";
-    genDocReportBtn.disabled = false;
 
     return data;
 
   } catch(e) {
+    if (requestId !== docReportRequestId) return null;
+
     statusEl.textContent = "Error";
     renderDocReport({
       overview: {
         title: "Report Error",
-        analysis: e.message
+        observation: e.message
       }
     });
     console.error(e);
+  } finally {
+    if (requestId === docReportRequestId) {
+      docReportLoading = false;
+      genDocReportBtn.disabled = false;
+    }
   }
 
+}
+
+function resetDocReport() {
+  const statusEl = document.getElementById("docReportStatus");
+  docReportRequestId++;
+  docReportLoading = false;
+  statusEl.textContent = "";
+  genDocReportBtn.disabled = false;
+  renderDocReport(null);
 }
 
 function updateDocUI(docStats) {
@@ -1121,6 +1141,8 @@ function renderPasteHl (activePaste, text) {
 
 let sessionStats = null;
 let docStats = null;
+let docReportLoading = false;
+let docReportRequestId = 0;
 updateDOM(DOM);
 let inspectMode = false;    // inspecting paste-like insertion
 
@@ -1145,6 +1167,7 @@ fileEl.addEventListener("change", async () => {
   resetSessionBtns();
   resetStatsPanel();
   resetDocUI();
+  resetDocReport();
 
   updateDOM(DOM);
   cursorDOM(DOM);
@@ -1305,9 +1328,7 @@ progAdvCb.addEventListener("change", () => {
 })
 
 
-const genDocReportBtn = document.getElementById("genDocReport");
 genDocReportBtn.addEventListener("click", () => {
-  if (!docStats) return;
   getDocReport(docStats);
 })
 

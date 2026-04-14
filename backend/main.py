@@ -1,4 +1,8 @@
 from ollama import chat
+from google import genai
+from google.genai import types
+import os
+from dotenv import load_dotenv
 from pydantic import BaseModel
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -6,7 +10,19 @@ from typing import Any
 import json
 from datetime import datetime
 from copy import deepcopy
+import asyncio
+from pathlib import Path
 
+
+LOCAL = False
+
+load_dotenv()
+load_dotenv(Path(__file__).resolve().parent / ".env", override=False)
+
+API_KEY = os.getenv("GEMINI_API_KEY")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemma-4-31b-it")
+REQUEST_TIMEOUT_SECONDS = 120
+REQUEST_TIMEOUT_MS = REQUEST_TIMEOUT_SECONDS * 1000
 
 app = FastAPI()
 app.add_middleware(
@@ -47,6 +63,7 @@ def format_duration(ms: int | float) -> str:
 def reformat_doc_stats(doc_stats):
     formatted = deepcopy(doc_stats)
     timeline = formatted.get("timeline", {})
+    edit = formatted.get("edit", {})
     continuity = formatted.get("continuity", {})
 
     for key in ("docStartTs", "docEndTs"):
@@ -65,20 +82,75 @@ def reformat_doc_stats(doc_stats):
         ]
 
     for gap in continuity.get("gaps", []):
-        if isinstance(gap, dict) and isinstance(gap.get("gapMs"), (int, float)):
+        if not isinstance(gap, dict):
+            continue
+        if isinstance(gap.get("gapMs"), (int, float)):
             gap["gapMs"] = format_duration(gap["gapMs"])
+        # gap.pop("textPatch", None)
+
+    # These arrays can get large and are not needed for the report narrative.
+    # edit.pop("heatmap", None)
 
     return formatted
 
 
+def strip_json_fence(text: str) -> str:
+    cleaned = text.strip()
+    if cleaned.startswith("```"):
+        lines = cleaned.splitlines()
+        if lines:
+            lines = lines[1:]
+        if lines and lines[-1].strip() == "```":
+            lines = lines[:-1]
+        return "\n".join(lines).strip()
+    return cleaned
+
+
+def extract_first_json_object(text: str) -> str:
+    cleaned = strip_json_fence(text)
+    start = cleaned.find("{")
+    if start < 0:
+        return cleaned
+
+    depth = 0
+    in_string = False
+    escaped = False
+    for i in range(start, len(cleaned)):
+        ch = cleaned[i]
+        if escaped:
+            escaped = False
+            continue
+        if ch == "\\":
+            escaped = True
+            continue
+        if ch == '"':
+            in_string = not in_string
+            continue
+        if in_string:
+            continue
+        if ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                return cleaned[start:i + 1]
+    return cleaned[start:]
+
 
 @app.get("/api/doc-report")
 async def doc_report_health():
-    return {"ok": True}
+    return {
+        "ok": True,
+        "provider": "ollama" if LOCAL else "google-genai",
+        "model": "gemma4:e4b" if LOCAL else GEMINI_MODEL,
+        "apiKeyConfigured": bool(API_KEY),
+        "timeoutSeconds": REQUEST_TIMEOUT_SECONDS,
+    }
 
 
 @app.post("/api/doc-report")
 async def gen_doc_report(req: DocReportRequest):
+    print("[doc-report] request received")
     prompt = {
         "task": "Generate a neutral document-level report.",
         "documentStats": reformat_doc_stats(req.documentStats),
@@ -98,7 +170,8 @@ async def gen_doc_report(req: DocReportRequest):
     - Use only the given facts
     - Each section should focus on one or two meaningful patterns, not a full recap of the input data.
     - Use numbers selectively, only when they support the main point of that section.
-    - Use no more than 3 number metrics in each section.
+    - Use no more than 2 number metrics in each section.
+    - Prefer using more human-readable metrics like word count and active writing time to character counts
     - Prefer pattern-first writing: state the pattern first, then support it with one or two numbers.
     - Do not repeat metric values unless they are essential.
     - Do not duplicate the main content of the overview, timeline, edit, or continuity sections.
@@ -122,24 +195,83 @@ async def gen_doc_report(req: DocReportRequest):
     """
     schema = DocReportSchema.model_json_schema()
 
-    try:
-        response = chat(
-            model="gemma4:e4b",
-            messages=[
-                {
-                    "role": "system",
-                    "content": system_prompt,
-                },
-                {
-                    "role": "user",
-                    "content": json.dumps(prompt),
-                },
-            ],
-            format=schema,
+    def generate_raw_content():
+        if LOCAL:
+            response = chat(
+                model="gemma4:e4b",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": system_prompt,
+                    },
+                    {
+                        "role": "user",
+                        "content": json.dumps(prompt),
+                    },
+                ],
+                format=schema,
+                think=False,
+                stream=False,
+            )
+            message = response.get("message") if isinstance(response, dict) else response.message
+            return message.get("content") if isinstance(message, dict) else message.content
+
+        if not API_KEY:
+            raise ValueError("Missing GEMINI_API_KEY")
+
+        print(f"[doc-report] calling Google GenAI model={GEMINI_MODEL}")
+        client = genai.Client(
+            api_key=API_KEY,
+            http_options=types.HttpOptions(
+                timeout=REQUEST_TIMEOUT_MS,
+                retry_options=types.HttpRetryOptions(
+                    attempts=1,
+                    http_status_codes=[408, 429, 500, 502, 503, 504],
+                ),
+            ),
         )
-        message = response.get("message") if isinstance(response, dict) else response.message
-        raw_content = message.get("content") if isinstance(message, dict) else message.content
-        content = json.loads(raw_content)
-        return DocReportSchema.model_validate(content)
+
+        response = client.models.generate_content(
+            model=GEMINI_MODEL,
+            contents=json.dumps(prompt),
+            config=types.GenerateContentConfig(
+                temperature=0.1,
+                system_instruction=system_prompt,
+                response_mime_type="application/json",
+                response_schema=DocReportSchema,
+            )
+        )
+        print("[doc-report] Google GenAI response received")
+        if response.candidates:
+            print(f"[doc-report] finish reason: {response.candidates[0].finish_reason}")
+        if response.parsed:
+            return response.parsed
+        return response.text
+
+    try:
+        raw_content = await asyncio.wait_for(
+            asyncio.to_thread(generate_raw_content),
+            timeout=REQUEST_TIMEOUT_SECONDS + 5,
+        )
+        if isinstance(raw_content, DocReportSchema):
+            content = raw_content
+        elif isinstance(raw_content, dict):
+            content = DocReportSchema.model_validate(raw_content)
+        else:
+            json_content = extract_first_json_object(raw_content)
+            try:
+                content = DocReportSchema.model_validate_json(json_content)
+            except Exception as parse_err:
+                preview = raw_content[:500] if isinstance(raw_content, str) else repr(raw_content)
+                raise ValueError(f"Failed to parse Gemini response JSON: {parse_err}. Response preview: {preview}") from parse_err
+        print("[doc-report] report generated")
+        return content
+    except TimeoutError as err:
+        print("[doc-report] timed out")
+        raise HTTPException(
+            status_code=504,
+            detail=f"Document report generation timed out after {REQUEST_TIMEOUT_SECONDS} seconds.",
+        ) from err
     except Exception as err:
+        print(f"[doc-report] failed: {err}")
         raise HTTPException(status_code=500, detail=str(err)) from err
