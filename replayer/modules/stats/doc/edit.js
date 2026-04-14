@@ -39,7 +39,8 @@ export function calEditStats(record, timeline) {
     const docWordCount = wordCount(docFinalText);
 
     // Paste origin ratio
-    const pasteOriginRatio = docInsChars > 0 ? pasteInsChars(sessions) / docInsChars : 0;
+    const originChars = docFinalText.length
+    const pasteOriginRatio =  originChars - pasteInsChars(sessions) > 0 ? pasteInsChars(sessions) / originChars : 0;
 
     // Session insert chars graph
     const insCharsGraph = sessionInsGraph(sessions);

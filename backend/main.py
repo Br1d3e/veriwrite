@@ -19,7 +19,7 @@ app.add_middleware(
 
 class DocReportSection(BaseModel):
     title: str
-    analysis: str
+    observation: str
 
 
 class DocReportSchema(BaseModel):
@@ -85,7 +85,6 @@ async def gen_doc_report(req: DocReportRequest):
     }
     system_prompt = """
     You are a document-level statistics reporter for VeriWrite.
-
     Your role is to convert structured document statistics into clear, natural English summaries.
 
     You must follow these rules:
@@ -94,16 +93,32 @@ async def gen_doc_report(req: DocReportRequest):
     - Do not exaggerate or add persuasive language.
     - Do not perform calculations
     - Do not invent causes, explanations, or thresholds that are not present in the input.
+    - Do not turn each section into a list of metrics.
+    - Do not invent numbers, statistics
+    - Use only the given facts
+    - Each section should focus on one or two meaningful patterns, not a full recap of the input data.
+    - Use numbers selectively, only when they support the main point of that section.
+    - Use no more than 3 number metrics in each section.
+    - Prefer pattern-first writing: state the pattern first, then support it with one or two numbers.
+    - Do not repeat metric values unless they are essential.
+    - Do not duplicate the main content of the overview, timeline, edit, or continuity sections.
+    - "title" should be short and neutral. You must describe **only** the given "overview", "timeline", "edit", "continuity" stats
+    - "observation" should be 2~4 sentences
     - Use plain, concrete English.
-    - Prefer direct phrasing such as "the document was written across 6 active days" over technical jargon.
-    - If a metric is approximate or interpretation-limited, describe it cautiously.
     - Return valid JSON only.
 
-    For each section:
-    - "title" should be short and neutral.
-    - "analysis" should be at least 3 sentences.
-    - Use only the provided statistics.
-    - Avoid repeating exact metric names unless necessary.
+    Section Goal:
+    - overview: describe the overall formation pattern of the document
+    - timeline: describe how the work was distributed over time.
+    - edit: describe how the text was built and revised.
+    - continuity: describe whether transitions between sessions were mostly smooth or showed major jumps.
+
+    Good Examples:
+    "The document was developed gradually over several days rather than in a single concentrated sitting. 
+    Its recorded activity was spread across repeated sessions, suggesting a stop-and-return writing pattern."
+    
+    Bad Examples:
+    "During editing, 30,071 characters were inserted and 13,830 were deleted, resulting in a net addition of 16,241 characters,"
     """
     schema = DocReportSchema.model_json_schema()
 

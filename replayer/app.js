@@ -247,7 +247,7 @@ function genReportSection(sectionName, section) {
   title.textContent = section?.title || sectionName;
 
   const analysis = document.createElement("p");
-  analysis.textContent = section?.analysis || "";
+  analysis.textContent = section?.observation || "";
 
   wrapper.append(title, analysis);
   return wrapper;
@@ -256,10 +256,12 @@ function genReportSection(sectionName, section) {
 function renderDocReport(report) {
   if (!report) {
     docReportEl.hidden = true;
+    genDocReportBtn.disabled = false;
     docReportEl.replaceChildren();
     return;
   }
 
+  genDocReportBtn.disabled = true;
   docReportEl.replaceChildren(
     genReportSection("Overview", report.overview),
     genReportSection("Timeline", report.timeline),
@@ -943,7 +945,8 @@ async function getDocReport(docStats) {
   const statusEl = document.getElementById("docReportStatus");
 
   try {
-    statusEl.textContent = "Generating";
+    statusEl.textContent = "Generating...";
+    genDocReportBtn.disabled = true;
     renderDocReport(null);
 
     const res = await fetch("/api/doc-report", {
@@ -964,6 +967,7 @@ async function getDocReport(docStats) {
     const data = await res.json();
     renderDocReport(data);
     statusEl.textContent = "Done";
+    genDocReportBtn.disabled = false;
 
     return data;
 
@@ -1054,12 +1058,6 @@ export function resetStatsPanel() {
   setStatsCollapsed(sessionStatsBodyEl, sessionStatsToggleEl, false);
 
   // Overview
-  // for (let label of overviewLblsEl) {
-  //   label.textContent = "";
-  // }
-  // for (let val of [sessionStartEl, sesDurationEl, sessionEndEl, insCharsEl, delCharsEl, netCharsEl]) {
-  //   val.textContent = "";
-  // }
   overviewEl.hidden = true;
   // Paste-like insertions
   while (pasteEvEl.firstChild) {
