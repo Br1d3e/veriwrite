@@ -10,7 +10,7 @@
  */
 
 
-import { wordCount } from "./utils.js";
+import { wordCount, editTextSeg } from "./utils.js";
 
 /**
  * Calculate document-level edit metrics
@@ -40,7 +40,7 @@ export function calEditStats(record, timeline) {
 
     // Paste origin ratio
     const originChars = docFinalText.length
-    const pasteOriginRatio =  originChars - pasteInsChars(sessions) > 0 ? pasteInsChars(sessions) / originChars : 0;
+    const pasteOriginRatio =  originChars - getPasteChars(sessions) > 0 ? getPasteChars(sessions) / originChars : 0;
 
     // Session insert chars graph
     const insCharsGraph = sessionInsGraph(sessions);
@@ -78,20 +78,43 @@ function getDocFinalText(sessions) {
     return docFinalText;
 }
 
-function pasteInsChars(sessions) {
-    let pasteIns = [];
-    let pasteInsChars = 0;
+function getPasteChars(sessions) {
+    // deprecated
+    // let pasteIns = [];
+
+    const initText = sessions[0].init;
+    let textSeg = [];
+    textSeg.push({
+        text: initText,
+        type: "init"
+    });
+
     for (let session of sessions) {
         const ev = session.ev;
-        for (let j = 0; j < ev.length; j++) {
-            const ins = ev[j][3];
-            const delLen= ev[j][2];
-            if (ins.length > 15 && !pasteIns.includes(ins) && delLen === 0) { // Heuristic: if inserted text is longer than 15 chars, consider it a paste
-                pasteInsChars += ins.length;
-                pasteIns.push(ins);
+
+        if (ev.length > 0) {
+            for (let j = 0; j < ev.length; j++) {
+                const ins = ev[j][3];
+                const delLen= ev[j][2];
+                if (ins.length > 15 && delLen === 0) { // Heuristic: if inserted text is longer than 15 chars, consider it a paste
+                    editTextSeg(textSeg, ev[j][1], ins, delLen, "paste");
+                    // pasteIns.push(ins);
+                }
+                else {
+                    editTextSeg(textSeg, ev[j][1], ins, delLen, "normal");
+                }
             }
         }
     }
+
+    let pasteInsChars = 0;
+
+    for (let seg of textSeg) {
+        if (seg.type === "paste") {
+            pasteInsChars += seg.text.length;
+        }
+    }
+
     return pasteInsChars;
 }
 
