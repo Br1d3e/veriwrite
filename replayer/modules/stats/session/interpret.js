@@ -216,7 +216,7 @@ function calFlow(session, descStats) {
     }
     smoothness.mse2ndDeri /= deri2nd.length;
     // Smoothness score / 100
-    smoothness.score = 1 / (1 + (Math.log(1 + smoothness.mse2ndDeri))) * 100;
+    smoothness.score = 1 / (1 + (Math.log10(1 + smoothness.mse2ndDeri))) * 100;
     
 
     // Relative Interruption （uunused)

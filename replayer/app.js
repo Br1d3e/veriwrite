@@ -57,6 +57,8 @@ const genDocReportBtn = document.getElementById("genDocReport");
 const sessionStatsEl = document.getElementById("sessionStats");
 const sessionStatsToggleEl = document.getElementById("sessionStatsToggle");
 const sessionStatsBodyEl = document.getElementById("sessionStatsBody");
+const sesReportEl = document.getElementById("sesReport");
+const genSesReportBtn = document.getElementById("genSesReport");
 
 const overviewEl = document.getElementById("overview");
 const overviewLblsEl = overviewEl.getElementsByClassName("metric-label");
@@ -268,6 +270,22 @@ function renderDocReport(report) {
     genReportSection("Continuity", report.continuity)
   );
   docReportEl.hidden = false;
+}
+
+function renderSesReport(report) {
+  if (!report) {
+    sesReportEl.hidden = true;
+    sesReportEl.replaceChildren();
+    return;
+  }
+
+  sesReportEl.replaceChildren(
+    genReportSection("Overview", report.overview),
+    genReportSection("Writing Flow", report.writingFlow),
+    genReportSection("Paste-like Insertions", report.pasteIns),
+    genReportSection("Revision Intensity", report.revisionIntensity)
+  )
+  sesReportEl.hidden = false;
 }
 
 function barChart(canvasEl, title, labels, values, yLabel) {
@@ -992,7 +1010,64 @@ async function getDocReport(docStats) {
       genDocReportBtn.disabled = false;
     }
   }
+}
 
+async function getSesReport(sessionStats) {
+  if (sesReportLoading || !sessionStats) return;
+
+  const sesStatusEl = document.getElementById("sesReportStatus");
+  sesReportLoading = true;
+  const requestId = ++sesReportRequestId;
+  genSesReportBtn.disabled = true;
+
+  try {
+    sesStatusEl.textContent = "Generating...";
+    renderSesReport(null);
+
+    const res = await fetch("/api/ses-report", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        sessionStats: sessionStats
+      })
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(errorText || `HTTP ${res.status}`);
+    }
+
+    const data = await res.json();
+    if (requestId !== sesReportRequestId) return data;
+
+    renderSesReport(data);
+    sesStatusEl.textContent = "Done";
+
+    return data;
+
+  } catch(e) {
+    if (requestId !== sesReportRequestId) return null;
+
+    sesStatusEl.textContent = "Error";
+    renderSesReport({
+      overview: {
+        title: "Report Error",
+        observation: e.message
+      }
+    });
+    console.error(e);
+  } finally {
+    if (requestId === sesReportRequestId) {
+      sesReportLoading = false;
+      setSessionReportEnabled(Boolean(sessionStats));
+    }
+  }
+}
+
+function setSessionReportEnabled(enabled) {
+  genSesReportBtn.disabled = !enabled || sesReportLoading;
 }
 
 function resetDocReport() {
@@ -1002,6 +1077,15 @@ function resetDocReport() {
   statusEl.textContent = "";
   genDocReportBtn.disabled = false;
   renderDocReport(null);
+}
+
+function resetSesReport() {
+  const sesStatusEl = document.getElementById("sesReportStatus");
+  sesReportRequestId++;
+  sesReportLoading = false;
+  sesStatusEl.textContent = "";
+  setSessionReportEnabled(Boolean(sessionStats));
+  renderSesReport(null);
 }
 
 function updateDocUI(docStats) {
@@ -1048,8 +1132,15 @@ function resetDocUI() {
 
 
 function updateSessionStatsPanel(sessionStats) {
+  if (!sessionStats) {
+    resetStatsPanel();
+    resetSesReport();
+    return;
+  }
+
   sessionStatsEl.hidden = false;
   setStatsCollapsed(sessionStatsBodyEl, sessionStatsToggleEl, false);
+  setSessionReportEnabled(true);
   const desc = sessionStats.desc;
   const interpret = sessionStats.interpret;
 
@@ -1143,6 +1234,8 @@ let sessionStats = null;
 let docStats = null;
 let docReportLoading = false;
 let docReportRequestId = 0;
+let sesReportLoading = false;
+let sesReportRequestId = 0;
 updateDOM(DOM);
 let inspectMode = false;    // inspecting paste-like insertion
 
@@ -1165,9 +1258,11 @@ fileEl.addEventListener("change", async () => {
 
   enableButtons();
   resetSessionBtns();
+  sessionStats = null;
   resetStatsPanel();
   resetDocUI();
   resetDocReport();
+  resetSesReport();
 
   updateDOM(DOM);
   cursorDOM(DOM);
@@ -1182,12 +1277,11 @@ fileEl.addEventListener("change", async () => {
 
   // test doc-level stats
   docStats = calDocStats(flightRecord);
-  // console.log(docStats);
   updateDocUI(docStats);
 
   // Update session-level stats
   sessionStats = calSession(getSession());
-  // console.log(sessionStats);
+  setSessionReportEnabled(Boolean(sessionStats));
 
   // Update HTML
   resetStatus();
@@ -1233,16 +1327,16 @@ sessionBtns.addEventListener("click", (e) => {
       const sid = Number(btnId);
       session = seekToSession(sid);
   }
-  // test
   sessionStats = calSession(session);
-  console.log(sessionStats);
   // Update HTML
+  resetSesReport();
   resetStatsPanel();
   updateSessionStatsPanel(sessionStats);
   restoreCursor(screenEl);
 
 })
 pasteEvEl.addEventListener("click", (e) => {
+  if (!sessionStats) return;
   if (e.target.className === "paste" || e.target.className === null || e.target.id === null) return;
   const pasteIdx = Number(e.target.id);
 
@@ -1285,6 +1379,7 @@ docGapsEl.addEventListener("click", (e) => {
 })
 
 normDisplayCb.addEventListener("change", () => {
+  if (!sessionStats) return;
   const flow = sessionStats.interpret.flow;
   // Remove previous graph
   const prevGraph = Chart.getChart("linearityGraph");
@@ -1296,6 +1391,7 @@ normDisplayCb.addEventListener("change", () => {
 })
 
 linearityAdvCb.addEventListener("change", () => {
+  if (!sessionStats) return;
   const flow = sessionStats.interpret.flow;
   
   linearityAdvEl.hidden = !linearityAdvCb.checked;
@@ -1308,6 +1404,7 @@ linearityAdvCb.addEventListener("change", () => {
 })
 
 progAdvCb.addEventListener("change", () => {
+  if (!sessionStats) return;
   const revInt = sessionStats.interpret.revisionIntensity;
   
   progAdvEl.hidden = !progAdvCb.checked;
@@ -1332,6 +1429,9 @@ genDocReportBtn.addEventListener("click", () => {
   getDocReport(docStats);
 })
 
+genSesReportBtn.addEventListener("click", () => {
+  getSesReport(sessionStats);
+})
 
 // // Test: skip caret to pos
 // const testPosInputEl = document.getElementById("test-pos-input");
