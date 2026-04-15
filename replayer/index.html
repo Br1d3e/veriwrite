@@ -6,7 +6,7 @@
   <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
-  <h2>VeriWrite Replayer</h2>
+  <h1 class="header">VeriWrite Replayer</h1>
   <input id="file" type="file" accept="application/json" />
   <span id="invalidInput" style="color: red;" hidden>Invalid file format</span>
   <div class="meta">
@@ -14,6 +14,10 @@
     <span id="sessions"></span> <br>
     <span id="events"></span> <br>
     <span id="duration"></span> <br>
+    <!-- test: seek to last event -->
+    <!-- <button name="Last Event" id="last-event">Last Event</button> <br> -->
+    <!-- test: caret to destination pos -->
+    <!-- Destination pos: <input type="text" name="Destination Pos:" id="test-pos-input"/> -->
   </div>
   <div id="screen"><span id="before"></span><span id="caret" class="cursor" hidden="true"></span><span id="after"></span></div>
   <div id="sessionBtns"></div>
@@ -25,6 +29,268 @@
     <span id="speedLbl">Speed: 1x</span> 
     <input id="speedSlider" disabled type="range" min="0.1" max="20" step="0.1" value="1">
   </div>   
+
+  <!-- Document Stats panel -->
+  <div id="document-stats" hidden>
+    <div class="stats-header">
+      <div>
+        <h2>Document Stats</h2>
+        <p>Document-level timeline, edit, and continuity analysis across all sessions.</p>
+      </div>
+      <button class="stats-toggle" id="docStatsToggle" type="button" aria-expanded="true" aria-controls="docStatsBody">-</button>
+    </div>
+    <!-- doc stats report by LLM -->
+    <div>
+      <button id="genDocReport" type="button">Generate Report</button>
+      <div id="docReportStatus"></div>
+      <div class="docReport" id="docReport" hidden></div>
+    </div>
+    <div id="docStatsBody">
+
+    <h3>Timeline</h3>
+    <div class="doc-card" id="doc-timeline">
+      <div class="metrics">
+        <div class="metric-box">
+          <span class="metric-label">Document Start</span>
+          <span class="metric-value" id="docStart"></span>
+        </div>
+        <div class="metric-box">
+          <span class="metric-label">Document End</span>
+          <span class="metric-value" id="docEnd"></span>
+        </div>
+        <div class="metric-box">
+          <span class="metric-label">Document Span</span>
+          <span class="metric-value" id="docSpan"></span>
+        </div>
+        <div class="metric-box">
+          <span class="metric-label">Active Writing Time</span>
+          <span class="metric-value" id="docDuration"></span>
+        </div>
+        <div class="metric-box">
+          <span class="metric-label">Active Writing Days</span>
+          <span class="metric-value" id="docActiveDays"></span>
+        </div>
+        <div class="metric-box">
+          <span class="metric-label">Session Count</span>
+          <span class="metric-value" id="docSessionCount"></span>
+        </div>
+      </div>
+      <div class="doc-chart-box" id="docDurationsGraphBox">
+        <canvas id="docDurationsGraph"></canvas>
+      </div>
+    </div>
+
+    <h3>Edit</h3>
+    <div class="doc-card" id="doc-edit">
+      <div class="metrics">
+        <div class="metric-box">
+          <span class="metric-label">Inserted Characters</span>
+          <span class="metric-value" id="docInsertedChars"></span>
+        </div>
+        <div class="metric-box">
+          <span class="metric-label">Deleted Characters</span>
+          <span class="metric-value" id="docDeletedChars"></span>
+        </div>
+        <div class="metric-box">
+          <span class="metric-label">Net Characters</span>
+          <span class="metric-value" id="docNetChars"></span>
+        </div>
+        <div class="metric-box">
+          <span class="metric-label">Word Count</span>
+          <span class="metric-value" id="docWordCount"></span>
+        </div>
+        <div class="metric-box">
+          <span class="metric-label">Paste Origin Ratio</span>
+          <span class="metric-value" id="docPasteOriginRatio"></span>
+        </div>
+      </div>
+      <h4>Edit Time Heatmap</h4>
+      <div class="doc-heatmap" id="docEditHeatmap"></div>
+      <div class="doc-chart-box" id="docInsertCharsGraphBox">
+        <canvas id="docInsertCharsGraph"></canvas>
+      </div>
+    </div>
+
+    <h3>Continuity</h3>
+    <div class="doc-card" id="doc-continuity">
+      <div class="metrics">
+        <div class="metric-box">
+          <span class="metric-label">Offline Text Ratio</span>
+          <span class="metric-value" id="docOfflineTextRatio"></span>
+        </div>
+      </div>
+      <h4 title="detected textual difference during gaps between sessions">Gaps</h4>
+      <div class="doc-gaps" id="docGaps"></div>
+    </div>
+    </div>
+  </div>
+
+  <!-- Session Stats panel -->
+  <div id="sessionStats" hidden>
+    <div class="stats-header">
+      <div>
+        <h2>Session Stats</h2>
+        <p>General and interpretive data analysis for each session.</p>
+      </div>
+      <button class="stats-toggle" id="sessionStatsToggle" type="button" aria-expanded="true" aria-controls="sessionStatsBody">-</button>
+    </div>
+    <div>
+      <button id="genSesReport" type="button">Generate Session Report</button>
+      <div id="sesReportStatus"></div>
+      <div class="docReport" id="sesReport" hidden></div>
+    </div>
+    
+    <div id="sessionStatsBody">
+    <h3>Overview</h3>
+    <div class="metrics" id="overview">
+        <div class="metric-box">
+          <span class="metric-label">Start</span>
+          <span class="metric-value" id="sessionStart"></span>
+        </div>
+        <div class="metric-box">
+          <span class="metric-label">End</span>
+          <span class="metric-value" id="sessionEnd"></span>
+        </div>
+        <div class="metric-box">
+          <span class="metric-label">Duration</span>
+          <span class="metric-value" id="sessionDuration"></span>
+        </div>
+        <div class="metric-box">
+          <span class="metric-label">Inserted Characters</span>
+          <span class="metric-value" id="insChars"></span>
+        </div>
+        <div class="metric-box">
+          <span class="metric-label">Deleted Characters</span>
+          <span class="metric-value" id="delChars"></span>
+        </div>
+        <div class="metric-box">
+          <span class="metric-label">Net Characters</span>
+          <span class="metric-value" id="netChars"></span>
+        </div>
+      </div>
+    <h3>Paste-like Insertion</h3><br>
+    <div class="paste" id="pasteEv"> 
+      <!-- generate paste events with script -->
+    </div>
+    <h3>Writing Flow</h3><br>
+    <div class="flow" id="flow">
+      <div class="flow-card" id="linearity">
+        <h4 id="linearity-title">Linearity & Smoothness</h4>
+        <div class="linearity-box">
+          <div class="flow-box">
+            <span class="flow-label">Linearity Score</span>
+            <span class="flow-value" id="linearityVal"></span>
+          </div>
+          <div class="flow-box">
+            <span class="flow-label">Smoothness Score</span>
+            <span class="flow-value" id="smoothnessVal"></span>
+          </div>
+        </div>
+        <div style="padding-top: 10px; padding-bottom: 5px"><!-- toggle advanced metrics -->
+          <input type="checkbox" id="linearity-adv-cb" name="Show Advanced"/>Show Advanced Metrics<!-- advanced metrics input -->
+        </div>
+        <div class="linearity-box" id="linearity-adv" hidden>
+            <div class="flow-box">
+              <span class="flow-label" title="Mean Absolute Deviation">MAD</span>
+              <span class="flow-value" id="madVal"></span>
+              <span class="flow-label" title="Root Mean Square Error">RMSE</span>
+              <span class="flow-value" id="rmseVal"></span>
+              <span class="flow-label" title="Max Deviation">Max Deviation</span>
+              <span class="flow-value" id="maxDevVal"></span>
+            </div>
+            <div class="flow-box">
+              <span class="flow-label" title="1st Derivative Mean Absolute Deviation">1st Derivative MAD</span>
+              <span class="flow-value" id="mad1stVal"></span>
+              <span class="flow-label" title="2nd Derivative Mean Square Error">2nd Derivative MSE</span>
+              <span class="flow-value" id="mse2ndVal"></span>
+            </div>
+        </div>
+          <!-- linearity graph -->
+        <div class="flow-box" style="position: relative; height: 80vh; width: 160vh">
+          <canvas id="linearityGraph"></canvas>
+        </div>
+        <div style="padding-bottom: 10px"><!-- toggle percentage display -->
+          <input type="checkbox" id="norm-display" name="Display in percentage"/>Display in percentage
+        </div>
+      </div>
+      <div class="flow-card" id="interrupt">
+        <h4 id="interrupt-title">Interruptions / Pauses</h3>
+        <div class="interrupt-box">
+          <div class="flow-box">
+            <span class="flow-label">Short Pauses</span>
+            <span class="flow-value" id="interrupt-short"></span>
+            <span class="flow-label">Extended Pauses</span>
+            <span class="flow-value" id="interrupt-medium"></span>
+            <span class="flow-label">Long Interrupts</span>
+            <span class="flow-value" id="interrupt-long"></span>
+          </div>
+          <div class="flow-box" style="position: relative; height: 45vh; width: 40vh">
+            <canvas id="interruptPie"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h3>Revision</h3><br>
+    <div class="revision" id="revision">
+      <div class="revision-card" id="intensity">
+        <h4 id="intensity-title">Intensity</h4>
+        <div class="intensity-box">
+          <div class="revision-box">
+            <span class="revision-label" title="Total deleted characters / total inserted characters">Delete-insert Ratio</span>
+            <span class="revision-value" id="delInsVal"></span>
+            <span class="revision-label" title="Total revised characters / total modified characters">Revision Ratio</span>
+            <span class="revision-value" id="revRatioVal"></span> 
+          </div>
+          <div class="revision-box" style="position: relative; height: 45vh; width: 40vh">
+            <canvas id="intensity-pie"></canvas>
+          </div>
+          <div class="revision-box" style="position: relative; height: 45vh; width: 40vh">
+            <canvas id="rev-op-types-pie"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="revision-card" id="progress">
+        <h4 id="progress-title">Progress</h4>
+        <div class="prog-box">
+          <div class="revision-box">
+            <span class="revision-label">Early Gained Progress</span>
+            <span class="revision-value" id="earlyGainVal"></span>
+            <span class="revision-label">Late Gained Progress</span>
+            <span class="revision-value" id="lateGainVal"></span>
+          </div>
+          <!-- TODO: Drop -->
+          <div class="revision-box" id="prog-dip">
+            <span class="revision-label" title="Total percentage of product-process similarity dip">Total Dip</span>
+            <span class="revision-value" id="totalDipVal"></span>
+            <span class="revision-label" title="Max percentage of product-process similarity dip">Max Dip</span>
+            <span class="revision-value" id="maxDipVal"></span>
+            <span class="revision-label" title="Similarity drop / Similarity increase (%)">Drop Ratio</span>
+            <span class="revision-value" id="dropRatioVal"></span>
+          </div>
+        </div>
+        <div style="padding-top: 10px; padding-bottom: 5px"><!-- toggle advanced metrics -->
+          <input type="checkbox" id="prog-adv-cb"/>Show Advanced Metrics<!-- advanced metrics input -->
+        </div>
+        <div class="prog-box" id="prog-adv" hidden>
+          <div class="revision-box">
+            <span class="revision-label" title="Similarity between final and start states of current session">Final-start Similarity</span>
+            <span class="revision-value" id="initFinalVal"></span>
+            <span class="revision-label" title="Similarity at 10th Percentile">Similarity P10</span>
+            <span class="revision-value" id="simP10Val"></span>
+            <span class="revision-label" title="Similarity at 30th Percentile">Similarity P30</span>
+            <span class="revision-value" id="simP30Val"></span>
+            <span class="revision-label" title="Median Similarity">Median Similarity</span>
+            <span class="revision-value" id="simMedVal"></span>
+          </div>
+        </div>
+        <div class="revision-box" style="padding-top: 20px; position: relative; height: 80vh; width: 150vh">
+          <canvas id="prog-graph"></canvas>
+        </div>
+      </div>
+    </div>
+    </div>
+  </div>
   <script type="module" src="./app.js"></script>
 </body>
 </html>
