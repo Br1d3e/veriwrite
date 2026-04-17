@@ -4,6 +4,17 @@ export function generateUUID() {
   return crypto.randomUUID();
 }
 
+// Escape Microsoft Word Chars
+function normalizeLines(s) {
+    return String(s)
+    .replace(/\r\n/g, "\n")  
+    .replace(/\r/g, '\n')   // Hard Break
+    .replace(/\u000b/g, '\n')   // Soft Break
+}
+
+export function arraySum(arr) {
+  return arr.reduce((a, b) => a + b, 0);
+}
 
 export function b64Encoder(str) {
   const bytes = new TextEncoder().encode(str); // Uint8Array

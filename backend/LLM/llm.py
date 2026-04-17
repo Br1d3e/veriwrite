@@ -5,7 +5,7 @@ from datetime import datetime
 import json
 import asyncio
 import os
-from utils import extract_first_json_object
+from backend.LLM.utils import extract_first_json_object
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from pathlib import Path

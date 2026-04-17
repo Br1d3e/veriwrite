@@ -12,8 +12,8 @@ from datetime import datetime
 from copy import deepcopy
 import asyncio
 from pathlib import Path
-from doc_stats import router as doc_stats_router
-from ses_stats import router as ses_stats_router
+from backend.LLM.doc_stats import router as doc_stats_router
+from backend.LLM.ses_stats import router as ses_stats_router
 
 
 app = FastAPI()

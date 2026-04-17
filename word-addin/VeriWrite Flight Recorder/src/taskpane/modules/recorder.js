@@ -2,6 +2,7 @@
 import { generateUUID, b64Encoder, b64Decoder, computeDiff } from "./utils";
 import { saveCustomXml, loadSettings, loadRecord, updateSettings} from "./store";
 import { getDocTitle, getDocAuthor, readBodyText } from "./docInfo";
+import { startDoc, startSession, endSession, postBlock } from "./post";
 
 // Initialize record
 let flightRecord = null;
@@ -88,21 +89,17 @@ export async function startRecording() {
 
     [docId, schema, xmlId] = await loadSettings();
 
-    // Load existing record
-    if (xmlId) {
-        flightRecord = await loadRecord(xmlId);
-    }
+    // // Load existing record
+    // if (xmlId) {
+    //     flightRecord = await loadRecord(xmlId);
+    // }
 
-    // No docId, create new flightRecord
-    if (!docId || !schema || !flightRecord) {
-        console.log("Record load failed or is new, initializing fresh record...");
-        flightRecord = await newRecord();
-        await updateSettings("docId", flightRecord.m.docId);
-        await updateSettings("v", flightRecord.v);
-    }
+    // No docId, create new document
+    await startDoc();
 
     // Start new session
-    await initializeSession();
+    // await initializeSession();
+    await startSession();
 
     lastPoll = Date.now();
     const initText = await readBodyText()
@@ -122,7 +119,8 @@ export async function stopRecording() {
   session.tn = Date.now();
   console.log(`Recording stopped. Duration: ${duration}s. Events: ${session.ev.length}`);
 
-  await updateSession();
+  await endSession();
+  // await updateSession();
 }
 
 

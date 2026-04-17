@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 from typing import Any
-from llm import gen_report
-from utils import format_timestamp, format_duration
+from backend.LLM.llm import gen_report
+from backend.LLM.utils import format_timestamp, format_duration
 from copy import deepcopy
 from fastapi import APIRouter
 
