@@ -17,13 +17,15 @@ let st0 = 0;
 let bSeq = 0;
 let prevHash = null;
 let sessionKey = null;
+let currentDocHash = null;
 
-function resetSessionState() {
+export function resetSessionState() {
   sid = null;
   st0 = 0;
   bSeq = 0;
   prevHash = null;
   sessionKey = null;
+  currentDocHash = null;
 }
 
 function bytesToBase64(bytes) {
@@ -163,6 +165,7 @@ export async function startSession() {
   const initHash = await sha256Hex(initText);
   const generatedKey = await genAEADKey();
   sessionKey = generatedKey.key;
+  currentDocHash = initHash;
 
   return postJson("/session/start", {
     v,
@@ -189,21 +192,17 @@ export async function endSession() {
     sid,
     dt,
     eh: endHash,
-    lbh: prevHash,
-    bc: bSeq,
   });
 }
 
-export async function postBlock(arg1, arg2) {
+export async function postBlock(ev = []) {
   if (!sid || !sessionKey) {
     throw new Error("Cannot post block before startSession()");
   }
 
-  const hasSeqOverride = Number.isInteger(arg1) && Array.isArray(arg2);
-  const ev = hasSeqOverride ? arg2 : arg1;
-  const q = hasSeqOverride ? arg1 : bSeq;
+  const q = bSeq;
   const dt0 = Date.now() - st0;
-  const dtn = arraySum((ev || []).map((e) => e[0] || 0));
+  const dtn = arraySum(ev.map((e) => e[0] || 0));
   const header = {
     v,
     dId: docId,
@@ -214,8 +213,9 @@ export async function postBlock(arg1, arg2) {
   const rawPayload = {
     dt0,
     dtn,
+    idsh: currentDocHash,
     dsh: await hashDocState(),
-    ev: ev || [],
+    ev,
   };
   const payloadText = canonicalJson(rawPayload);
   const headerText = canonicalJson(header);
@@ -231,7 +231,8 @@ export async function postBlock(arg1, arg2) {
   });
 
   prevHash = ch;
-  bSeq = q + 1;
+  currentDocHash = rawPayload.dsh;
+  bSeq += 1;
 
   return response;
 }
