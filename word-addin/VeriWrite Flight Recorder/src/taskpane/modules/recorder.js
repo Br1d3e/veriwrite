@@ -13,17 +13,21 @@ let xmlId = null;
 // Recorder States
 let ONLINE = true;
 let recording = false;
+let failed = false;
 let lastPoll = Date.now();
 let lastText = "";
 const postInterval = 10_000;
 let lastPost = Date.now();
 let evBuffer = [];
+let posting = null;
 let docState = null;
 let sesState = null;
 let blockReceipt = null;
 let finalReceipt = null;
+let lastError = null;
 
 export function setOnlineMode(value) {
+  if (recording) return;
   ONLINE = Boolean(value);
 }
 
@@ -36,7 +40,8 @@ export function getPostState() {
     docState,
     sesState,
     blockReceipt,
-    finalReceipt
+    finalReceipt,
+    lastError
   }
 }
 
@@ -77,23 +82,54 @@ async function initializeSession() {
   };
 }
 
+async function flushBlock(docText) {
+  if (posting) {
+    await posting;
+  }
+  if (evBuffer.length === 0) return null;
+
+  const blockEvents = evBuffer;
+  evBuffer = [];
+
+  posting = postBlock(blockEvents, docText)
+    .then((receipt) => {
+      blockReceipt = receipt;
+      lastPost = Date.now();
+      return receipt;
+    })
+    .catch((error) => {
+      evBuffer = blockEvents.concat(evBuffer);
+      throw error;
+    })
+    .finally(() => {
+      posting = null;
+    });
+
+  return posting;
+}
+
+function failRecording(error) {
+  failed = true;
+  recording = false;
+  lastError = error instanceof Error ? error.message : String(error);
+}
+
 async function poll() {
-  if (!recording) return;
+  if (!recording || failed) return;
 
   try {
     const currentText = await captureDiff();
 
     if (ONLINE && evBuffer.length > 0 && Date.now() - lastPost >= postInterval) {
-      blockReceipt = await postBlock(evBuffer, currentText);
-      evBuffer = [];
-      lastPost = Date.now();
+      await flushBlock(currentText);
     }
   } catch (error) {
     console.error("Polling Error: ", error);
+    failRecording(error);
   }
 
   // Poll again (rate 200ms)
-  if (recording) {
+  if (recording && !failed) {
     setTimeout(poll, 200);
   }
 }
@@ -126,6 +162,11 @@ async function updateSessions() {
 export async function startRecording() {
     if (recording) return;
     ONLINE = isOnlineMode();
+    failed = false;
+    lastError = null;
+    blockReceipt = null;
+    finalReceipt = null;
+    posting = null;
 
     [docId, schema, xmlId] = await loadSettings();
 
@@ -165,23 +206,32 @@ export async function startRecording() {
 export async function stopRecording() {
   if (!recording) return;
   recording = false;
-  const finalText = await captureDiff();
-  
-  if (ONLINE) {
-    if (evBuffer.length > 0) {
-      blockReceipt = await postBlock(evBuffer, finalText);
-      evBuffer = [];
-      lastPost = Date.now();
-    } else {
-      const finalHash = await hashText(finalText);
-      const { currentDocHash } = getSessionPostState();
-      if (currentDocHash !== finalHash) {
-        throw new Error("Final document state changed, but no pending events were captured for the record server.");
-      }
+
+  try {
+    if (posting) {
+      await posting;
     }
-    finalReceipt = await endSession(finalText);
-  } else {
-    await updateSessions();
+
+    const finalText = await captureDiff();
+
+    if (ONLINE) {
+      if (evBuffer.length > 0) {
+        await flushBlock(finalText);
+      } else {
+        const finalHash = await hashText(finalText);
+        const { currentDocHash } = getSessionPostState();
+        if (currentDocHash !== finalHash) {
+          throw new Error("Final document state changed, but no pending events were captured for the record server.");
+        }
+      }
+      finalReceipt = await endSession(finalText);
+    } else {
+      await updateSessions();
+    }
+  } catch (error) {
+    console.error("Stop Recording Error: ", error);
+    failRecording(error);
+    throw error;
   }
 }
 
