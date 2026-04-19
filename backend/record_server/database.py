@@ -390,13 +390,17 @@ def end_session(session_end: dict[str, Any]) -> dict[str, Any]:
                 return {"status": "SESSION NOT FOUND", "op": "session/end", "sid": sid}
 
             continuity_status = session["continuity_status"] or "UNKNOWN"
-            if continuity_status != "TRUE":
-                return {"status": "INVALID CONTINUITY STATUS", 
-                        "op": "session/end", 
-                        "sid": sid}
-            if end_hash != session["current_dsh"]:
-                return {"status": "INVALID END HASH", "op": "session/end", "sid": sid}
-            
+            valid_continuity = continuity_status == "TRUE"
+            valid_end_hash = end_hash == session["current_dsh"]
+            if valid_continuity and valid_end_hash:
+                session_status = "SUCCESS"
+            elif not valid_continuity and not valid_end_hash:
+                session_status = "INVALID CONTINUITY AND END HASH"
+            elif not valid_continuity:
+                session_status = "INVALID CONTINUITY STATUS"
+            else:
+                session_status = "INVALID END HASH"
+
             init_hash = session["ih"]
             closed_server_ts = now_ms()
 
@@ -421,6 +425,11 @@ def end_session(session_end: dict[str, Any]) -> dict[str, Any]:
                 "sid": sid,
                 "ih": init_hash,
                 "eh": end_hash,
+                "current_dsh": session["current_dsh"],
+                "continuity_status": continuity_status,
+                "valid_continuity": valid_continuity,
+                "valid_end_hash": valid_end_hash,
+                "session_status": session_status,
                 "last_ch": last_block_hash,
                 "merkle_root": merkle_root,
                 "block_count": len(block_hashes),
@@ -447,7 +456,7 @@ def end_session(session_end: dict[str, Any]) -> dict[str, Any]:
             )
 
     return {
-        "status": "SUCCESS", 
+        "status": session_status,
         "op": "session/end", 
         "sid": sid,
         "receipt": final_receipt
