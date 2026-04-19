@@ -64,7 +64,6 @@ def get_signing_key() -> Ed25519PrivateKey:
         return Ed25519PrivateKey.from_private_bytes(base64.b64decode(SIGNING_PRIVATE_KEY_B64))
     return _PROCESS_SIGNING_KEY
 
-
 def signing_private_key_b64_for_env() -> str:
     raw_key = _PROCESS_SIGNING_KEY.private_bytes(Encoding.Raw, PrivateFormat.Raw, NoEncryption())
     return base64.b64encode(raw_key).decode("ascii")
@@ -92,6 +91,24 @@ def apply_events(text: str, ev: list[Any]) -> str:
         next_text = next_text[:pos] + ins + next_text[pos + del_len:]
 
     return next_text
+
+def merkle_tree_root(block_hashes: list[str]) -> str | None:
+    if not block_hashes:
+        return None
+    if len(block_hashes) == 1:
+        return block_hashes[0]
+
+    level = block_hashes[:]
+    if len(level) % 2 == 1:
+        level.append(level[-1])
+
+    next_level = []
+    for i in range(0, len(level), 2):
+        left = bytes.fromhex(level[i])
+        right = bytes.fromhex(level[i + 1])
+        next_level.append(hashlib.sha256(left + right).hexdigest())
+
+    return merkle_tree_root(next_level)
 
 
 def start_doc(doc: dict[str, Any]) -> dict[str, Any]:
@@ -153,6 +170,8 @@ def start_session(session: dict[str, Any]) -> dict[str, Any]:
             continuity_status = "UNKNOWN"
             if prev_end_hash:
                 continuity_status = "TRUE" if prev_end_hash == init_hash else "FALSE"
+            else:
+                continuity_status = "TRUE"  # true if first session
 
             cursor.execute(
                 """
@@ -341,11 +360,95 @@ def append_block(block: dict[str, Any]) -> dict[str, Any]:
         "valid_q": valid_q,
         "valid_h": valid_ch,
         "valid_dsh": valid_dsh,
-        "receipt": receipt,
+        "receipt": receipt
     }
 
 
 def end_session(session_end: dict[str, Any]) -> dict[str, Any]:
-    # TODO: SELECT block hashes, close session, store Merkle root/final receipt.
-    # SQL boundary: sessions + blocks tables.
-    return {"status": "TODO", "op": "session/end", "sid": session_end.get("sid")}
+    d_id = session_end.get("dId")
+    sid = session_end.get("sid")
+    v = session_end.get("v")
+    if not verify_protocol(v):
+        return {"status": "INVALID PROTOCOL", "op": "session/end", "sid": sid}
+
+    dt = session_end.get("dt")  # ?
+    end_hash = session_end.get("eh")
+
+    with connect() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT *
+                FROM sessions
+                WHERE d_id = %s AND sid = %s
+                FOR UPDATE
+                """,
+                (d_id, sid),
+            )
+            session = cursor.fetchone()
+            if not session:
+                return {"status": "SESSION NOT FOUND", "op": "session/end", "sid": sid}
+
+            continuity_status = session["continuity_status"] or "UNKNOWN"
+            if continuity_status != "TRUE":
+                return {"status": "INVALID CONTINUITY STATUS", 
+                        "op": "session/end", 
+                        "sid": sid}
+            if end_hash != session["current_dsh"]:
+                return {"status": "INVALID END HASH", "op": "session/end", "sid": sid}
+            
+            init_hash = session["ih"]
+            closed_server_ts = now_ms()
+
+            cursor.execute(
+                """
+                SELECT ch
+                FROM blocks
+                WHERE d_id = %s AND sid = %s
+                ORDER BY q ASC
+                """,
+                (d_id, sid)
+            )
+            blocks = cursor.fetchall()
+            block_hashes = [block["ch"] for block in blocks]
+            merkle_root = merkle_tree_root(block_hashes)
+            last_block_hash = block_hashes[-1] if block_hashes else None
+
+            final_receipt = sign_receipt({
+                "type": "session_receipt",
+                "v": v,
+                "dId": d_id,
+                "sid": sid,
+                "ih": init_hash,
+                "eh": end_hash,
+                "last_ch": last_block_hash,
+                "merkle_root": merkle_root,
+                "block_count": len(block_hashes),
+                "closed_server_ts": closed_server_ts
+            })
+
+            cursor.execute(
+                """
+                UPDATE sessions 
+                SET eh = %s,
+                    dt = %s,
+                    merkle_root = %s,
+                    final_receipt = %s,
+                    closed_server_ts = %s
+                WHERE d_id = %s AND sid = %s
+                """,
+                (end_hash, 
+                 dt,
+                 merkle_root,
+                 Jsonb(final_receipt), 
+                 closed_server_ts, 
+                 d_id, 
+                 sid)
+            )
+
+    return {
+        "status": "SUCCESS", 
+        "op": "session/end", 
+        "sid": sid,
+        "receipt": final_receipt
+    }

@@ -3,7 +3,10 @@ from typing import Any
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from database import append_block, end_session, start_doc, start_session
+try:
+    from .database import append_block, end_session, start_doc, start_session
+except ImportError:
+    from database import append_block, end_session, start_doc, start_session
 
 
 app = FastAPI()
