@@ -55,8 +55,11 @@ def decrypt_payload(sk_b64: str, ct_b64: str, iv_b64: str, tag_b64: str, header_
     iv = base64.b64decode(iv_b64)
     tag = base64.b64decode(tag_b64)
 
-    plain_text = AESGCM(s_key).decrypt(iv, cipher_text + tag, header_text.encode("utf-8"))
-    return json.loads(plain_text.decode("utf-8"))
+    try:
+        plain_text = AESGCM(s_key).decrypt(iv, cipher_text + tag, header_text.encode("utf-8"))
+        return json.loads(plain_text.decode("utf-8"))
+    except:
+        return {}
 
 
 def get_signing_key() -> Ed25519PrivateKey:
@@ -249,6 +252,8 @@ def append_block(block: dict[str, Any]) -> dict[str, Any]:
                 valid_ch = ph is None
 
             payload = decrypt_payload(session["session_key_b64"], cipher_text, iv, tag, header_text)
+            if payload == {}:
+                return {"status": "INVALID AEED TAG", "op": "session/block", "sid": sid, "q": q}
             dt0 = payload.get("dt0")
             dtn = payload.get("dtn")
             init_dsh = payload.get("idsh")
