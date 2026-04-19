@@ -6,7 +6,7 @@ import { generateUUID, arraySum } from "./utils";
 import { getDocAuthor, getDocTitle, readBodyText } from "./docInfo";
 import { loadSettings, updateSettings } from "./store";
 
-const SERVER_URL = "http://127.0.0.1:8000";
+const SERVER_URL = "https://localhost:8443";
 const PROTOCOL_VERSION = 3;
 const AES_GCM_TAG_BYTES = 16;
 
@@ -56,21 +56,30 @@ async function sha256Hex(input) {
   return toHex(new Uint8Array(hashBuffer));
 }
 
+export async function hashText(text) {
+  return sha256Hex(text);
+}
+
 async function postJson(path, body) {
-  const response = await fetch(`${SERVER_URL}${path}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
+  let response;
+  try {
+    response = await fetch(`${SERVER_URL}${path}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+  } catch (error) {
+    throw new Error(`Record server is unreachable at ${SERVER_URL}. Start backend/record_server before using online mode.`);
+  }
 
   if (!response.ok) {
     const detail = await response.text();
     throw new Error(`Record server ${path} failed (${response.status}): ${detail}`);
   }
 
-  return response;
+  return response.json();
 }
 
 async function genAEADKey() {
@@ -111,6 +120,11 @@ async function hashDocState() {
   return sha256Hex(await readBodyText());
 }
 
+async function hashDocText(docText) {
+  if (typeof docText === "string") return sha256Hex(docText);
+  return hashDocState();
+}
+
 async function hashCurrent(header, iv, ct, tag) {
   return sha256Hex(canonicalJson({ header, iv, ct, tag }));
 }
@@ -118,13 +132,13 @@ async function hashCurrent(header, iv, ct, tag) {
 async function ensureDocSettings() {
   const [storedDocId, storedVersion] = await loadSettings();
   docId = storedDocId;
-  v = storedVersion ? Number(storedVersion) : PROTOCOL_VERSION;
+  const parsedVersion = storedVersion ? Number(storedVersion) : null;
+  v = PROTOCOL_VERSION;
 
-  if (v !== PROTOCOL_VERSION) {
-    throw new Error(`Unsupported VeriWrite protocol version: ${storedVersion}`);
-  }
-
-  if (!storedVersion) {
+  if (parsedVersion !== PROTOCOL_VERSION) {
+    if (storedVersion) {
+      console.warn(`Migrating VeriWrite protocol setting from v${storedVersion} to v${PROTOCOL_VERSION}`);
+    }
     await updateSettings("v", PROTOCOL_VERSION);
   }
 
@@ -178,13 +192,13 @@ export async function startSession() {
   });
 }
 
-export async function endSession() {
+export async function endSession(docText = null) {
   if (!sid) {
     throw new Error("Cannot end session before startSession()");
   }
 
   const dt = Date.now() - st0;
-  const endHash = await hashDocState();
+  const endHash = await hashDocText(docText);
 
   return postJson("/session/end", {
     v,
@@ -195,7 +209,16 @@ export async function endSession() {
   });
 }
 
-export async function postBlock(ev = []) {
+export function getSessionPostState() {
+  return {
+    sid,
+    bSeq,
+    prevHash,
+    currentDocHash,
+  };
+}
+
+export async function postBlock(ev = [], docText = null) {
   if (!sid || !sessionKey) {
     throw new Error("Cannot post block before startSession()");
   }
@@ -214,7 +237,7 @@ export async function postBlock(ev = []) {
     dt0,
     dtn,
     idsh: currentDocHash,
-    dsh: await hashDocState(),
+    dsh: await hashDocText(docText),
     ev,
   };
   const payloadText = canonicalJson(rawPayload);
@@ -229,6 +252,10 @@ export async function postBlock(ev = []) {
     tag,
     ch,
   });
+
+  if (response.status && response.status !== "SUCCESS") {
+    throw new Error(`Record server rejected block ${q}: ${JSON.stringify(response)}`);
+  }
 
   prevHash = ch;
   currentDocHash = rawPayload.dsh;

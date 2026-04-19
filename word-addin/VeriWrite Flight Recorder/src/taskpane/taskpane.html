@@ -29,7 +29,7 @@
         <h2 class="ms-font-xl">Please <a target="_blank" href="https://learn.microsoft.com/office/dev/add-ins/testing/test-debug-office-add-ins#sideload-an-office-add-in-for-testing">sideload</a> your add-in to see app body.</h2>
     </section>
     <main id="app-body" class="ms-welcome__main" style="display: none;">
-        <h2 class="ms-font-xl"> Discover what Office Add-ins can do for you today! </h2>
+        <!-- <h2 class="ms-font-xl"> Discover what Office Add-ins can do for you today! </h2>
         <ul class="ms-List ms-welcome__features">
             <li class="ms-ListItem">
                 <i class="ms-Icon ms-Icon--Ribbon ms-font-xl"></i>
@@ -43,11 +43,22 @@
                 <i class="ms-Icon ms-Icon--Design ms-font-xl"></i>
                 <span class="ms-font-m">Create and visualize like a pro</span>
             </li>
-        </ul>
+        </ul> -->
+        <!-- <div>
+            <h3>Debug Console</h3>
+            <span id="post-state" style="display:flex; gap:8px"></span>
+            <span id="ev-block" style="display: flex; gap:10px"></span>
+        </div> -->
         <div style="display:flex; gap:8px; margin: 10px 0;">
             <button id="btnStart">Start</button>
-            <!-- <button id="btnStop">Stop</button> -->
-            <button id="btnExport">Export JSON</button>
+            <button id="btnStop">Stop</button>
+            <!-- <button id="btnExport">Export JSON</button> -->
+        </div>
+        <div>
+            <input type="checkbox" class="checkbox" id="onlineCb" checked>
+            <label class="switch" for="checkbox">Online Mode
+                <span class="slider"></span>
+            </label>
         </div>
 <div id="status" style="font-size: 12px; color: #555;"></div>
         <p><label id="item-subject"></label></p>

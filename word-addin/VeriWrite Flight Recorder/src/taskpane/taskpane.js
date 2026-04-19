@@ -5,10 +5,7 @@
 
 /* global document, Office, Word */
 
-
-import { startRecording, stopRecording, getFlightRecord } from "./modules/recorder";
-
-
+import { startRecording, stopRecording, getFlightRecord, isOnlineMode, setOnlineMode, getPostState, getEvBlock } from "./modules/recorder";
 
 function downloadJSON() {
   const flightRecord = getFlightRecord();
@@ -29,7 +26,25 @@ Office.onReady((info) => {
       document.getElementById("app-body").style.display = "flex";
     }
     document.getElementById("btnStart")?.addEventListener("click", startRecording);
-    document.getElementById("btnExport")?.addEventListener("click", () => {
-      stopRecording().then(() => downloadJSON());
-    });
-});
+    document.getElementById("btnStop")?.addEventListener("click", async () => {
+        await stopRecording() 
+        if (!isOnlineMode()) {
+          downloadJSON()
+        }
+    })
+    const onlineCb = document.getElementById("onlineCb");
+    setOnlineMode(onlineCb.checked);
+    onlineCb.addEventListener("change", () => {
+      setOnlineMode(onlineCb.checked);
+    })
+    // setInterval(debugState, 100);
+  });
+
+  function debugState() {
+    // Debug
+    const postStateEl = document.getElementById("post-state")
+    postStateEl.textContent = JSON.stringify(getPostState(), null, 2);
+    // const evBlockEl = document.getElementById("ev-block");
+    // evBlockEl.textContent = JSON.stringify(getEvBlock(), null, 2);
+  }
+
