@@ -15,7 +15,10 @@ from typing import Any
 import psycopg
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-from cryptography.hazmat.primitives.serialization import Encoding, PrivateFormat, NoEncryption
+from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey, X25519PublicKey
+from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.serialization import Encoding, PrivateFormat, PublicFormat, NoEncryption
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 
@@ -71,12 +74,36 @@ def signing_private_key_b64_for_env() -> str:
     raw_key = _PROCESS_SIGNING_KEY.private_bytes(Encoding.Raw, PrivateFormat.Raw, NoEncryption())
     return base64.b64encode(raw_key).decode("ascii")
 
-
 def sign_receipt(receipt_body: dict[str, Any]) -> dict[str, Any]:
     signed_receipt = {**receipt_body, "key_id": SIGNING_KEY_ID}
     signature = get_signing_key().sign(canonical_json(signed_receipt).encode("utf-8"))
     signed_receipt["sig"] = base64.b64encode(signature).decode("ascii")
     return signed_receipt
+
+def get_ecdh_keys() -> tuple[X25519PrivateKey, X25519PublicKey]:
+    private_key = X25519PrivateKey.generate()
+    public_key = private_key.public_key()
+    return (private_key, public_key)
+
+def exchange_session_key(c_pub_b64: Any, salt: bytes, info: dict) -> dict[str, Any]:
+    c_pub_bytes = base64.b64decode(c_pub_b64)
+    c_pub = X25519PublicKey.from_public_bytes(c_pub_bytes)
+
+    private_key, public_key = get_ecdh_keys()
+    raw_key = public_key.public_bytes(Encoding.Raw, PublicFormat.Raw)
+    shared = private_key.exchange(c_pub)
+    hkdf = HKDF(
+        algorithm=hashes.SHA256(),
+        length=32,
+        salt=salt,
+        info=canonical_json(info).encode("utf-8"),
+    )
+    session_key = hkdf.derive(shared)
+
+    return {
+        "s_pub": base64.b64encode(raw_key).decode("ascii"),
+        "s_key": base64.b64encode(session_key).decode("ascii"),
+    }
 
 
 def apply_events(text: str, ev: list[Any]) -> str:
@@ -151,7 +178,18 @@ def start_session(session: dict[str, Any]) -> dict[str, Any]:
         return {"status": "INVALID PROTOCOL", "op": "session/start", "sid": sid}
 
     st0 = session.get("st0")
-    s_key = session.get("sk")
+    
+    c_pub = session.get("cp")
+    info = {
+        "dId": d_id,
+        "sid": sid,
+        "v": v
+    }
+    salt = os.urandom(16)
+    keys = exchange_session_key(c_pub, salt, info)
+    s_key = keys.get("s_key")
+    s_pub = keys.get("s_pub")
+
     init_text = session.get("it")
     init_hash = session.get("ih")
     server_ts = now_ms()
@@ -203,7 +241,14 @@ def start_session(session: dict[str, Any]) -> dict[str, Any]:
                 (server_ts, d_id),
             )
 
-    return {"status": "SUCCESS", "op": "session/start", "sid": sid}
+    return {
+        "status": "SUCCESS", 
+        "op": "session/start", 
+        "sid": sid, 
+        "sp": s_pub, 
+        "salt": base64.b64encode(salt).decode("ascii"), 
+        "info": info
+    }
 
 
 def append_block(block: dict[str, Any]) -> dict[str, Any]:

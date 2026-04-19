@@ -34,6 +34,11 @@ function bytesToBase64(bytes) {
   return btoa(binary);
 }
 
+function base64ToBytes(base64) {
+  const binaryBytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+  return new Uint8Array(binaryBytes);
+}
+
 function toHex(bytes) {
   return Array.from(bytes)
     .map((byte) => byte.toString(16).padStart(2, "0"))
@@ -82,14 +87,57 @@ async function postJson(path, body) {
   return response.json();
 }
 
-async function genAEADKey() {
-  const key = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, true, ["encrypt"]);
-  const raw = new Uint8Array(await crypto.subtle.exportKey("raw", key));
+async function genECDHKey() {
+  const { publicKey, privateKey } = await crypto.subtle.generateKey({ name: "X25519" }, true, ["deriveBits"]);
+  const rawPub = new Uint8Array(await crypto.subtle.exportKey("raw", publicKey));
 
   return {
-    key,
-    keyB64: bytesToBase64(raw),
+    privKey: privateKey,
+    pubKeyB64: bytesToBase64(rawPub),
   };
+}
+
+async function deriveSessionKey(clientPrivateKey, serverPublicKeyBytes, saltB64, info) {
+  const serverPublicKey = await crypto.subtle.importKey(
+    "raw",
+    serverPublicKeyBytes,
+    { name: "X25519" },
+    false,
+    []
+  );
+
+  const sharedBits = await crypto.subtle.deriveBits(
+    { name: "X25519", public: serverPublicKey },
+    clientPrivateKey,
+    256
+  );
+
+  const hkdfKey = await crypto.subtle.importKey(
+    "raw",
+    sharedBits,
+    "HKDF",
+    false,
+    ["deriveBits"]
+  );
+
+  const derivedBits = await crypto.subtle.deriveBits(
+    {
+      name: "HKDF",
+      hash: "SHA-256",
+      salt: base64ToBytes(saltB64),
+      info: new TextEncoder().encode(canonicalJson(info)),
+    },
+    hkdfKey,
+    256
+  );
+
+  return crypto.subtle.importKey(
+    "raw",
+    derivedBits,
+    { name: "AES-GCM" },
+    false,
+    ["encrypt", "decrypt"]
+  );
 }
 
 async function encryptText(text, key, additionalData) {
@@ -177,19 +225,28 @@ export async function startSession() {
 
   const initText = await readBodyText();
   const initHash = await sha256Hex(initText);
-  const generatedKey = await genAEADKey();
-  sessionKey = generatedKey.key;
+  const generatedKey = await genECDHKey();
   currentDocHash = initHash;
 
-  return postJson("/session/start", {
+  const response = await postJson("/session/start", {
     v,
     dId: docId,
     sid,
     st0,
-    sk: generatedKey.keyB64,
+    cp: generatedKey.pubKeyB64,
     it: initText,
     ih: initHash,
   });
+
+  if (response.status && response.status !== "SUCCESS") {
+    throw new Error(`Record server rejected session start: ${JSON.stringify(response)}`);
+  }
+  
+  const server_pub = base64ToBytes(response.sp);
+  const salt = response.salt;
+  const info = response.info;
+  sessionKey = await deriveSessionKey(generatedKey.privKey, server_pub, salt, info);
+  return response;
 }
 
 export async function endSession(docText = null) {
