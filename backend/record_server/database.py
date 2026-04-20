@@ -31,6 +31,7 @@ SIGNING_KEY_ID = os.getenv("VERIWRITE_SIGNING_KEY_ID", "local-dev-ed25519")
 SIGNING_PRIVATE_KEY_B64 = os.getenv("VERIWRITE_ED25519_PRIVATE_KEY_B64")
 _PROCESS_SIGNING_KEY = Ed25519PrivateKey.generate()
 
+FRESHNESS_WINDOW = 20_000
 
 def verify_protocol(v):
     return v == 3
@@ -52,14 +53,14 @@ def sha256_hex(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
-def decrypt_payload(sk_b64: str, ct_b64: str, iv_b64: str, tag_b64: str, header_text: str) -> dict[str, Any]:
+def decrypt_payload(sk_b64: str, ct_b64: str, iv_b64: str, tag_b64: str, aad: str) -> dict[str, Any]:
     s_key = base64.b64decode(sk_b64)
     cipher_text = base64.b64decode(ct_b64)
     iv = base64.b64decode(iv_b64)
     tag = base64.b64decode(tag_b64)
 
     try:
-        plain_text = AESGCM(s_key).decrypt(iv, cipher_text + tag, header_text.encode("utf-8"))
+        plain_text = AESGCM(s_key).decrypt(iv, cipher_text + tag, aad.encode("utf-8"))
         return json.loads(plain_text.decode("utf-8"))
     except:
         return {}
@@ -140,6 +141,17 @@ def merkle_tree_root(block_hashes: list[str]) -> str | None:
 
     return merkle_tree_root(next_level)
 
+def gen_challenge(sid: Any | str, freshness_window: int) -> dict[str, Any]:
+    nonce = base64.b64encode(os.urandom(16)).decode("ascii")
+    issued_ts = now_ms()
+    expires_ts = issued_ts + freshness_window
+    return {
+        "sid": sid,
+        "n": nonce,
+        "it": issued_ts,
+        "et": expires_ts,
+    }
+
 
 def start_doc(doc: dict[str, Any]) -> dict[str, Any]:
     d_id = doc.get("dId")
@@ -187,12 +199,21 @@ def start_session(session: dict[str, Any]) -> dict[str, Any]:
     }
     salt = os.urandom(16)
     keys = exchange_session_key(c_pub, salt, info)
-    s_key = keys.get("s_key")
+    session_key_b64 = keys.get("s_key")
     s_pub = keys.get("s_pub")
+
+    s_key_info = {
+        "sp": s_pub,
+        "salt": base64.b64encode(salt).decode("ascii"),
+        "info": info
+    }
 
     init_text = session.get("it")
     init_hash = session.get("ih")
     server_ts = now_ms()
+
+    # initial challenge
+    challenge = gen_challenge(sid, FRESHNESS_WINDOW)
 
     with connect() as conn:
         with conn.cursor() as cursor:
@@ -217,17 +238,19 @@ def start_session(session: dict[str, Any]) -> dict[str, Any]:
             cursor.execute(
                 """
                 INSERT INTO sessions (
-                    d_id, sid, v, st0, session_key_b64, init_text,
+                    d_id, sid, v, st0, session_key_b64, chal_nonce, chal_expire, init_text,
                     current_text, current_dsh, ih, continuity_status, created_server_ts
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """,
                 (
                     d_id,
                     sid,
                     v,
                     st0,
-                    s_key,
+                    session_key_b64,
+                    challenge["n"],
+                    challenge["et"],
                     init_text,
                     init_text,
                     init_hash,
@@ -245,11 +268,65 @@ def start_session(session: dict[str, Any]) -> dict[str, Any]:
         "status": "SUCCESS", 
         "op": "session/start", 
         "sid": sid, 
-        "sp": s_pub, 
-        "salt": base64.b64encode(salt).decode("ascii"), 
-        "info": info
+        "s_key": s_key_info,
+        "challenge": challenge
     }
 
+def create_challenge(meta: dict[str, Any] = {}) -> dict[str, Any]:
+    d_id = meta.get("dId")
+    sid = meta.get("sid")
+    v = meta.get("v")
+    if not verify_protocol(v):
+        return {"status": "INVALID PROTOCOL", "op": "session/challenge", "sid": sid}
+    
+    with connect() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT *
+                FROM sessions
+                WHERE d_id = %s AND sid = %s
+                """,
+                (d_id, sid),
+            )
+            session = cursor.fetchone()
+            if not session:
+                return {"status": "SESSION NOT FOUND", "op": "session/challenge", "sid": sid}
+            chal_nonce = session.get("chal_nonce")
+            chal_expire = session.get("chal_expire")
+            if not chal_nonce or not chal_expire:
+                challenge = gen_challenge(sid, FRESHNESS_WINDOW)
+                cursor.execute(
+                    """
+                    UPDATE sessions
+                    SET chal_nonce = %s, chal_expire = %s
+                    WHERE d_id = %s AND sid = %s
+                    """,
+                    (challenge["n"], challenge["et"], d_id, sid),
+                )
+            else:
+                server_ts = now_ms()
+                if chal_expire - server_ts < FRESHNESS_WINDOW:
+                    challenge = gen_challenge(sid, FRESHNESS_WINDOW)
+                    cursor.execute(
+                        """
+                        UPDATE sessions
+                        SET chal_nonce = %s, chal_expire = %s
+                        WHERE d_id = %s AND sid = %s
+                        """,
+                        (challenge["n"], challenge["et"], d_id, sid),
+                    )
+                else:
+                    challenge = {
+                        "sid": sid,
+                        "it": server_ts,
+                        "n": chal_nonce,
+                        "et": chal_expire,
+                    }
+
+    return challenge
+    
+    
 
 def append_block(block: dict[str, Any]) -> dict[str, Any]:
     header = block.get("header") or {}
@@ -258,6 +335,14 @@ def append_block(block: dict[str, Any]) -> dict[str, Any]:
     sid = header.get("sid")
     q = header.get("q")
     ph = header.get("ph")
+
+    challenge = block.get("challenge") or {}
+    nonce = challenge.get("n")
+    expire_ts = challenge.get("et")
+    chal_sid = challenge.get("sid")
+    if chal_sid != sid:
+        return {"status": "INVALID CHALLENGE SID", "op": "session/block", "sid": sid, "q": q}
+
     iv = block.get("iv")
     cipher_text = block.get("ct")
     tag = block.get("tag")
@@ -266,7 +351,10 @@ def append_block(block: dict[str, Any]) -> dict[str, Any]:
         return {"status": "INVALID PROTOCOL", "op": "session/block", "sid": sid, "q": q}
 
     server_ts = now_ms()
-    header_text = canonical_json(header)
+    aad = canonical_json({
+        "header": header, 
+        "challenge": challenge
+    })
 
     with connect() as conn:
         with conn.cursor() as cursor:
@@ -295,8 +383,19 @@ def append_block(block: dict[str, Any]) -> dict[str, Any]:
             else:
                 valid_q = q == 0
                 valid_ch = ph is None
+            
+            chal_nonce = session["chal_nonce"]
+            chal_expire = session["chal_expire"]
+            known_challenge = chal_nonce == nonce and chal_expire == expire_ts
+            valid_n = known_challenge and chal_expire >= server_ts
+            if valid_n:
+                freshness_status = "FRESH"
+            elif known_challenge:
+                freshness_status = "DELAYED"
+            else:
+                freshness_status = "STALE"
 
-            payload = decrypt_payload(session["session_key_b64"], cipher_text, iv, tag, header_text)
+            payload = decrypt_payload(session["session_key_b64"], cipher_text, iv, tag, aad)
             if payload == {}:
                 return {"status": "INVALID AEED TAG", "op": "session/block", "sid": sid, "q": q}
             dt0 = payload.get("dt0")
@@ -331,6 +430,8 @@ def append_block(block: dict[str, Any]) -> dict[str, Any]:
                     "valid_q": valid_q,
                     "valid_h": valid_ch,
                     "valid_dsh": valid_dsh,
+                    "valid_n": valid_n,
+                    "freshness_status": freshness_status,
                 }
 
             session_ev = session["ev"] or []
@@ -350,6 +451,8 @@ def append_block(block: dict[str, Any]) -> dict[str, Any]:
                     "valid_q": valid_q,
                     "valid_h": valid_ch,
                     "valid_dsh": valid_dsh,
+                    "valid_n": valid_n,
+                    "freshness_status": freshness_status,
                     "server_ts": server_ts,
                 }
             )
@@ -359,12 +462,14 @@ def append_block(block: dict[str, Any]) -> dict[str, Any]:
                 INSERT INTO blocks (
                     d_id, sid, q, ph, iv_b64, ct_b64, tag_b64, ch,
                     dt0, dtn, init_dsh, dsh, ev, receipt,
-                    received_server_ts, valid_q, valid_h, valid_dsh
+                    received_server_ts, valid_q, valid_h, valid_dsh,
+                    valid_n, freshness_status
                 )
                 VALUES (
                     %s, %s, %s, %s, %s, %s, %s, %s,
                     %s, %s, %s, %s, %s, %s,
-                    %s, %s, %s, %s
+                    %s, %s, %s, %s,
+                    %s, %s
                 )
                 """,
                 (
@@ -386,6 +491,8 @@ def append_block(block: dict[str, Any]) -> dict[str, Any]:
                     valid_q,
                     valid_ch,
                     valid_dsh,
+                    valid_n,
+                    freshness_status,
                 ),
             )
             cursor.execute(
@@ -410,6 +517,8 @@ def append_block(block: dict[str, Any]) -> dict[str, Any]:
         "valid_q": valid_q,
         "valid_h": valid_ch,
         "valid_dsh": valid_dsh,
+        "valid_n": valid_n,
+        "freshness_status": freshness_status,
         "receipt": receipt
     }
 

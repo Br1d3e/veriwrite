@@ -18,6 +18,7 @@ let bSeq = 0;
 let prevHash = null;
 let sessionKey = null;
 let currentDocHash = null;
+let challenge = null;
 
 export function resetSessionState() {
   sid = null;
@@ -177,8 +178,8 @@ async function hashDocText(docText) {
   return hashDocState();
 }
 
-async function hashCurrent(header, iv, ct, tag) {
-  return sha256Hex(canonicalJson({ header, iv, ct, tag }));
+async function hashCurrent(header, challenge, iv, ct, tag) {
+  return sha256Hex(canonicalJson({ header, challenge, iv, ct, tag }));
 }
 
 async function ensureDocSettings() {
@@ -246,10 +247,14 @@ export async function startSession() {
     throw new Error(`Record server rejected session start: ${JSON.stringify(response)}`);
   }
   
-  const server_pub = base64ToBytes(response.sp);
-  const salt = response.salt;
-  const info = response.info;
-  sessionKey = await deriveSessionKey(generatedKey.privKey, server_pub, salt, info);
+  const sKeyInfo = response.s_key;
+  const serverPub = base64ToBytes(sKeyInfo.sp);
+  const salt = sKeyInfo.salt;
+  const info = sKeyInfo.info;
+  sessionKey = await deriveSessionKey(generatedKey.privKey, serverPub, salt, info);
+
+  challenge = response.challenge;
+
   return response;
 }
 
@@ -279,6 +284,18 @@ export function getSessionPostState() {
   };
 }
 
+export async function getChallenge(challenge) {
+  const response = await postJson("/session/challenge", {
+    v,
+    dId: docId,
+    sid
+  })
+  if (response.status && response.status !== "SUCCESS") {
+    throw new Error(`Record server rejected challenge: ${JSON.stringify(response)}`);
+  }
+  return response;
+}
+
 export async function postBlock(ev = [], docText = null) {
   if (!sid || !sessionKey) {
     throw new Error("Cannot post block before startSession()");
@@ -301,13 +318,19 @@ export async function postBlock(ev = [], docText = null) {
     dsh: await hashDocText(docText),
     ev,
   };
+
+  if (!challenge.sid || challenge.sid !== sid) {
+    challenge = await getChallenge(challenge);
+  }
+
   const payloadText = canonicalJson(rawPayload);
-  const headerText = canonicalJson(header);
-  const { ct, iv, tag } = await encryptText(payloadText, sessionKey, headerText);
-  const ch = await hashCurrent(header, iv, ct, tag);
+  const aad = canonicalJson({ header, challenge });
+  const { ct, iv, tag } = await encryptText(payloadText, sessionKey, aad);
+  const ch = await hashCurrent(header, challenge, iv, ct, tag);
 
   const response = await postJson("/session/block", {
     header,
+    challenge,
     iv,
     ct,
     tag,

@@ -20,6 +20,8 @@ CREATE TABLE IF NOT EXISTS sessions (
     current_text TEXT,
     current_dsh TEXT,
     session_key_b64 TEXT NOT NULL,
+    chal_nonce TEXT,
+    chal_expire BIGINT,
     ev JSONB NOT NULL DEFAULT '[]'::jsonb,
     block_count INTEGER NOT NULL DEFAULT 0,
     continuity_status TEXT NOT NULL DEFAULT 'UNKNOWN',
@@ -49,6 +51,8 @@ CREATE TABLE IF NOT EXISTS blocks (
     valid_q BOOLEAN NOT NULL,
     valid_h BOOLEAN NOT NULL,
     valid_dsh BOOLEAN NOT NULL,
+    valid_n BOOLEAN NOT NULL DEFAULT FALSE,
+    freshness_status TEXT NOT NULL DEFAULT 'UNKNOWN',
     PRIMARY KEY (sid, q),
     UNIQUE (sid, ch)
 );

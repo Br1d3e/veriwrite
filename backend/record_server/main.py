@@ -4,9 +4,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 try:
-    from .database import append_block, end_session, start_doc, start_session
+    from .database import append_block, end_session, start_doc, start_session, create_challenge
 except ImportError:
-    from database import append_block, end_session, start_doc, start_session
+    from database import append_block, end_session, start_doc, start_session, create_challenge
 
 
 app = FastAPI()
@@ -33,6 +33,9 @@ async def post_doc_start(doc: dict[str, Any]):
 async def post_session_start(session: dict[str, Any]):
     return start_session(session)
 
+@app.post("/session/challenge")
+async def post_session_challenge(meta: dict[str, Any]):
+    return create_challenge(meta)
 
 @app.post("/session/block")
 async def post_session_block(block: dict[str, Any]):
