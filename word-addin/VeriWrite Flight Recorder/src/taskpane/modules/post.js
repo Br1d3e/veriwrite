@@ -88,7 +88,11 @@ async function postJson(path, body) {
 }
 
 async function genECDHKey() {
-  const { publicKey, privateKey } = await crypto.subtle.generateKey({ name: "X25519" }, true, ["deriveBits"]);
+  const { publicKey, privateKey } = await crypto.subtle.generateKey(
+    { name: "ECDH", namedCurve: "P-256" },
+    true,
+    ["deriveBits"]
+  );
   const rawPub = new Uint8Array(await crypto.subtle.exportKey("raw", publicKey));
 
   return {
@@ -101,13 +105,13 @@ async function deriveSessionKey(clientPrivateKey, serverPublicKeyBytes, saltB64,
   const serverPublicKey = await crypto.subtle.importKey(
     "raw",
     serverPublicKeyBytes,
-    { name: "X25519" },
+    { name: "ECDH", namedCurve: "P-256" },
     false,
     []
   );
 
   const sharedBits = await crypto.subtle.deriveBits(
-    { name: "X25519", public: serverPublicKey },
+    { name: "ECDH", public: serverPublicKey },
     clientPrivateKey,
     256
   );

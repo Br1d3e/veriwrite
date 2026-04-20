@@ -14,8 +14,8 @@ from typing import Any
 
 import psycopg
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey, X25519PublicKey
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.serialization import Encoding, PrivateFormat, PublicFormat, NoEncryption
@@ -80,18 +80,18 @@ def sign_receipt(receipt_body: dict[str, Any]) -> dict[str, Any]:
     signed_receipt["sig"] = base64.b64encode(signature).decode("ascii")
     return signed_receipt
 
-def get_ecdh_keys() -> tuple[X25519PrivateKey, X25519PublicKey]:
-    private_key = X25519PrivateKey.generate()
+def get_ecdh_keys() -> tuple[ec.EllipticCurvePrivateKey, ec.EllipticCurvePublicKey]:
+    private_key = ec.generate_private_key(ec.SECP256R1())
     public_key = private_key.public_key()
     return (private_key, public_key)
 
 def exchange_session_key(c_pub_b64: Any, salt: bytes, info: dict) -> dict[str, Any]:
     c_pub_bytes = base64.b64decode(c_pub_b64)
-    c_pub = X25519PublicKey.from_public_bytes(c_pub_bytes)
+    c_pub = ec.EllipticCurvePublicKey.from_encoded_point(ec.SECP256R1(), c_pub_bytes)
 
     private_key, public_key = get_ecdh_keys()
-    raw_key = public_key.public_bytes(Encoding.Raw, PublicFormat.Raw)
-    shared = private_key.exchange(c_pub)
+    raw_key = public_key.public_bytes(Encoding.X962, PublicFormat.UncompressedPoint)
+    shared = private_key.exchange(ec.ECDH(), c_pub)
     hkdf = HKDF(
         algorithm=hashes.SHA256(),
         length=32,
