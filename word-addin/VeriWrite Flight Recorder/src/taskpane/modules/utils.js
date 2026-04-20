@@ -16,6 +16,10 @@ export function arraySum(arr) {
   return arr.reduce((a, b) => a + b, 0);
 }
 
+export function isUserOnline() {
+  return navigator.onLine;
+}
+
 export function b64Encoder(str) {
   const bytes = new TextEncoder().encode(str); // Uint8Array
   let bin = "";

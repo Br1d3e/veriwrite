@@ -1,5 +1,5 @@
 
-import { generateUUID, b64Encoder, b64Decoder, computeDiff } from "./utils";
+import { generateUUID, b64Encoder, b64Decoder, computeDiff, isUserOnline } from "./utils";
 import { saveCustomXml, loadSettings, loadRecord, updateSettings} from "./store";
 import { getDocTitle, getDocAuthor, readBodyText } from "./docInfo";
 import { startDoc, startSession, endSession, postBlock, hashText, getSessionPostState, getRetryMs, OFFLINE_STATUS } from "./post";
@@ -123,9 +123,8 @@ function failRecording(error) {
 }
 
 function switchOffline(error) {
-  ONLINE = false;
+  setOnlineMode(false)
   evBuffer = [];
-  if (onlineCbEl) onlineCbEl.checked = false;
   if (error && error.status === OFFLINE_STATUS) {
     lastError = `${error.op || "record server"} unavailable`;
     lastRetryMs = error.retryMs || 0;
@@ -205,7 +204,7 @@ async function updateSessions() {
 
 export async function startRecording() {
     if (recording) return;
-    ONLINE = isOnlineMode();
+    // setOnlineMode();
     failed = false;
     lastError = null;
     lastRetryMs = 0;

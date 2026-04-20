@@ -6,6 +6,7 @@
 /* global document, Office, Word */
 
 import { startRecording, stopRecording, getFlightRecord, isOnlineMode, setOnlineMode, getPostState, getEvBlock, getOnlineCb, isDisconnected } from "./modules/recorder";
+import { isUserOnline } from "./modules/utils";
 
 function downloadJSON() {
   const flightRecord = getFlightRecord();
@@ -20,6 +21,7 @@ function downloadJSON() {
   URL.revokeObjectURL(a.href);
 }
 
+setOnlineMode(isUserOnline());
 Office.onReady((info) => {
     if (info.host === Office.HostType.Word) {
       document.getElementById("sideload-msg").style.display = "none";
@@ -36,7 +38,7 @@ Office.onReady((info) => {
     })
     setOnlineMode(Boolean(onlineCb?.checked));
     onlineCb?.addEventListener("change", () => {
-      setOnlineMode(onlineCb.checked);
+     switchOnlineCb();
     })
     setInterval(showOfflineMsg, 500);
     // setInterval(debugState, 100);
@@ -48,6 +50,24 @@ function debugState() {
   postStateEl.textContent = JSON.stringify(getPostState(), null, 2);
   // const evBlockEl = document.getElementById("ev-block");
   // evBlockEl.textContent = JSON.stringify(getEvBlock(), null, 2);
+}
+
+function switchOnlineCb() {
+  const onlineCb = document.getElementById("onlineCb");
+  const cbMsgEl = document.getElementById("cb-msg");
+  setOnlineMode(onlineCb.checked);
+  if (onlineCb.checked) {
+    if (isUserOnline) {
+      cbMsgEl.textContent = "✅ Successfully switched to online mode.";
+    } else {
+      cbMsgEl.textContent = "❗Warning: you are currently offline. Connect to the internet to use online mode."
+    }
+  } else {
+    cbMsgEl.textContent = "✅ Successfully switched to offline mode.";
+  }
+  setTimeout(() => {
+    cbMsgEl.textContent = "";
+  }, 3000)
 }
 
 function showOfflineMsg() {
