@@ -9,6 +9,7 @@ import { loadSettings, updateSettings } from "./store";
 const SERVER_URL = "https://localhost:8443";
 const PROTOCOL_VERSION = 3;
 const AES_GCM_TAG_BYTES = 16;
+export const OFFLINE_STATUS = "OFFLINE_LOCAL";
 
 let docId = null;
 let sid = null;
@@ -19,6 +20,13 @@ let prevHash = null;
 let sessionKey = null;
 let currentDocHash = null;
 let challenge = null;
+
+let retrying = false;
+let retryStart = 0;
+let retryLastMs = 0;
+const retryTimeout = 5_000;
+const retryInterval = 1_000;
+const requestTimeout = 1_000;
 
 export function resetSessionState() {
   sid = null;
@@ -66,8 +74,15 @@ export async function hashText(text) {
   return sha256Hex(text);
 }
 
+export function getRetryMs() {
+  if (!retrying) return null;
+  return Date.now() - retryStart;
+}
+
 async function postJson(path, body) {
   let response;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), requestTimeout);
   try {
     response = await fetch(`${SERVER_URL}${path}`, {
       method: "POST",
@@ -75,17 +90,26 @@ async function postJson(path, body) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify(body),
+      signal: controller.signal,
     });
   } catch (error) {
-    throw new Error(`Record server is unreachable at ${SERVER_URL}. Start backend/record_server before using online mode.`);
+    // throw new Error(`Record server is unreachable at ${SERVER_URL}. Start backend/record_server before using online mode.`);
+    return;
+  } finally {
+    clearTimeout(timeout);
   }
 
   if (!response.ok) {
     const detail = await response.text();
-    throw new Error(`Record server ${path} failed (${response.status}): ${detail}`);
+    // throw new Error(`Record server ${path} failed (${response.status}): ${detail}`);
+    return;
   }
 
   return response.json();
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function genECDHKey() {
@@ -201,6 +225,41 @@ async function ensureDocSettings() {
   }
 }
 
+async function retryPost(response, path, body) {
+  if (response && response.status) {
+    return response;
+  }
+
+  retrying = true;
+  retryStart = Date.now();
+  retryLastMs = 0;
+
+  try {
+    while (Date.now() - retryStart < retryTimeout) {
+      response = await postJson(path, body);
+      if (response && response.status) {
+        return response;
+      }
+      await sleep(retryInterval);
+    }
+  } finally {
+    retryLastMs = Date.now() - retryStart;
+    retrying = false;
+  }
+
+  return {
+    status: OFFLINE_STATUS,
+    op: path.replace(/^\//, ""),
+    retryMs: retryLastMs,
+  };
+}
+
+function assertOnlineResponse(response, op) {
+  if (!response || !response.status) {
+    throw new Error(`${op} did not receive a valid record server response`);
+  }
+  return response;
+}
 
 export async function startDoc() {
   resetSessionState();
@@ -209,14 +268,22 @@ export async function startDoc() {
   const title = await getDocTitle();
   const author = await getDocAuthor();
   const t0 = Date.now();
-
-  return postJson("/doc/start", {
+  const path = "/doc/start";
+  const body = {
     v,
     dId: docId,
     t0,
     ttl: title,
     a: author,
-  });
+  }
+
+  let response = await retryPost(null, path, body)
+  response = assertOnlineResponse(response, "doc/start");
+  if (response.status === OFFLINE_STATUS) return response;
+  if (response.status !== "SUCCESS") {
+    throw new Error(`Record server rejected doc start: ${JSON.stringify(response)}`);
+  }
+  return response;
 }
 
 export async function startSession() {
@@ -233,7 +300,8 @@ export async function startSession() {
   const generatedKey = await genECDHKey();
   currentDocHash = initHash;
 
-  const response = await postJson("/session/start", {
+  const path = "/session/start";
+  const body = {
     v,
     dId: docId,
     sid,
@@ -241,7 +309,11 @@ export async function startSession() {
     cp: generatedKey.pubKeyB64,
     it: initText,
     ih: initHash,
-  });
+  }
+
+  let response = await retryPost(null, path, body)
+  response = assertOnlineResponse(response, "session/start");
+  if (response.status === OFFLINE_STATUS) return response;
 
   if (response.status && response.status !== "SUCCESS") {
     throw new Error(`Record server rejected session start: ${JSON.stringify(response)}`);
@@ -265,14 +337,19 @@ export async function endSession(docText = null) {
 
   const dt = Date.now() - st0;
   const endHash = await hashDocText(docText);
-
-  return postJson("/session/end", {
+  const path = "/session/end";
+  const body = {
     v,
     dId: docId,
     sid,
     dt,
     eh: endHash,
-  });
+  };
+
+  let response = await retryPost(null, path, body);
+  response = assertOnlineResponse(response, "session/end");
+
+  return response;
 }
 
 export function getSessionPostState() {
@@ -285,15 +362,24 @@ export function getSessionPostState() {
 }
 
 export async function getChallenge(challenge) {
-  const response = await postJson("/session/challenge", {
+  if (challenge && challenge.sid && challenge.sid === sid && Date.now() < challenge.et) {
+    return challenge;
+  }
+
+  const path = "/session/challenge";
+  const body = {
     v,
     dId: docId,
-    sid
-  })
+    sid: sid,
+  };
+  let response = await retryPost(null, path, body)
+  response = assertOnlineResponse(response, "session/challenge");
+  if (response.status === OFFLINE_STATUS) return response;
+
   if (response.status && response.status !== "SUCCESS") {
     throw new Error(`Record server rejected challenge: ${JSON.stringify(response)}`);
   }
-  return response;
+  return response.challenge;
 }
 
 export async function postBlock(ev = [], docText = null) {
@@ -321,6 +407,7 @@ export async function postBlock(ev = [], docText = null) {
 
   if (!challenge.sid || challenge.sid !== sid) {
     challenge = await getChallenge(challenge);
+    if (challenge.status === OFFLINE_STATUS) return challenge;
   }
 
   const payloadText = canonicalJson(rawPayload);
@@ -328,14 +415,18 @@ export async function postBlock(ev = [], docText = null) {
   const { ct, iv, tag } = await encryptText(payloadText, sessionKey, aad);
   const ch = await hashCurrent(header, challenge, iv, ct, tag);
 
-  const response = await postJson("/session/block", {
+  const path = "/session/block";
+  const body = {
     header,
     challenge,
     iv,
     ct,
     tag,
     ch,
-  });
+  }
+  let response = await retryPost(null, path, body)
+  response = assertOnlineResponse(response, `session/block ${q}`);
+  if (response.status === OFFLINE_STATUS) return response;
 
   if (response.status && response.status !== "SUCCESS") {
     throw new Error(`Record server rejected block ${q}: ${JSON.stringify(response)}`);

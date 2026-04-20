@@ -5,7 +5,7 @@
 
 /* global document, Office, Word */
 
-import { startRecording, stopRecording, getFlightRecord, isOnlineMode, setOnlineMode, getPostState, getEvBlock } from "./modules/recorder";
+import { startRecording, stopRecording, getFlightRecord, isOnlineMode, setOnlineMode, getPostState, getEvBlock, getOnlineCb, isDisconnected } from "./modules/recorder";
 
 function downloadJSON() {
   const flightRecord = getFlightRecord();
@@ -25,6 +25,8 @@ Office.onReady((info) => {
       document.getElementById("sideload-msg").style.display = "none";
       document.getElementById("app-body").style.display = "flex";
     }
+    const onlineCb = document.getElementById("onlineCb");
+    getOnlineCb(onlineCb);
     document.getElementById("btnStart")?.addEventListener("click", startRecording);
     document.getElementById("btnStop")?.addEventListener("click", async () => {
         await stopRecording() 
@@ -32,19 +34,33 @@ Office.onReady((info) => {
           downloadJSON()
         }
     })
-    const onlineCb = document.getElementById("onlineCb");
-    setOnlineMode(onlineCb.checked);
-    onlineCb.addEventListener("change", () => {
+    setOnlineMode(Boolean(onlineCb?.checked));
+    onlineCb?.addEventListener("change", () => {
       setOnlineMode(onlineCb.checked);
     })
+    setInterval(showOfflineMsg, 500);
     // setInterval(debugState, 100);
   });
 
-  function debugState() {
-    // Debug
-    const postStateEl = document.getElementById("post-state")
-    postStateEl.textContent = JSON.stringify(getPostState(), null, 2);
-    // const evBlockEl = document.getElementById("ev-block");
-    // evBlockEl.textContent = JSON.stringify(getEvBlock(), null, 2);
-  }
+function debugState() {
+  // Debug
+  const postStateEl = document.getElementById("post-state")
+  postStateEl.textContent = JSON.stringify(getPostState(), null, 2);
+  // const evBlockEl = document.getElementById("ev-block");
+  // evBlockEl.textContent = JSON.stringify(getEvBlock(), null, 2);
+}
 
+function showOfflineMsg() {
+  const offlineMsgEl = document.getElementById("offline-msg");
+  const disconnected = isDisconnected();
+
+  if (disconnected) {
+    const { error, retryMs, retrying } = disconnected;
+    const seconds = Math.round((retryMs || 0) / 1000);
+    offlineMsgEl.textContent = retrying
+      ? `Reconnecting to record server... ${seconds}s`
+      : `Connection Failed! Switched to offline recording.`;
+  } else {
+    offlineMsgEl.textContent = "";
+  }
+}

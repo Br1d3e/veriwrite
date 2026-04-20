@@ -2,7 +2,7 @@
 import { generateUUID, b64Encoder, b64Decoder, computeDiff } from "./utils";
 import { saveCustomXml, loadSettings, loadRecord, updateSettings} from "./store";
 import { getDocTitle, getDocAuthor, readBodyText } from "./docInfo";
-import { startDoc, startSession, endSession, postBlock, hashText, getSessionPostState } from "./post";
+import { startDoc, startSession, endSession, postBlock, hashText, getSessionPostState, getRetryMs, OFFLINE_STATUS } from "./post";
 
 // Initialize record
 let flightRecord = null;
@@ -25,9 +25,17 @@ let sesState = null;
 let blockReceipt = null;
 let finalReceipt = null;
 let lastError = null;
+let lastRetryMs = 0;
+
+let onlineCbEl = null;
+
+export function getOnlineCb(onlineCb) {
+  onlineCbEl = onlineCb;
+}
 
 export function setOnlineMode(value) {
-  if (recording) return;
+  // if (recording) return;
+  if (onlineCbEl) onlineCbEl.checked = value;
   ONLINE = Boolean(value);
 }
 
@@ -52,7 +60,6 @@ export function getEvBlock() {
   }
 }
 
-// Creates new flightRecord.json
 async function newRecord() {
   let flightRecord = {
     v: 2,
@@ -75,10 +82,8 @@ async function initializeSession() {
     tn: Date.now(),
     init: await readBodyText(),
     ev: [],
-    kf: [],
-    stats: {},
-    prevHash: null,
-    endHash: null
+    localPh: null,
+    localEh: null
   };
 }
 
@@ -92,10 +97,13 @@ async function flushBlock(docText) {
   evBuffer = [];
 
   posting = postBlock(blockEvents, docText)
-    .then((receipt) => {
-      blockReceipt = receipt;
+    .then((response) => {
+      if (isOfflineResponse(response)) {
+        return response;
+      }
+      blockReceipt = response.receipt;
       lastPost = Date.now();
-      return receipt;
+      return response;
     })
     .catch((error) => {
       evBuffer = blockEvents.concat(evBuffer);
@@ -114,6 +122,41 @@ function failRecording(error) {
   lastError = error instanceof Error ? error.message : String(error);
 }
 
+function switchOffline(error) {
+  ONLINE = false;
+  evBuffer = [];
+  if (onlineCbEl) onlineCbEl.checked = false;
+  if (error && error.status === OFFLINE_STATUS) {
+    lastError = `${error.op || "record server"} unavailable`;
+    lastRetryMs = error.retryMs || 0;
+  } else {
+    lastError = error instanceof Error ? error.message : String(error);
+    lastRetryMs = getRetryMs() || 0;
+  }
+}
+
+function isOfflineResponse(response) {
+  return response && response.status === OFFLINE_STATUS;
+}
+
+export function isDisconnected() {
+  const retryMs = getRetryMs();
+  if (retryMs !== null) {
+    return {
+      retrying: true,
+      error: "Retrying record server connection",
+      retryMs
+    };
+  }
+  if (lastError && ONLINE === false) {
+    return {
+      error: lastError,
+      retryMs: lastRetryMs
+    };
+  }
+  else return null;
+}
+
 async function poll() {
   if (!recording || failed) return;
 
@@ -121,10 +164,12 @@ async function poll() {
     const currentText = await captureDiff();
 
     if (ONLINE && evBuffer.length > 0 && Date.now() - lastPost >= postInterval) {
-      await flushBlock(currentText);
+      const response = await flushBlock(currentText);
+      if (isOfflineResponse(response)) {
+        switchOffline(response);
+      }
     }
   } catch (error) {
-    console.error("Polling Error: ", error);
     failRecording(error);
   }
 
@@ -143,9 +188,8 @@ async function captureDiff() {
   lastText = newText;
   if (ONLINE) {
     evBuffer.push(diff);
-  } else {
-    session.ev.push(diff);
   }
+  session.ev.push(diff);
   return newText;
 }
 
@@ -164,6 +208,7 @@ export async function startRecording() {
     ONLINE = isOnlineMode();
     failed = false;
     lastError = null;
+    lastRetryMs = 0;
     blockReceipt = null;
     finalReceipt = null;
     posting = null;
@@ -171,27 +216,38 @@ export async function startRecording() {
     [docId, schema, xmlId] = await loadSettings();
 
     if (ONLINE) {
-      docState = await startDoc();
-      sesState = await startSession();
-      evBuffer = [];
-      lastPost = Date.now();
-    } else {
-      // Load existing record
-      if (xmlId) {
-          flightRecord = await loadRecord(xmlId);
+      try {
+        docState = await startDoc();
+        if (isOfflineResponse(docState)) {
+          switchOffline(docState);
+        } else {
+          sesState = await startSession();
+          if (isOfflineResponse(sesState)) {
+            switchOffline(sesState);
+          } else {
+            evBuffer = [];
+            lastPost = Date.now();
+          }
+        }
+      } catch (error) {
+        switchOffline(error);
       }
-
-      // No docId, create new document
-      if (!docId || !schema || !flightRecord) {
-          console.log("Record load failed or is new, initializing fresh record...");
-          flightRecord = await newRecord();
-          await updateSettings("docId", flightRecord.m.docId);
-          await updateSettings("v", flightRecord.v);
-      }
-
-      // Start new session
-      await initializeSession();
     }
+    // Load existing record
+    if (xmlId) {
+        flightRecord = await loadRecord(xmlId);
+    }
+
+    // No docId, create new document
+    if (!docId || !schema || !flightRecord) {
+        console.log("Record load failed or is new, initializing fresh record...");
+        flightRecord = await newRecord();
+        await updateSettings("docId", flightRecord.m.docId);
+        await updateSettings("v", 2);
+    }
+
+    // Start new session
+    await initializeSession();
 
     lastPoll = Date.now();
     const initText = await readBodyText()
@@ -216,7 +272,12 @@ export async function stopRecording() {
 
     if (ONLINE) {
       if (evBuffer.length > 0) {
-        await flushBlock(finalText);
+        const response = await flushBlock(finalText);
+        if (isOfflineResponse(response)) {
+          switchOffline(response);
+          await updateSessions();
+          return;
+        }
       } else {
         const finalHash = await hashText(finalText);
         const { currentDocHash } = getSessionPostState();
@@ -225,16 +286,16 @@ export async function stopRecording() {
         }
       }
       finalReceipt = await endSession(finalText);
-    } else {
-      await updateSessions();
+      if (isOfflineResponse(finalReceipt)) {
+        switchOffline(finalReceipt);
+      }
     }
+    await updateSessions();
   } catch (error) {
-    console.error("Stop Recording Error: ", error);
     failRecording(error);
     throw error;
   }
 }
-
 
 export function getFlightRecord() {
   return flightRecord;

@@ -324,7 +324,12 @@ def create_challenge(meta: dict[str, Any] = {}) -> dict[str, Any]:
                         "et": chal_expire,
                     }
 
-    return challenge
+    return {
+        "status": "SUCCESS",
+        "op": "session/challenge",
+        "sid": sid,
+        "challenge": challenge,
+    }
     
     
 
@@ -347,6 +352,14 @@ def append_block(block: dict[str, Any]) -> dict[str, Any]:
     cipher_text = block.get("ct")
     tag = block.get("tag")
     current_hash = block.get("ch")
+    expected_current_hash = sha256_hex(canonical_json({
+        "header": header,
+        "challenge": challenge,
+        "iv": iv,
+        "ct": cipher_text,
+        "tag": tag,
+    }))
+    valid_current_hash = current_hash == expected_current_hash
     if not verify_protocol(v):
         return {"status": "INVALID PROTOCOL", "op": "session/block", "sid": sid, "q": q}
 
@@ -421,7 +434,7 @@ def append_block(block: dict[str, Any]) -> dict[str, Any]:
             expected_dsh = sha256_hex(next_text)
             valid_dsh = init_dsh == current_dsh and doc_state_hash == expected_dsh
 
-            if not (valid_q and valid_ch and valid_dsh):
+            if not (valid_q and valid_ch and valid_current_hash and valid_dsh):
                 return {
                     "status": "INVALID BLOCK",
                     "op": "session/block",
@@ -429,6 +442,7 @@ def append_block(block: dict[str, Any]) -> dict[str, Any]:
                     "q": q,
                     "valid_q": valid_q,
                     "valid_h": valid_ch,
+                    "valid_ch": valid_current_hash,
                     "valid_dsh": valid_dsh,
                     "valid_n": valid_n,
                     "freshness_status": freshness_status,
@@ -450,6 +464,7 @@ def append_block(block: dict[str, Any]) -> dict[str, Any]:
                     "dsh": doc_state_hash,
                     "valid_q": valid_q,
                     "valid_h": valid_ch,
+                    "valid_ch": valid_current_hash,
                     "valid_dsh": valid_dsh,
                     "valid_n": valid_n,
                     "freshness_status": freshness_status,
@@ -516,6 +531,7 @@ def append_block(block: dict[str, Any]) -> dict[str, Any]:
         "q": q,
         "valid_q": valid_q,
         "valid_h": valid_ch,
+        "valid_ch": valid_current_hash,
         "valid_dsh": valid_dsh,
         "valid_n": valid_n,
         "freshness_status": freshness_status,
