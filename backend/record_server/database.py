@@ -434,7 +434,7 @@ def append_block(block: dict[str, Any]) -> dict[str, Any]:
             expected_dsh = sha256_hex(next_text)
             valid_dsh = init_dsh == current_dsh and doc_state_hash == expected_dsh
 
-            if not (valid_q and valid_ch and valid_current_hash and valid_dsh):
+            if not valid_q:
                 return {
                     "status": "INVALID BLOCK",
                     "op": "session/block",
@@ -447,6 +447,8 @@ def append_block(block: dict[str, Any]) -> dict[str, Any]:
                     "valid_n": valid_n,
                     "freshness_status": freshness_status,
                 }
+
+            valid_block = valid_ch and valid_current_hash and valid_dsh
 
             session_ev = session["ev"] or []
             if not isinstance(session_ev, list):
@@ -510,6 +512,8 @@ def append_block(block: dict[str, Any]) -> dict[str, Any]:
                     freshness_status,
                 ),
             )
+            
+            # update sessions 
             cursor.execute(
                 """
                 UPDATE sessions
@@ -521,7 +525,7 @@ def append_block(block: dict[str, Any]) -> dict[str, Any]:
                     current_dsh = %s
                 WHERE d_id = %s AND sid = %s
                 """,
-                (d_id, sid, Jsonb(session_ev), next_text, doc_state_hash, d_id, sid),
+                (d_id, sid, Jsonb(session_ev), next_text, expected_dsh, d_id, sid),
             )
 
     return {
