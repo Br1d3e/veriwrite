@@ -4,9 +4,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 try:
-    from .database import append_block, end_session, start_doc, start_session, create_challenge
+    from .store_db import append_block, end_session, start_doc, start_session, create_challenge
 except ImportError:
-    from database import append_block, end_session, start_doc, start_session, create_challenge
+    from backend.record_server.store_db import append_block, end_session, start_doc, start_session, create_challenge
 
 
 app = FastAPI()
