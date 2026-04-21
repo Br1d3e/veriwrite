@@ -412,8 +412,8 @@ def append_block(block: dict[str, Any]) -> dict[str, Any]:
             
             if client_freshness == "FRESH" and freshness_status != "FRESH":
                 return {"status": "INVALID FRESHNESS STATUS", "op": "session/block", "sid": sid, "q": q}
-            # elif client_freshness == "DELAYED" and freshness_status == "FRESH":     # within server expire ts but still delayed packet
-            #     freshness_status = "DELAYED"
+            elif client_freshness == "DELAYED" and freshness_status == "FRESH":
+                freshness_status = "DELAYED"
 
 
             payload = decrypt_payload(session["session_key_b64"], cipher_text, iv, tag, aad)

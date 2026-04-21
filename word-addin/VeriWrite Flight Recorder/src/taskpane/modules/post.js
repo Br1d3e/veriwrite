@@ -446,9 +446,9 @@ export async function postBlock(ev = [], docText = null, delayed = false) {
     ch,
   }
   if (delayed) {
-    body.freshness = "OFFLINE_DELAYED";
+    body.freshness = "DELAYED";
   } else {
-    body.freshness = "ONLINE";
+    body.freshness = "FRESH";
   }
   let response = await postJson(path, body);
   response = await retryPost(response, path, body)
