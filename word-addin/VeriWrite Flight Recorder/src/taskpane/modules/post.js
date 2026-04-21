@@ -426,7 +426,7 @@ export async function postBlock(ev = [], docText = null, delayed = false) {
     ev,
   };
 
-  if (!challenge.sid || challenge.sid !== sid) {
+  if (!delayed && (!challenge.sid || challenge.sid !== sid || challenge.et < Date.now())) {
     challenge = await getChallenge(challenge);
     if (challenge.status === OFFLINE_STATUS) return challenge;
   }
