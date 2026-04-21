@@ -1,4 +1,5 @@
 // Fetch document's metadata and content
+import { normalizeLines } from "./utils";
 
 export async function getDocTitle() {
   try {
@@ -31,6 +32,6 @@ export async function readBodyText() {
     const body = context.document.body;
     body.load("text");
     await context.sync();
-    return body.text || "";
+    return normalizeLines(body.text) || "";
   });
 }
