@@ -8,7 +8,41 @@
 import { startRecording, stopRecording, getFlightRecord, getOnlineStatus, setOnlineMode, getPostState, getEvBlock, getRetryStatus } from "./modules/recorder";
 
 let lastManualSwitchAt = 0;
-const msgDuration = 3000;
+const msgDuration = 5000;
+let lastAutoStatus = null;
+let cbMsgTimeout = null;
+let lastRetryKey = null;
+let retryMsgTimeout = null;
+
+function setCbMessage(message) {
+  const cbMsgEl = document.getElementById("cb-msg");
+  if (!cbMsgEl) return;
+  cbMsgEl.textContent = message;
+  if (cbMsgTimeout) {
+    clearTimeout(cbMsgTimeout);
+  }
+  cbMsgTimeout = setTimeout(() => {
+    if (cbMsgEl.textContent === message) {
+      cbMsgEl.textContent = "";
+    }
+    cbMsgTimeout = null;
+  }, msgDuration);
+}
+
+function setRetryMessage(message) {
+  const retryMsgEl = document.getElementById("retry-msg");
+  if (!retryMsgEl) return;
+  retryMsgEl.textContent = message;
+  if (retryMsgTimeout) {
+    clearTimeout(retryMsgTimeout);
+  }
+  retryMsgTimeout = setTimeout(() => {
+    if (retryMsgEl.textContent === message) {
+      retryMsgEl.textContent = "";
+    }
+    retryMsgTimeout = null;
+  }, msgDuration);
+}
 
 function downloadJSON() {
   const flightRecord = getFlightRecord();
@@ -36,16 +70,11 @@ Office.onReady(async (info) => {
           downloadJSON()
         }
     })
-    // const reachable = await isUserOnline();
-    // setOnlineMode(Boolean(onlineCb?.checked) && reachable);
-    // if (onlineCb) onlineCb.checked = Boolean(onlineCb.checked) && reachable;
     onlineCb?.addEventListener("change", () => {
      switchOnlineCb();
     })
-    showRetryMsg();
-    autoSwitchMsg();
     setInterval(showRetryMsg, 500);
-    setInterval(autoSwitchMsg, 1000);
+    setInterval(autoSwitchMsg, 500);
     // setInterval(debugState, 100);
   });
 
@@ -59,21 +88,15 @@ function debugState() {
 
 async function switchOnlineCb() {
   const onlineCb = document.getElementById("onlineCb");
-  const cbMsgEl = document.getElementById("cb-msg");
   lastManualSwitchAt = Date.now();
   setOnlineMode(onlineCb.checked);
   const onlineMsg = "✅ Successfully switched to online mode.";
   const offlineMsg = "✅ Successfully switched to offline mode."
   if (onlineCb.checked) {
-    cbMsgEl.textContent = onlineMsg;
+    setCbMessage(onlineMsg);
   } else {
-    cbMsgEl.textContent = offlineMsg;
+    setCbMessage(offlineMsg);
   }
-  setTimeout(() => {
-    if (cbMsgEl.textContent === onlineMsg || cbMsgEl.textContent === offlineMsg) {
-      cbMsgEl.textContent = "";
-    }
-  }, msgDuration)
 }
 
 async function autoSwitchMsg() {
@@ -82,41 +105,47 @@ async function autoSwitchMsg() {
   }
 
   const onlineCb = document.getElementById("onlineCb");
-  const cbMsgEl = document.getElementById("cb-msg");
   const onlineStatus = getOnlineStatus();
   const onlineMsg = "✅ Detected Internet! Automatically switched to online mode.";
   const offlineMsg = "❗ No network access! Automatically switched to offline mode.";
 
+  if (onlineStatus === lastAutoStatus) {
+    return;
+  }
+
   if (onlineStatus === "ONLINE_AUTO") {
     onlineCb.checked = true;
-    cbMsgEl.textContent = onlineMsg;
-    setTimeout(() => {
-      if (cbMsgEl.textContent === onlineMsg) {
-        cbMsgEl.textContent = "";
-      }
-    }, msgDuration)
+    setCbMessage(onlineMsg);
   } else if (onlineStatus === "OFFLINE_AUTO") {
     onlineCb.checked = false;
-    cbMsgEl.textContent = offlineMsg;
-    setTimeout(() => {
-      if (cbMsgEl.textContent === offlineMsg) {
-        cbMsgEl.textContent = "";
-      }
-    }, msgDuration)
+    setCbMessage(offlineMsg);
   }
+  lastAutoStatus = onlineStatus;
 }
 
 function showRetryMsg() {
-  const onlineMsgEl = document.getElementById("retry-msg");
   const retryStatus = getRetryStatus();
 
   if (retryStatus) {
-    const { error, retryMs, retrying } = retryStatus;
+    const { retryMs, retrying } = retryStatus;
     const seconds = Math.round((retryMs || 0) / 1000);
-    onlineMsgEl.textContent = retrying
+    const message = retrying
       ? `Reconnecting to record server... ${seconds}s`
       : `Connection Failed! Switched to offline recording.`;
+    const retryKey = retrying ? `retrying:${seconds}` : "offline";
+    if (retryKey !== lastRetryKey) {
+      setRetryMessage(message);
+      lastRetryKey = retryKey;
+    }
   } else {
-    onlineMsgEl.textContent = "";
+    const retryMsgEl = document.getElementById("retry-msg");
+    if (retryMsgEl) {
+      retryMsgEl.textContent = "";
+    }
+    if (retryMsgTimeout) {
+      clearTimeout(retryMsgTimeout);
+      retryMsgTimeout = null;
+    }
+    lastRetryKey = null;
   }
 }
