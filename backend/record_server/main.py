@@ -24,10 +24,13 @@ app.add_middleware(
 )
 
 
+@app.post("/ping")
+async def ping_server():
+    return {"status": "OK"}
+
 @app.post("/doc/start")
 async def post_doc_start(doc: dict[str, Any]):
     return start_doc(doc)
-
 
 @app.post("/session/start")
 async def post_session_start(session: dict[str, Any]):

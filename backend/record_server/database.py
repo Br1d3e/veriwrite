@@ -31,7 +31,7 @@ SIGNING_KEY_ID = os.getenv("VERIWRITE_SIGNING_KEY_ID", "local-dev-ed25519")
 SIGNING_PRIVATE_KEY_B64 = os.getenv("VERIWRITE_ED25519_PRIVATE_KEY_B64")
 _PROCESS_SIGNING_KEY = Ed25519PrivateKey.generate()
 
-FRESHNESS_WINDOW = 20_000
+FRESHNESS_WINDOW = 10_000
 
 def verify_protocol(v):
     return v == 3
@@ -348,6 +348,8 @@ def append_block(block: dict[str, Any]) -> dict[str, Any]:
     if chal_sid != sid:
         return {"status": "INVALID CHALLENGE SID", "op": "session/block", "sid": sid, "q": q}
 
+    client_freshness = block.get("freshness") or "UNKNOWN"    
+
     iv = block.get("iv")
     cipher_text = block.get("ct")
     tag = block.get("tag")
@@ -407,6 +409,12 @@ def append_block(block: dict[str, Any]) -> dict[str, Any]:
                 freshness_status = "DELAYED"
             else:
                 freshness_status = "STALE"
+            
+            if client_freshness == "FRESH" and freshness_status != "FRESH":
+                return {"status": "INVALID FRESHNESS STATUS", "op": "session/block", "sid": sid, "q": q}
+            # elif client_freshness == "DELAYED" and freshness_status == "FRESH":     # within server expire ts but still delayed packet
+            #     freshness_status = "DELAYED"
+
 
             payload = decrypt_payload(session["session_key_b64"], cipher_text, iv, tag, aad)
             if payload == {}:
@@ -428,8 +436,14 @@ def append_block(block: dict[str, Any]) -> dict[str, Any]:
 
             try:
                 next_text = apply_events(current_text, ev)
-            except ValueError:
-                return {"status": "INVALID EV", "op": "session/block", "sid": sid, "q": q}
+            except ValueError as err:
+                return {
+                    "status": "INVALID EV",
+                    "op": "session/block",
+                    "sid": sid,
+                    "q": q,
+                    "error": str(err),
+                }
 
             expected_dsh = sha256_hex(next_text)
             valid_dsh = init_dsh == current_dsh and doc_state_hash == expected_dsh

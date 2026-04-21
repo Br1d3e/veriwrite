@@ -5,8 +5,10 @@
 
 /* global document, Office, Word */
 
-import { startRecording, stopRecording, getFlightRecord, isOnlineMode, setOnlineMode, getPostState, getEvBlock, getOnlineCb, isDisconnected } from "./modules/recorder";
-import { isUserOnline } from "./modules/utils";
+import { startRecording, stopRecording, getFlightRecord, getOnlineStatus, setOnlineMode, getPostState, getEvBlock, getRetryStatus } from "./modules/recorder";
+
+let lastManualSwitchAt = 0;
+const msgDuration = 3000;
 
 function downloadJSON() {
   const flightRecord = getFlightRecord();
@@ -21,26 +23,29 @@ function downloadJSON() {
   URL.revokeObjectURL(a.href);
 }
 
-setOnlineMode(isUserOnline());
-Office.onReady((info) => {
+Office.onReady(async (info) => {
     if (info.host === Office.HostType.Word) {
       document.getElementById("sideload-msg").style.display = "none";
       document.getElementById("app-body").style.display = "flex";
     }
     const onlineCb = document.getElementById("onlineCb");
-    getOnlineCb(onlineCb);
     document.getElementById("btnStart")?.addEventListener("click", startRecording);
     document.getElementById("btnStop")?.addEventListener("click", async () => {
         await stopRecording() 
-        if (!isOnlineMode()) {
+        if (getOnlineStatus() !== "ONLINE" && getOnlineStatus() !== "ONLINE_AUTO") {
           downloadJSON()
         }
     })
-    setOnlineMode(Boolean(onlineCb?.checked));
+    // const reachable = await isUserOnline();
+    // setOnlineMode(Boolean(onlineCb?.checked) && reachable);
+    // if (onlineCb) onlineCb.checked = Boolean(onlineCb.checked) && reachable;
     onlineCb?.addEventListener("change", () => {
      switchOnlineCb();
     })
-    setInterval(showOfflineMsg, 500);
+    showRetryMsg();
+    autoSwitchMsg();
+    setInterval(showRetryMsg, 500);
+    setInterval(autoSwitchMsg, 1000);
     // setInterval(debugState, 100);
   });
 
@@ -52,35 +57,66 @@ function debugState() {
   // evBlockEl.textContent = JSON.stringify(getEvBlock(), null, 2);
 }
 
-function switchOnlineCb() {
+async function switchOnlineCb() {
   const onlineCb = document.getElementById("onlineCb");
   const cbMsgEl = document.getElementById("cb-msg");
+  lastManualSwitchAt = Date.now();
   setOnlineMode(onlineCb.checked);
+  const onlineMsg = "✅ Successfully switched to online mode.";
+  const offlineMsg = "✅ Successfully switched to offline mode."
   if (onlineCb.checked) {
-    if (isUserOnline) {
-      cbMsgEl.textContent = "✅ Successfully switched to online mode.";
-    } else {
-      cbMsgEl.textContent = "❗Warning: you are currently offline. Connect to the internet to use online mode."
-    }
+    cbMsgEl.textContent = onlineMsg;
   } else {
-    cbMsgEl.textContent = "✅ Successfully switched to offline mode.";
+    cbMsgEl.textContent = offlineMsg;
   }
   setTimeout(() => {
-    cbMsgEl.textContent = "";
-  }, 3000)
+    if (cbMsgEl.textContent === onlineMsg || cbMsgEl.textContent === offlineMsg) {
+      cbMsgEl.textContent = "";
+    }
+  }, msgDuration)
 }
 
-function showOfflineMsg() {
-  const offlineMsgEl = document.getElementById("offline-msg");
-  const disconnected = isDisconnected();
+async function autoSwitchMsg() {
+  if (Date.now() - lastManualSwitchAt < msgDuration) {
+    return;
+  }
 
-  if (disconnected) {
-    const { error, retryMs, retrying } = disconnected;
+  const onlineCb = document.getElementById("onlineCb");
+  const cbMsgEl = document.getElementById("cb-msg");
+  const onlineStatus = getOnlineStatus();
+  const onlineMsg = "✅ Detected Internet! Automatically switched to online mode.";
+  const offlineMsg = "❗ No network access! Automatically switched to offline mode.";
+
+  if (onlineStatus === "ONLINE_AUTO") {
+    onlineCb.checked = true;
+    cbMsgEl.textContent = onlineMsg;
+    setTimeout(() => {
+      if (cbMsgEl.textContent === onlineMsg) {
+        cbMsgEl.textContent = "";
+      }
+    }, msgDuration)
+  } else if (onlineStatus === "OFFLINE_AUTO") {
+    onlineCb.checked = false;
+    cbMsgEl.textContent = offlineMsg;
+    setTimeout(() => {
+      if (cbMsgEl.textContent === offlineMsg) {
+        cbMsgEl.textContent = "";
+      }
+    }, msgDuration)
+  }
+}
+
+function showRetryMsg() {
+  const onlineMsgEl = document.getElementById("retry-msg");
+  const retryStatus = getRetryStatus();
+
+  if (retryStatus) {
+    const { error, retryMs, retrying } = retryStatus;
     const seconds = Math.round((retryMs || 0) / 1000);
-    offlineMsgEl.textContent = retrying
+    onlineMsgEl.textContent = retrying
       ? `Reconnecting to record server... ${seconds}s`
       : `Connection Failed! Switched to offline recording.`;
   } else {
-    offlineMsgEl.textContent = "";
+    onlineMsgEl.textContent = "";
   }
 }

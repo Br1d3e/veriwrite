@@ -101,19 +101,25 @@ export async function loadRecord(xmlId) {
 
       // Extract XML
       const xmlPart = context.document.customXmlParts.getItemOrNullObject(xmlId);
-      xmlPart.load("xml");
+      await context.sync();
+      if (xmlPart.isNullObject) return null;
+
       const xml = xmlPart.getXml();
       await context.sync();
 
       // Parse XML
       const xmlStr = xml.value;
+      if (!xmlStr) return null;
       const xmlDoc = new DOMParser().parseFromString(xmlStr, "text/xml");
-      const b64 = xmlDoc.getElementsByTagName("b64")[0].textContent;
+      const b64Node = xmlDoc.getElementsByTagName("b64")[0];
+      if (!b64Node || !b64Node.textContent) return null;
+      const b64 = b64Node.textContent;
       const json = b64Decoder(b64);
       const flightRecord = JSON.parse(json);
       return flightRecord;
     })
   } catch(err) {
     console.log(`Error loading record: ${err}`);
+    return null;
   }
 }

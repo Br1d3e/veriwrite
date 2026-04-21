@@ -1,3 +1,4 @@
+export const SERVER_URL = "https://localhost:8443";
 
 // uuid generator
 export function generateUUID() {
@@ -5,7 +6,7 @@ export function generateUUID() {
 }
 
 // Escape Microsoft Word Chars
-function normalizeLines(s) {
+export function normalizeLines(s) {
     return String(s)
     .replace(/\r\n/g, "\n")  
     .replace(/\r/g, '\n')   // Hard Break
@@ -16,8 +17,15 @@ export function arraySum(arr) {
   return arr.reduce((a, b) => a + b, 0);
 }
 
-export function isUserOnline() {
-  return navigator.onLine;
+export async function isUserOnline() {
+  try {
+    const ping = await fetch(`${SERVER_URL}/ping`, {
+      method: "POST",
+    });
+    return navigator.onLine && ping.ok;
+  } catch (error) {
+    return false;
+  }
 }
 
 export function b64Encoder(str) {
@@ -70,7 +78,7 @@ export function computeDiff(oldText, newText, lastPoll) {
     // Compute Differences
     const pos = p;
     const delLen = oldText.length - p - s;
-    const ins = newText.slice(p, newText.length - s);
+    const ins = normalizeLines(newText.slice(p, newText.length - s));
 
     if (delLen === 0 && ins === "") return null;
 

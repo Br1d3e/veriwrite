@@ -2,7 +2,7 @@
 import { generateUUID, b64Encoder, b64Decoder, computeDiff, isUserOnline } from "./utils";
 import { saveCustomXml, loadSettings, loadRecord, updateSettings} from "./store";
 import { getDocTitle, getDocAuthor, readBodyText } from "./docInfo";
-import { startDoc, startSession, endSession, postBlock, hashText, getSessionPostState, getRetryMs, OFFLINE_STATUS } from "./post";
+import { startDoc, startSession, endSession, postBlock, hashText, getSessionPostState, getRetryMs, OFFLINE_STATUS, docReady, sessionReady } from "./post";
 
 // Initialize record
 let flightRecord = null;
@@ -12,6 +12,8 @@ let schema = null;
 let xmlId = null;
 // Recorder States
 let ONLINE = true;
+let onlineStatus = "ONLINE";
+let pending = false;
 let recording = false;
 let failed = false;
 let lastPoll = Date.now();
@@ -27,20 +29,18 @@ let finalReceipt = null;
 let lastError = null;
 let lastRetryMs = 0;
 
-let onlineCbEl = null;
 
-export function getOnlineCb(onlineCb) {
-  onlineCbEl = onlineCb;
-}
-
-export function setOnlineMode(value) {
-  // if (recording) return;
-  if (onlineCbEl) onlineCbEl.checked = value;
+export function setOnlineMode(value, auto=false) {
   ONLINE = Boolean(value);
+  if (auto) {
+    onlineStatus = value ? "ONLINE_AUTO" : "OFFLINE_AUTO"
+  } else {
+    onlineStatus = value ? "ONLINE" : "OFFLINE"
+  }
 }
 
-export function isOnlineMode() {
-  return ONLINE;
+export function getOnlineStatus() {
+  return onlineStatus;
 }
 
 export function getPostState() {
@@ -75,19 +75,20 @@ async function newRecord() {
   return flightRecord;
 }
 
-async function initializeSession() {
+async function initializeSession(initTextOverride = null) {
+  const initText = typeof initTextOverride === "string" ? initTextOverride : await readBodyText();
   session = {
     id: `s${flightRecord.sessions.length + 1}`,
     t0: Date.now(),
     tn: Date.now(),
-    init: await readBodyText(),
+    init: initText,
     ev: [],
     localPh: null,
     localEh: null
   };
 }
 
-async function flushBlock(docText) {
+async function flushBlock(docText, delayed=false) {
   if (posting) {
     await posting;
   }
@@ -96,7 +97,7 @@ async function flushBlock(docText) {
   const blockEvents = evBuffer;
   evBuffer = [];
 
-  posting = postBlock(blockEvents, docText)
+  posting = postBlock(blockEvents, docText, delayed)
     .then((response) => {
       if (isOfflineResponse(response)) {
         return response;
@@ -123,8 +124,8 @@ function failRecording(error) {
 }
 
 function switchOffline(error) {
-  setOnlineMode(false)
-  evBuffer = [];
+  setOnlineMode(false, true);
+  pending = true; 
   if (error && error.status === OFFLINE_STATUS) {
     lastError = `${error.op || "record server"} unavailable`;
     lastRetryMs = error.retryMs || 0;
@@ -134,11 +135,17 @@ function switchOffline(error) {
   }
 }
 
+function switchOnline() {
+  setOnlineMode(true, true);
+  lastError = null;
+  lastRetryMs = 0;
+}
+
 function isOfflineResponse(response) {
   return response && response.status === OFFLINE_STATUS;
 }
 
-export function isDisconnected() {
+export function getRetryStatus() {
   const retryMs = getRetryMs();
   if (retryMs !== null) {
     return {
@@ -160,10 +167,33 @@ async function poll() {
   if (!recording || failed) return;
 
   try {
-    const currentText = await captureDiff();
+    const currentText = await captureDiff(pending);
+
+    const prevOnlineStatus = onlineStatus;
+    const reachable = await isUserOnline();
+    if (!reachable) {
+      switchOffline({
+        status: OFFLINE_STATUS,
+        op: "connectivity",
+        retryMs: 0,
+      });
+    } else {
+      switchOnline();
+      if (!docReady()) {
+        await startDoc()
+      }
+      if (!sessionReady()) {
+        await startSession(currentText);
+      }
+    }
 
     if (ONLINE && evBuffer.length > 0 && Date.now() - lastPost >= postInterval) {
-      const response = await flushBlock(currentText);
+      let response = null;
+      if (prevOnlineStatus.includes("OFFLINE") && onlineStatus.includes("ONLINE")) {
+        response = await flushBlock(currentText, true);
+      } else {
+        response = await flushBlock(currentText);
+      }
       if (isOfflineResponse(response)) {
         switchOffline(response);
       }
@@ -178,14 +208,14 @@ async function poll() {
   }
 }
 
-async function captureDiff() {
+async function captureDiff(pending) {
   const newText = await readBodyText();
   const diff = computeDiff(lastText, newText, lastPoll);
   lastPoll = Date.now();
   if (!diff) return newText;
 
   lastText = newText;
-  if (ONLINE) {
+  if (ONLINE || pending) {
     evBuffer.push(diff);
   }
   session.ev.push(diff);
@@ -199,7 +229,7 @@ async function updateSessions() {
   flightRecord.m.title = await getDocTitle();
   flightRecord.m.author = await getDocAuthor();
 
-  xmlId = saveCustomXml(flightRecord);    // New XMl id
+  xmlId = await saveCustomXml(flightRecord);    // New XML id
 }
 
 export async function startRecording() {
@@ -213,6 +243,7 @@ export async function startRecording() {
     posting = null;
 
     [docId, schema, xmlId] = await loadSettings();
+    const sessionInitText = await readBodyText();
 
     if (ONLINE) {
       try {
@@ -220,7 +251,7 @@ export async function startRecording() {
         if (isOfflineResponse(docState)) {
           switchOffline(docState);
         } else {
-          sesState = await startSession();
+          sesState = await startSession(sessionInitText);
           if (isOfflineResponse(sesState)) {
             switchOffline(sesState);
           } else {
@@ -246,11 +277,10 @@ export async function startRecording() {
     }
 
     // Start new session
-    await initializeSession();
+    await initializeSession(sessionInitText);
 
     lastPoll = Date.now();
-    const initText = await readBodyText()
-    lastText = initText;
+    lastText = sessionInitText;
         
     recording = true;
 
@@ -259,7 +289,7 @@ export async function startRecording() {
 
 
 export async function stopRecording() {
-  if (!recording) return;
+  if (!recording && !session) return;
   recording = false;
 
   try {

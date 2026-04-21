@@ -2,11 +2,10 @@
  * @fileoverview Post recorded session blocks to record server.
  */
 
-import { generateUUID, arraySum } from "./utils";
+import { generateUUID, arraySum, SERVER_URL } from "./utils";
 import { getDocAuthor, getDocTitle, readBodyText } from "./docInfo";
 import { loadSettings, updateSettings } from "./store";
 
-const SERVER_URL = "https://localhost:8443";
 const PROTOCOL_VERSION = 3;
 const AES_GCM_TAG_BYTES = 16;
 export const OFFLINE_STATUS = "OFFLINE_LOCAL";
@@ -20,6 +19,8 @@ let prevHash = null;
 let sessionKey = null;
 let currentDocHash = null;
 let challenge = null;
+let serverDocReady = false;
+let serverSessionReady = false;
 
 let retrying = false;
 let retryStart = 0;
@@ -35,6 +36,8 @@ export function resetSessionState() {
   prevHash = null;
   sessionKey = null;
   currentDocHash = null;
+  challenge = null;
+  serverSessionReady = false;
 }
 
 function bytesToBase64(bytes) {
@@ -261,8 +264,17 @@ function assertOnlineResponse(response, op) {
   return response;
 }
 
+export function docReady() {
+    return serverDocReady;
+}
+
+export function sessionReady() {
+    return serverDocReady && serverSessionReady;
+}
+
 export async function startDoc() {
   resetSessionState();
+  serverDocReady = false;
   await ensureDocSettings();
 
   const title = await getDocTitle();
@@ -277,25 +289,30 @@ export async function startDoc() {
     a: author,
   }
 
-  let response = await retryPost(null, path, body)
+  let response = await postJson(path, body);
+  response = await retryPost(response, path, body)
   response = assertOnlineResponse(response, "doc/start");
   if (response.status === OFFLINE_STATUS) return response;
   if (response.status !== "SUCCESS") {
     throw new Error(`Record server rejected doc start: ${JSON.stringify(response)}`);
   }
+  serverDocReady = true;
   return response;
 }
 
-export async function startSession() {
+export async function startSession(initTextOverride = null) {
   if (!docId) {
     await ensureDocSettings();
+  }
+  if (!serverDocReady) {
+    throw new Error("Cannot start server session before server doc is ready");
   }
 
   resetSessionState();
   sid = generateUUID();
   st0 = Date.now();
 
-  const initText = await readBodyText();
+  const initText = typeof initTextOverride === "string" ? initTextOverride : await readBodyText();
   const initHash = await sha256Hex(initText);
   const generatedKey = await genECDHKey();
   currentDocHash = initHash;
@@ -311,7 +328,8 @@ export async function startSession() {
     ih: initHash,
   }
 
-  let response = await retryPost(null, path, body)
+  let response = await postJson(path, body);
+  response = await retryPost(response, path, body)
   response = assertOnlineResponse(response, "session/start");
   if (response.status === OFFLINE_STATUS) return response;
 
@@ -326,6 +344,7 @@ export async function startSession() {
   sessionKey = await deriveSessionKey(generatedKey.privKey, serverPub, salt, info);
 
   challenge = response.challenge;
+  serverSessionReady = true;
 
   return response;
 }
@@ -346,7 +365,8 @@ export async function endSession(docText = null) {
     eh: endHash,
   };
 
-  let response = await retryPost(null, path, body);
+  let response = await postJson(path, body);
+  response = await retryPost(response, path, body)
   response = assertOnlineResponse(response, "session/end");
 
   return response;
@@ -372,7 +392,8 @@ export async function getChallenge(challenge) {
     dId: docId,
     sid: sid,
   };
-  let response = await retryPost(null, path, body)
+  let response = await postJson(path, body);
+  response = await retryPost(response, path, body)
   response = assertOnlineResponse(response, "session/challenge");
   if (response.status === OFFLINE_STATUS) return response;
 
@@ -382,7 +403,7 @@ export async function getChallenge(challenge) {
   return response.challenge;
 }
 
-export async function postBlock(ev = [], docText = null) {
+export async function postBlock(ev = [], docText = null, delayed = false) {
   if (!sid || !sessionKey) {
     throw new Error("Cannot post block before startSession()");
   }
@@ -424,7 +445,13 @@ export async function postBlock(ev = [], docText = null) {
     tag,
     ch,
   }
-  let response = await retryPost(null, path, body)
+  if (delayed) {
+    body.freshness = "OFFLINE_DELAYED";
+  } else {
+    body.freshness = "ONLINE";
+  }
+  let response = await postJson(path, body);
+  response = await retryPost(response, path, body)
   response = assertOnlineResponse(response, `session/block ${q}`);
   if (response.status === OFFLINE_STATUS) return response;
 
