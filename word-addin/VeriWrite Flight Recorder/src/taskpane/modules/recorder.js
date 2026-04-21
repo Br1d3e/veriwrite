@@ -221,6 +221,19 @@ function switchOnline() {
   lastRetryMs = 0;
 }
 
+async function checkConnectivity() {
+  const reachable = await isUserOnline();
+  if (!reachable) {
+    switchOffline({
+      status: OFFLINE_STATUS,
+      op: "connectivity",
+      retryMs: 0,
+    });
+  } else {
+    switchOnline();
+  }
+}
+
 function isOfflineResponse(response) {
   return response && response.status === OFFLINE_STATUS;
 }
@@ -250,17 +263,7 @@ async function poll() {
     const currentText = await captureDiff(pending);
 
     const prevOnlineStatus = onlineStatus;
-    const reachable = await isUserOnline();
-    if (!reachable) {
-      switchOffline({
-        status: OFFLINE_STATUS,
-        op: "connectivity",
-        retryMs: 0,
-      });
-    } else {
-      switchOnline();
-    }
-
+    await checkConnectivity();
     if (ONLINE && sessionReady() && evBuffer.length > 0 && Date.now() - lastPost >= postInterval) {
       let response = null;
       if (prevOnlineStatus.includes("OFFLINE") && onlineStatus.includes("ONLINE")) {
@@ -331,6 +334,8 @@ export async function startRecording() {
         await updateSettings("v", 2);
     }
 
+    await checkConnectivity();
+
     if (ONLINE) {
       try {
         await syncPendingSessions();
@@ -372,6 +377,8 @@ export async function startRecording() {
 export async function stopRecording() {
   if (!recording && !session) return;
   recording = false;
+
+  await checkConnectivity();
 
   try {
     if (posting) {
