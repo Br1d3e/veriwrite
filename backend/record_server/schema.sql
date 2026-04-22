@@ -1,4 +1,6 @@
 
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
 CREATE TABLE IF NOT EXISTS docs (
     d_id TEXT PRIMARY KEY,
     v INTEGER NOT NULL,
@@ -60,3 +62,5 @@ CREATE TABLE IF NOT EXISTS blocks (
 CREATE INDEX IF NOT EXISTS idx_sessions_d_id ON sessions(d_id);
 CREATE INDEX IF NOT EXISTS idx_blocks_d_id ON blocks(d_id);
 CREATE INDEX IF NOT EXISTS idx_blocks_ch ON blocks(ch);
+CREATE INDEX IF NOT EXISTS idx_docs_title_trgm ON docs USING gin (title gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_docs_author_trgm ON docs USING gin (author gin_trgm_ops);

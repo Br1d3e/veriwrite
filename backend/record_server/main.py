@@ -5,8 +5,12 @@ from fastapi.middleware.cors import CORSMiddleware
 
 try:
     from .store_db import append_block, end_session, start_doc, start_session, create_challenge
+    from .search_db import query_title, query_author
+    from .analyze_db import AnalyzeDB
 except ImportError:
     from backend.record_server.store_db import append_block, end_session, start_doc, start_session, create_challenge
+    from backend.record_server.search_db import query_title, query_author
+    from backend.record_server.analyze_db import AnalyzeDB
 
 
 app = FastAPI()
@@ -48,3 +52,28 @@ async def post_session_block(block: dict[str, Any]):
 @app.post("/session/end")
 async def post_session_end(session_end: dict[str, Any]):
     return end_session(session_end)
+
+@app.post("/query/title")
+async def query_record_title(payload: dict[str, Any]):
+    title = payload.get("title")
+    if not isinstance(title, str) or not title.strip():
+        raise ValueError("missing title query")
+    return query_title(title)
+
+
+@app.post("/query/author")
+async def query_record_author(payload: dict[str, Any]):
+    author = payload.get("author")
+    if not isinstance(author, str) or not author.strip():
+        raise ValueError("missing author query")
+    return query_author(author)
+
+
+@app.post("/record/load")
+async def load_record(payload: dict[str, Any]):
+    d_id = payload.get("d_id")
+    if not isinstance(d_id, str) or not d_id.strip():
+        raise ValueError("missing d_id")
+    analyze = AnalyzeDB()
+    analyze.load_doc(d_id=d_id)
+    return analyze.get_record()

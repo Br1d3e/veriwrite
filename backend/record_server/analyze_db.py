@@ -81,22 +81,8 @@ class AnalyzeDB:
         self.sessions = matched
         return self.sessions
         
-    def query_title(self, title: str) -> str:
-        """
-        N-gram text rough match
-        returns `docId`
-        """
-        pass
-
-    def query_author(self, author: str) -> str:
-        """
-        returns `docId`
-        """
-        pass
 
     def load_doc(self, d_id: str | None = None, title: str | None = None, author: str | None = None):
-        if self.d_id:
-            return self.d_id
         if d_id:
             self.d_id = d_id
         elif title:
