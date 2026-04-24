@@ -20,8 +20,8 @@ export function calTimeline(record) {
     
     const sessionCount = sessions.length;
 
-    const docStartTs = record.m.created;
-    const docEndTs = record.m.lastModified;
+    const docStartTs = record.m.created || record.m.t0;
+    const docEndTs = record.m.lastModified || record.m.tn;
     const docSpanTs = docEndTs - docStartTs;
 
     let durationTs = 0;

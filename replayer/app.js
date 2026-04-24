@@ -57,6 +57,8 @@ const DOM = {
   sessionBtns: sessionBtns
 }
 
+// Current active flightRecord
+let flightRecord;
 
 // Do not display metadata before file is uploaded
 function initializeApp() {
@@ -96,9 +98,11 @@ function startReplayer(flightRecord, v = 3) {
   flightRecord = processData(flightRecord);
   // Pass record to player.js
   loadRecord(flightRecord);
+  console.log(flightRecord);
 
   // Generate session buttons
-  genSessionBtns(flightRecord.sessions);
+  const sessions = flightRecord.sessions || flightRecord.s;
+  genSessionBtns(sessions);
 
   updateDocumentStats(flightRecord);
   updateSessionStats(getSession());
@@ -210,7 +214,7 @@ fileEl.addEventListener("change", async () => {
   const f = fileEl.files?.[0];
   if (!f) return;
   const fileText = await f.text();
-  let flightRecord = JSON.parse(fileText);
+  flightRecord = JSON.parse(fileText);
 
   startReplayer(flightRecord, 2);
 });
@@ -226,7 +230,7 @@ searchResultsEl.addEventListener("click", async (e) => {
   if (!searchCard) return;
 
   const docId = searchResults[Number(searchCard.id)].d_id;
-  const flightRecord = await getRecordById(docId);
+  flightRecord = await getRecordById(docId);
 
   startReplayer(flightRecord)
 })

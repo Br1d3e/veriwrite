@@ -21,7 +21,8 @@ let state = {
   sessions: null,     // Sessions Array
   currentSession: 0,    // index in session
   caretPos: 0,
-  docText: ""
+  docText: "",
+  online: false
 }
 
 
@@ -40,7 +41,13 @@ let sessionsEl = null;
 // Load record from app.js
 export function loadRecord(flightRecord) {
     state.record = flightRecord
-    state.sessions = flightRecord.sessions;
+    state.sessions = flightRecord.sessions || flightRecord.s;
+
+    if (flightRecord.v === 3) {
+      state.online = true;
+    } else if (flightRecord.v === 2) {
+      state.online = false;
+    }
 
     return flightRecord; 
 }
@@ -97,6 +104,7 @@ export function resetStatus() {
       state.playTs = 0;
       state.currentSession = 0;
       state.evCount = 0;
+      state.online = false;
       titleEl.textContent = `Title: ${state.record.m.title}`;
       sessionsEl.textContent = `Session: ${state.currentSession + 1} / ${state.sessions.length}`;
       eventsEl.textContent = `Events: 0 /${state.sessions[0].ev.length}`;
@@ -140,9 +148,21 @@ function calculateTs(eventIdx) {
 function runSessions() {
   if (state.playing === false) return;
 
-  const ev = state.sessions[state.currentSession].ev;
+  const session = state.sessions[state.currentSession];
+  let ev;
+  if (state.online) {
+    const blocks = session.b || session.blocks;
 
-  step(ev);
+    for (let block of blocks) {
+      ev = block.ev;
+      step(ev);
+      
+      // TODO: block brief stats panel + progress bar
+    }
+  } else {
+    ev = session.ev;
+    step(ev);
+  }
 
   // Forward to next session
   if (state.i >= ev.length) {

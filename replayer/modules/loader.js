@@ -50,12 +50,14 @@ function normalizeRecord(sessions) {
     return sessions;
 }
 
-export function processData(flightRecord) {
+export function processData(flightRecord, v) {
     let newRecord = flightRecord;
     let sessions = newRecord.sessions;
-    sessions = dedupe(sessions);
-    sessions = sort(sessions);
-    sessions = normalizeRecord(sessions)
+    if (v === 2) {      // deprecated for online protocol v3
+        sessions = dedupe(sessions);
+        sessions = normalizeRecord(sessions)
+        sessions = sort(sessions);
+    }
     return newRecord;
 }
 
@@ -70,7 +72,7 @@ export function checkStruct(flightRecord, protocolVer) {
     } else if (protocolVer === 3) {
         const v = flightRecord.v ?? null;
         const m = flightRecord.m ?? null;
-        const s = flightRecord.s ?? null;
+        const s = flightRecord.s ?? flightRecord.sessions;
 
         return flightRecord && v === protocolVer && m && s && typeof m === "object" && typeof s === "object";
     }

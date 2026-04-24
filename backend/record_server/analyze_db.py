@@ -12,7 +12,7 @@ class AnalyzeDB:
         self.record = {
             "v": 3,
             "m": None,
-            "s": None
+            "sessions": None
         }
         self.doc = None
         self.sessions = None
@@ -110,11 +110,11 @@ class AnalyzeDB:
         if not isinstance(self.doc, pd.Series):
             return
         m = {
-            "dId": self.doc["d_id"],
+            "docId": self.doc["d_id"],
             "t0": int(self.doc["t0"]),
             "tn": int(self.doc["updated_server_ts"]),
-            "ttl": self.doc["title"],
-            "a": self.doc["author"]
+            "title": self.doc["title"],
+            "author": self.doc["author"]
         }
         self.record["m"] = m
         return m
@@ -186,13 +186,13 @@ class AnalyzeDB:
                 "sid": sid,
                 "t0": int(session["st0"]),
                 "tn": int(session["st0"] + session["dt"]),
-                "it": session["init_text"],
-                # "ev": session["ev"],
+                "init": session["init_text"],
+                "ev": session["ev"],
                 "b": blocks.drop(columns=["ch"]).to_dict(orient="records"),
                 "cs": mapping.get(session["continuity_status"]),
                 "mr": session["merkle_root"] == merkle_tree_root(blocks["ch"].to_list())
             })
-        self.record["s"] = s
+        self.record["sessions"] = s
         return s            
 
     def get_record(self):
