@@ -1,5 +1,8 @@
 
-from store_db import DATABASE_URL, merkle_tree_root
+try: 
+    from .store_db import DATABASE_URL, merkle_tree_root
+except ImportError:
+    from backend.record_server.store_db import DATABASE_URL, merkle_tree_root
 import pandas as pd
 import psycopg
 
@@ -200,9 +203,3 @@ class AnalyzeDB:
         if self.record["s"] is None:
             self.fetch_sessions()
         return self.record
-
-
-if __name__ == "__main__":
-    a = AnalyzeDB()
-    a.load_doc(d_id="83cd8058-ee7d-4097-b7fa-d11c543c98c5")
-    print(a.get_record())

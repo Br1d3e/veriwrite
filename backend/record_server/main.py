@@ -17,15 +17,15 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "https://localhost:3000",
-        "http://localhost:8000",
-        "http://127.0.0.1:8000",
-    ],
-    allow_methods=["GET", "POST"],
+    allow_origins=["*"],
+    allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.get("/ping")
+async def get_ping_server():
+    return {"status": "OK"}
 
 
 @app.post("/ping")
@@ -57,7 +57,7 @@ async def post_session_end(session_end: dict[str, Any]):
 async def query_record_title(payload: dict[str, Any]):
     title = payload.get("title")
     if not isinstance(title, str) or not title.strip():
-        raise ValueError("missing title query")
+        raise ValueError(f"missing title query")
     return query_title(title)
 
 
@@ -65,7 +65,7 @@ async def query_record_title(payload: dict[str, Any]):
 async def query_record_author(payload: dict[str, Any]):
     author = payload.get("author")
     if not isinstance(author, str) or not author.strip():
-        raise ValueError("missing author query")
+        raise ValueError(f"missing author query")
     return query_author(author)
 
 

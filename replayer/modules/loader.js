@@ -1,6 +1,11 @@
-// Data pre-process
-// Input: Raw flightRecord.json
-// Outputs a normalized flightRecord.json document
+/**
+ * @fileoverview
+ * Data pre-process
+ * 
+ * Input: Raw flightRecord.json
+ * Outputs a normalized flightRecord.json document
+ */
+
 
 
 
@@ -55,10 +60,20 @@ export function processData(flightRecord) {
 }
 
 
-export function checkStruct(flightRecord) {
-    const v = flightRecord.v ?? null;
-    const m = flightRecord.m ?? null;
-    const sessions = flightRecord.sessions ?? null
-    
-    return flightRecord && v === 2 && m && sessions && typeof sessions === "object";
+export function checkStruct(flightRecord, protocolVer) {
+    if (protocolVer === 2) {
+        const v = flightRecord.v ?? null;
+        const m = flightRecord.m ?? null;
+        const sessions = flightRecord.sessions ?? null;
+        
+        return flightRecord && v === protocolVer && m && sessions && typeof sessions === "object";
+    } else if (protocolVer === 3) {
+        const v = flightRecord.v ?? null;
+        const m = flightRecord.m ?? null;
+        const s = flightRecord.s ?? null;
+
+        return flightRecord && v === protocolVer && m && s && typeof m === "object" && typeof s === "object";
+    }
+
 }
+  
