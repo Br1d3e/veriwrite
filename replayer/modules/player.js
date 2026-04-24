@@ -5,7 +5,7 @@
 
 // import { processData } from "./loader.js";
 import { applyPatch, updateState, renderCursor } from "./renderer.js";
-import { resetStatsPanel } from "../app.js";
+import { resetStatsPanel } from "./statsPanel.js";
 
 
 // Global Variables & State Machine
