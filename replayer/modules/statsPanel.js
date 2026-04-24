@@ -1,7 +1,10 @@
 import { Chart } from "chart.js/auto";
 import { calSession } from "./stats/session/index.js";
 import { calDocStats } from "./stats/doc/index.js";
+import { getDocText, seekToEvent, seekToSession, stopPlaying } from "./player.js";
+import { restoreCursor } from "./renderer.js";
 
+const screenEl = document.getElementById("screen");
 const docStatsEl = document.getElementById("document-stats");
 const docStartEl = document.getElementById("docStart");
 const docEndEl = document.getElementById("docEnd");
@@ -88,6 +91,8 @@ let docReportLoading = false;
 let docReportRequestId = 0;
 let sesReportLoading = false;
 let sesReportRequestId = 0;
+let inspectMode = false;
+let highlightSpan = null;
 
 export function getSessionStats() {
   return sessionStats;
@@ -274,6 +279,99 @@ function genPatchBox(textPatch, id) {
 
   box.append(labelEl, valueEl);
   return box;
+}
+
+function getPatchHighlightRange(textPatch, textLength) {
+  for (let patch of textPatch) {
+    let pos = patch.start2;
+    let start = null;
+    let end = pos;
+
+    for (let [op, text] of patch.diffs) {
+      if (op === 0) {
+        pos += text.length;
+        continue;
+      }
+
+      if (start === null) start = pos;
+
+      if (op === 1) {
+        pos += text.length;
+        end = pos;
+      } else {
+        end = Math.max(end, pos);
+      }
+    }
+
+    if (start !== null) {
+      start = Math.max(0, Math.min(start, textLength));
+      end = Math.max(start, Math.min(end, textLength));
+      return { start, end };
+    }
+  }
+  return { start: 0, end: 0 };
+}
+
+function renderGapHl(gap) {
+  const text = getDocText();
+  const { start, end } = getPatchHighlightRange(gap.textPatch, text.length);
+  const before = text.slice(0, start);
+  const highlight = text.slice(start, end);
+  const after = text.slice(end);
+
+  screenEl.replaceChildren();
+  screenEl.append(document.createTextNode(before));
+
+  const span = document.createElement("span");
+  span.className = gap.majorDiff ? "hl" : "hl-med";
+  span.title = "offline text patch";
+  span.textContent = highlight || "[offline deletion]";
+  screenEl.append(span);
+
+  highlightSpan = span;
+  screenEl.append(document.createTextNode(after));
+
+  highlightSpan.scrollIntoView({
+    behavior: "smooth",
+    block: "center",
+    inline: "center"
+  });
+}
+
+function renderPasteHl(activePaste, text) {
+  if (!inspectMode || !activePaste) return;
+  const currentPos = text.length;
+  const startPos = activePaste.startPos;
+  const endPos = activePaste.endPos;
+  const lvl = activePaste.lvl;
+  const tags = activePaste.tags;
+
+  if (currentPos >= startPos && currentPos >= endPos) {
+    const start = text.slice(0, startPos);
+    const highlight = text.slice(startPos, endPos);
+    const end = text.slice(endPos);
+
+    screenEl.replaceChildren();
+    screenEl.append(document.createTextNode(start));
+
+    const span = document.createElement("span");
+    if (tags.includes("in-doc paste") || tags.includes("replacement")) {
+      span.className = "hl-low";
+    }
+    else if (lvl === "high") {
+      span.className = "hl";
+    } else if (lvl === "medium") {
+      span.className = "hl-med";
+    }
+
+    span.title = "highlighted";
+    span.textContent = highlight;
+    screenEl.append(span);
+
+    highlightSpan = span;
+
+    screenEl.append(document.createTextNode(end));
+  }
 }
 
 function genPasteCards(pasteIns) {
@@ -868,6 +966,8 @@ export function updateSessionStats(session) {
 
 export function resetStatsPanel() {
   sessionStats = null;
+  inspectMode = false;
+  highlightSpan = null;
   sessionStatsEl.hidden = true;
   setStatsCollapsed(sessionStatsBodyEl, sessionStatsToggleEl, false);
   overviewEl.hidden = true;
@@ -916,4 +1016,45 @@ genDocReportBtn.addEventListener("click", () => {
 
 genSesReportBtn.addEventListener("click", () => {
   getSesReport(sessionStats);
+})
+
+pasteEvEl.addEventListener("click", (e) => {
+  if (!sessionStats) return;
+  if (e.target.className === "paste" || e.target.className === null || e.target.id === null) return;
+  const pasteIdx = Number(e.target.id);
+
+  stopPlaying();
+  restoreCursor(screenEl);
+
+  const pasteIns = sessionStats.interpret.pasteIns;
+  const activePaste = pasteIns[pasteIdx];
+  const evIdx = activePaste.evIdx;
+  seekToEvent(evIdx);
+
+  inspectMode = true;
+
+  const text = getDocText();
+  renderPasteHl(activePaste, text);
+
+  highlightSpan.scrollIntoView({
+    behavior: "smooth",
+    block: "center",
+    inline: "center"
+  })
+})
+
+docGapsEl.addEventListener("click", (e) => {
+  const card = e.target.closest(".doc-gap-card");
+  if (!card || !docStats) return;
+
+  const gap = docStats.continuity.gaps[Number(card.id)];
+  if (!gap) return;
+
+  stopPlaying();
+  restoreCursor(screenEl);
+  const session = seekToSession(gap.nextSession - 1);
+  resetStatsPanel();
+  updateSessionStats(session);
+  renderGapHl(gap);
+  inspectMode = true;
 })
