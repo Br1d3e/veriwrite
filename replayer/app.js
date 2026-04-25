@@ -3,13 +3,17 @@ import { loadRecord, startPlaying, stopPlaying, resetStatus, changeSpeed, update
 import { cursorDOM, restoreCursor } from "./modules/renderer.js";
 import { checkStruct, processData } from "./modules/loader.js";
 import {
-  resetDocReport,
+  renderDocGapHighlight,
+  resetDocReport, 
   resetDocUI,
+  setDocGapSelectedHandler,
+  updateDocumentStats
+} from "./modules/stats/ui/docStatsPanel.js";
+import {
   resetSesReport,
-  resetStatsPanel,
-  updateDocumentStats,
-  updateSessionStats,
-} from "./modules/statsPanel.js";
+  resetSessionStatsPanel,
+  updateSessionStats
+} from "./modules/stats/ui/sessionStatsPanel.js"
 import { queryTitle, queryAuthor, getRecordById } from "./modules/recordApi.js";
 
 
@@ -89,7 +93,7 @@ function startReplayer(flightRecord, v = 3) {
 
   enableButtons();
   resetSessionBtns();
-  resetStatsPanel();
+  resetSessionStatsPanel();
   resetDocUI();
   resetDocReport();
   resetSesReport();
@@ -245,7 +249,7 @@ playBtn.addEventListener("click", () => {
 pauseBtn.addEventListener("click", stopPlaying);
 resetBtn.addEventListener("click", () => {
   resetStatus();
-  resetStatsPanel();
+  resetSessionStatsPanel();
 });
 speedSlider.addEventListener("change", () => {
   changeSpeed(Number(speedSlider.value))
@@ -269,7 +273,17 @@ sessionBtns.addEventListener("click", (e) => {
       session = seekToSession(sid);
   }
   resetSesReport();
-  resetStatsPanel();
+  resetSessionStatsPanel();
   updateSessionStats(session);
   restoreCursor(screenEl);
 })
+
+setDocGapSelectedHandler((gap) => {
+  stopPlaying();
+  restoreCursor(screenEl);
+  const session = seekToSession(gap.nextSession - 1);
+  resetSesReport();
+  resetSessionStatsPanel();
+  updateSessionStats(session);
+  renderDocGapHighlight(gap);
+});
