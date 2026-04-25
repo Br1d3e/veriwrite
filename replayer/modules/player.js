@@ -29,12 +29,12 @@ let state = {
 // DOM
 let eventsEl = null;
 let durationEl = null;
+let sessionProgEl = null;
 let progressEl = null;
 let speedLbl = null;
 let titleEl = null;
 let caretEl = null;
 let sessionsEl = null;
-
 
 
 // Interface with app.js
@@ -87,6 +87,7 @@ export function getDocText() {
 export function updateDOM(DOM) {    // an object
   eventsEl = DOM.eventsEl;
   durationEl = DOM.durationEl;
+  sessionProgEl = DOM.sessionProgEl;
   progressEl = DOM.progressEl;
   speedLbl = DOM.speedLbl;
   titleEl = DOM.titleEl;
@@ -111,7 +112,8 @@ export function resetStatus() {
       state.docText = state.sessions[0].init;   // Start with first session's init text
       durationEl.textContent = "Session Time: 00:00:00";
       state.evTotal = calculateTotalEv(state.sessions.length);
-      progressEl.value = calculateProgress();
+      progressEl.value = calDocProgress();
+      sessionProgEl.value = calSesProgress();
       // Reset caret
       state.caretPos = state.docText.length;
       caretEl.hidden = false;
@@ -129,7 +131,11 @@ function calculateTotalEv(totalS) {     // Total session numbers
   return total;
 }
 
-function calculateProgress() {
+function calSesProgress() {
+  return state.i / state.sessions[state.currentSession].ev.length * 100;
+}
+
+function calDocProgress() {
   return state.evCount / state.evTotal * 100;
 }
 
@@ -192,7 +198,8 @@ export function seekToSession(sid) {
     state.currentSession = sid;
     state.i = 0;
     state.evCount = calculateTotalEv(state.currentSession);
-    progressEl.value = calculateProgress();
+    sessionProgEl.value = calSesProgress();
+    progressEl.value = calDocProgress();
     state.playTs = 0;
     eventsEl.textContent = `Events: ${state.i} /${state.sessions[state.currentSession].ev.length}`;
     durationEl.textContent = `Session Time: ${convertTs()}`;
@@ -235,7 +242,8 @@ export function seekToEvent(eventIdx) {
   state.playTs = calculateTs(eventIdx);
   state.playing = false;
   state.evCount = eventIdx;
-  progressEl.value = calculateProgress();
+  progressEl.value = calDocProgress();
+  sessionProgEl.value = calSesProgress();
   eventsEl.textContent = `Events: ${state.i} /${state.sessions[state.currentSession].ev.length}`;
   durationEl.textContent = `Session Time: ${convertTs()}`;
 
@@ -278,7 +286,8 @@ function step(ev) {
   // Update meta & progress bar
   eventsEl.textContent = `Events: ${state.i} /${ev.length}`;
   durationEl.textContent = `Session Time: ${convertTs()}`;
-  progressEl.value = calculateProgress();
+  progressEl.value = calDocProgress();
+  sessionProgEl.value = calSesProgress();
 }
 
 

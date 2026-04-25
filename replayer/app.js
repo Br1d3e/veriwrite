@@ -26,6 +26,7 @@ const titleEl = document.getElementById("title");
 const sessionsEl = document.getElementById("sessions");
 const eventsEl = document.getElementById("events");
 const durationEl = document.getElementById("duration");
+const sessionProgEl = document.getElementById("session-prog");
 const progressEl = document.getElementById("replayProg");
 // Buttons
 const playBtn = document.getElementById("playBtn");
@@ -47,6 +48,7 @@ const DOM = {
   afterEl: afterEl,
   eventsEl: eventsEl,
   durationEl: durationEl,
+  sessionProgEl: sessionProgEl,
   progressEl: progressEl,
   speedLbl: speedLbl,
   titleEl: titleEl, 
@@ -70,6 +72,7 @@ function initializeApp() {
   beforeEl.textContent = "";
   afterEl.textContent = "";
   caretEl.hidden = true;
+  sessionProgEl.value = 0;
   progressEl.value = 0;
 }
 
