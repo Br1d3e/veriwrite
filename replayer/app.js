@@ -104,7 +104,10 @@ function startReplayer(flightRecord, v = 3) {
   cursorDOM(DOM);
 
   // Normalize data using loader.js
-  flightRecord = processData(flightRecord);
+  if (v === 2){
+    flightRecord = processData(flightRecord);
+  }
+
   // Pass record to player.js
   loadRecord(flightRecord);
   console.log(flightRecord);

@@ -53,11 +53,9 @@ function normalizeRecord(sessions) {
 export function processData(flightRecord, v) {
     let newRecord = flightRecord;
     let sessions = newRecord.sessions;
-    if (v === 2) {      // deprecated for online protocol v3
-        sessions = dedupe(sessions);
-        sessions = normalizeRecord(sessions)
-        sessions = sort(sessions);
-    }
+    sessions = dedupe(sessions);
+    sessions = normalizeRecord(sessions)
+    sessions = sort(sessions);
     return newRecord;
 }
 
