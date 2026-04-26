@@ -119,6 +119,99 @@ body {
     word-break: keep-all;
 }
 
+.integrity-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr);
+  align-items: stretch;
+  gap: 18px;
+  position: relative;
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  box-shadow: 12px 17px 15px rgba(0, 0, 0, 0.22);
+  padding: 16px;
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+.integrity-section {
+  min-width: 0;
+  position: relative;
+}
+
+.integrity-divider {
+  background: #e3e3e3;
+  min-height: 120px;
+}
+
+.integrity-status-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.status-icon {
+  width: 12px;
+  height: 12px;
+  min-width: 12px;
+  border-radius: 50%;
+  background: #9e9ea7;
+  box-shadow: 0 0 0 3px #eee;
+}
+
+.integrity-info {
+  display: inline-flex;
+  align-items: center;
+  column-gap: 2px;
+  border-radius: 8px;
+  padding: 0.6rem 0.8rem;
+  outline: none;
+  border: none;
+  font-weight: 600;
+  position: relative;
+}
+
+.integrity-desc {
+  display: block;
+  font-size: 0.85rem;
+  color: rgba(0, 0, 0, 0.58);
+  margin-top: 10px;
+}
+
+.integrity-details-grid {
+  font-size: 14px;
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 7px 80px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #ececec;
+}
+
+.integrity-label {
+  color: rgba(0, 0, 0, 0.4);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+}
+
+.integrity-value {
+  color: #333;
+  font-size: 0.78rem;
+  min-width: 0;
+  font-weight: 400;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 720px) {
+  .integrity-card {
+    grid-template-columns: 1fr;
+  }
+
+  .integrity-divider {
+    min-height: 1px;
+    height: 1px;
+  }
+}
+
 .docReport {
     background: white;
     white-space: pre-wrap;

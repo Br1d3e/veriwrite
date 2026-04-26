@@ -95,7 +95,7 @@ class AnalyzeDB:
         else:
             return None
         self.record["m"] = None
-        self.record["s"] = None
+        self.record["sessions"] = None
         self.get_doc(self.d_id)
         self.get_sessions(self.d_id)
         return self.d_id
@@ -133,12 +133,13 @@ class AnalyzeDB:
             "valid_dsh",
             "valid_n",
             "freshness_status",
+            "receipt"
         ]].copy()
         
         blocks_parsed["status"] = self.get_blocks_status(blocks_parsed)
-        blocks_parsed = blocks_parsed.drop(
-            columns=["valid_q", "valid_h", "valid_dsh", "valid_n", "freshness_status"]
-        )
+        # blocks_parsed = blocks_parsed.drop(
+        #     columns=["valid_q", "valid_h", "valid_dsh", "valid_n", "freshness_status"]
+        # )
         return blocks_parsed
 
     def get_blocks_status(self, blocks_parsed: pd.DataFrame):
@@ -200,6 +201,6 @@ class AnalyzeDB:
             raise ValueError("d_id is not loaded")
         if self.record["m"] is None:
             self.fetch_doc_meta()
-        if self.record["s"] is None:
+        if self.record["sessions"] is None:
             self.fetch_sessions()
         return self.record

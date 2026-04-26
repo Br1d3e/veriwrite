@@ -50,7 +50,47 @@
     <button id="resetBtn" disabled>Reset</button>
     <span id="speedLbl">Speed: 1x</span> 
     <input id="speedSlider" disabled type="range" min="0.1" max="20" step="0.1" value="1">
-  </div>   
+  </div>
+  
+  <!-- Block integrity stats -->
+  <div id="integrity-stats" hidden>
+    <div class="stats-header">
+      <div>
+        <h2>Data Integrity Stats</h2>
+        <p>Server-side writing data integrity proof.</p>
+      </div>
+      <button class="stats-toggle" id="integrity-stats-toggle" type="button" aria-expanded="true" aria-controls="integrity-stats-body">-</button>
+    </div>
+    <div id="integrity-stats-body">
+      <div class="integrity-card" id="block-integrity-card">
+        <section class="integrity-section integrity-block-section">
+          <div class="integrity-status-row">
+            <div id="status-icon" class="status-icon"></div>
+            <span class="integrity-info" id="block-integrity-info"></span>
+          </div>
+          <span class="integrity-desc" id="block-integrity-desc"></span>
+          <div class="integrity-details-grid" id="block-integrity-details">
+            <span class="integrity-label">Block</span>
+            <span class="integrity-value" id="b-seq"></span>
+            <span class="integrity-label">Freshness</span>
+            <span class="integrity-value" id="freshness"></span>
+            <span class="integrity-label">Hash Chain</span>
+            <span class="integrity-value" id="hash-chain"></span>
+            <span class="integrity-label">Document State</span>
+            <span class="integrity-value" id="doc-state"></span>
+            <span class="integrity-label">Server Received</span>
+            <span class="integrity-value" id="received-time"></span>
+            <span class="integrity-label">Receipt</span>
+            <span class="integrity-value" id="receipt"></span>
+          </div>
+        </section>
+        <div class="integrity-divider" aria-hidden="true"></div>
+        <section class="integrity-section integrity-session-section" id="session-integrity-section">
+
+        </section>
+      </div>
+    </div>
+  </div>
 
   <!-- Document Stats panel -->
   <div id="document-stats" hidden>

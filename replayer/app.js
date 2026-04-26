@@ -15,6 +15,7 @@ import {
   updateSessionStats
 } from "./modules/stats/ui/sessionStatsPanel.js"
 import { queryTitle, queryAuthor, getRecordById } from "./modules/recordApi.js";
+import { renderIntegrityPanel, resetIntegrityPanel } from "./modules/stats/ui/integrityPanel.js";
 
 
 // HTML Elements
@@ -97,6 +98,7 @@ function startReplayer(flightRecord, v = 3) {
   resetDocUI();
   resetDocReport();
   resetSesReport();
+  resetIntegrityPanel();
 
   updateDOM(DOM);
   cursorDOM(DOM);
@@ -116,6 +118,21 @@ function startReplayer(flightRecord, v = 3) {
 
   // Update HTML
   resetStatus();
+  firstBlockIntegrity(getSession());
+}
+
+function getFirstBlock(session) {
+  const blocks = session?.b || session?.blocks;
+  return Array.isArray(blocks) && blocks.length > 0 ? blocks[0] : null;
+}
+
+function firstBlockIntegrity(session) {
+  const block = getFirstBlock(session);
+  if (block) {
+    renderIntegrityPanel(session, block);
+  } else {
+    resetIntegrityPanel();
+  }
 }
 
 async function updateSearch() {
@@ -239,7 +256,7 @@ searchResultsEl.addEventListener("click", async (e) => {
   const docId = searchResults[Number(searchCard.id)].d_id;
   flightRecord = await getRecordById(docId);
 
-  startReplayer(flightRecord)
+  startReplayer(flightRecord);
 })
 
 playBtn.addEventListener("click", () => {
@@ -275,6 +292,7 @@ sessionBtns.addEventListener("click", (e) => {
   resetSesReport();
   resetSessionStatsPanel();
   updateSessionStats(session);
+  firstBlockIntegrity(session);
   restoreCursor(screenEl);
 })
 
