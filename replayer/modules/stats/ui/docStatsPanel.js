@@ -123,6 +123,25 @@ function barChart(canvasEl, title, labels, values, yLabel) {
   });
 }
 
+function genMetricBox(label, value, id, color="black") {
+  const box = document.createElement("div");
+  box.className = "paste-box";
+  box.id = id;
+  const labelEl = document.createElement("span");
+  labelEl.className = "paste-label";
+  labelEl.id = id;
+  const valueEl = document.createElement("span");
+  valueEl.className = "paste-value";
+  valueEl.id = id;
+  labelEl.textContent = label;
+  valueEl.textContent = value;
+  valueEl.style = `color: ${color}`;
+  box.appendChild(labelEl);
+  box.appendChild(valueEl);
+  return box;
+}
+
+
 function genPatchBox(textPatch, id) {
   const box = document.createElement("div");
   box.className = "paste-box doc-patch-preview";
