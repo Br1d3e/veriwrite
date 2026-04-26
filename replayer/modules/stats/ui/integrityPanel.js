@@ -13,6 +13,7 @@ const blockInfoEl = document.getElementById("block-integrity-info");
 const bSeqEl = document.getElementById("b-seq");
 const freshnessEl = document.getElementById("freshness");
 const hashChainEl = document.getElementById("hash-chain");
+const hashEl = document.getElementById("hash");
 const docStateEl = document.getElementById("doc-state");
 const receivedTimeEl = document.getElementById("received-time");
 const receiptEl = document.getElementById("receipt");
@@ -48,6 +49,7 @@ export function resetIntegrityPanel() {
     blockDescEl.textContent = "";
     freshnessEl.textContent = "";
     hashChainEl.textContent = "";
+    hashEl.textContent = "";
     docStateEl.textContent = "";
     receivedTimeEl.textContent = "";
     receiptEl.textContent = "";
@@ -77,12 +79,26 @@ function genBlockIntegrityUI(block) {
     let state = "Unverified";
     let message = "Server integrity status is unavailable.";
 
-    if (status.includes("INVALID_HASH") || status.includes("INVALID_Q")) {
+    if (status.includes("INVALID_Q")) {
         color = "#c62828";
         bgColor = "#f8ced2";
-        // icon = "!";
         state = "Invalid";
-        message = "Hash chain or block sequence verification failed.";
+        message = "Block sequence verification failed.";
+    } else if (status.includes("INVALID_HASH_CHAIN")) {
+        color = "#c62828";
+        bgColor = "#f8ced2";
+        state = "Invalid";
+        message = "Hash chain verification failed.";
+    } else if (status.includes("INVALID_STATE")) {
+        color = "#c62828";
+        bgColor = "#f8ced2";
+        state = "Invalid";
+        message = "Document state verification failed.";
+    } else if (status.includes("INVALID_COMMITMENT")) {
+        color = "#c62828";
+        bgColor = "#f8ced2";
+        state = "Invalid";
+        message = "Block Commitment is not verified by server.";
     } else if (status.includes("INVALID_FRESHNESS")) {
         color = "#dfb601";
         bgColor = "#fef1c4";
@@ -106,6 +122,8 @@ function genBlockIntegrityUI(block) {
     freshnessEl.style.color = block.freshness_status === "FRESH" ? "#0bc847" : "#ffa200";
     hashChainEl.textContent = block.valid_h === false || status.includes("INVALID_HASH") ? "Invalid" : "Valid";
     hashChainEl.style.color = block.valid_h === false ? "#c62828" : "#0bc847";
+    hashEl.textContent = block.valid_ch === false ? "Invalid" : "Valid";
+    hashEl.style.color = block.valid_ch === false ? "#c62828" : "#0bc847";
     docStateEl.textContent = block.valid_dsh === false ? "Invalid" : "Valid";
     docStateEl.style.color = block.valid_dsh === false ? "#c62828" : "#0bc847";
     receivedTimeEl.textContent = block.received_server_ts ? new Date(block.received_server_ts).toLocaleString() : "Unknown";

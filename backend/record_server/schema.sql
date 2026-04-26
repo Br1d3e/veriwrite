@@ -52,6 +52,7 @@ CREATE TABLE IF NOT EXISTS blocks (
     received_server_ts BIGINT NOT NULL,
     valid_q BOOLEAN NOT NULL,
     valid_h BOOLEAN NOT NULL,
+    valid_ch BOOLEAN NOT NULL,
     valid_dsh BOOLEAN NOT NULL,
     valid_n BOOLEAN NOT NULL DEFAULT FALSE,
     freshness_status TEXT NOT NULL DEFAULT 'UNKNOWN',

@@ -130,6 +130,7 @@ class AnalyzeDB:
             "received_server_ts",
             "valid_q",
             "valid_h",
+            "valid_ch",
             "valid_dsh",
             "valid_n",
             "freshness_status",
@@ -152,6 +153,7 @@ class AnalyzeDB:
             
             valid_q = block["valid_q"]
             valid_h = block["valid_h"]
+            valid_ch = block["valid_ch"]
             valid_dsh = block["valid_dsh"]
             valid_n = block["valid_n"]
             freshness_status = block["freshness_status"]
@@ -160,8 +162,12 @@ class AnalyzeDB:
                 block_status.append("VALID")
             if not valid_q:
                 block_status.append("INVALID_Q")
-            if not valid_h or not valid_dsh:
-                block_status.append("INVALID_HASH")
+            if not valid_h:
+                block_status.append("INVALID_HASH_CHAIN")
+            if not valid_ch:
+                block_status.append("INVALID_COMMITMENT")
+            if not valid_dsh:
+                block_status.append("INVALID_STATE")
             if not valid_n or freshness_status != "FRESH":
                 block_status.append("INVALID_FRESHNESS")
         

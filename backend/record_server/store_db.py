@@ -361,7 +361,7 @@ def append_block(block: dict[str, Any]) -> dict[str, Any]:
         "ct": cipher_text,
         "tag": tag,
     }))
-    valid_current_hash = current_hash == expected_current_hash
+    valid_ch = current_hash == expected_current_hash
     if not verify_protocol(v):
         return {"status": "INVALID PROTOCOL", "op": "session/block", "sid": sid, "q": q}
 
@@ -394,10 +394,10 @@ def append_block(block: dict[str, Any]) -> dict[str, Any]:
             previous_block = cursor.fetchone()
             if previous_block:
                 valid_q = q == previous_block["q"] + 1
-                valid_ch = ph == previous_block["ch"]
+                valid_h = ph == previous_block["ch"]
             else:
                 valid_q = q == 0
-                valid_ch = ph is None
+                valid_h = ph is None
             
             chal_nonce = session["chal_nonce"]
             chal_expire = session["chal_expire"]
@@ -455,14 +455,14 @@ def append_block(block: dict[str, Any]) -> dict[str, Any]:
                     "sid": sid,
                     "q": q,
                     "valid_q": valid_q,
-                    "valid_h": valid_ch,
-                    "valid_ch": valid_current_hash,
+                    "valid_h": valid_h,
+                    "valid_ch": valid_ch,
                     "valid_dsh": valid_dsh,
                     "valid_n": valid_n,
                     "freshness_status": freshness_status,
                 }
 
-            valid_block = valid_ch and valid_current_hash and valid_dsh
+            valid_block = valid_h and valid_ch and valid_dsh and valid_n
 
             session_ev = session["ev"] or []
             if not isinstance(session_ev, list):
@@ -479,8 +479,8 @@ def append_block(block: dict[str, Any]) -> dict[str, Any]:
                     "ch": current_hash,
                     "dsh": doc_state_hash,
                     "valid_q": valid_q,
-                    "valid_h": valid_ch,
-                    "valid_ch": valid_current_hash,
+                    "valid_h": valid_h,
+                    "valid_ch": valid_ch,
                     "valid_dsh": valid_dsh,
                     "valid_n": valid_n,
                     "freshness_status": freshness_status,
@@ -493,13 +493,13 @@ def append_block(block: dict[str, Any]) -> dict[str, Any]:
                 INSERT INTO blocks (
                     d_id, sid, q, ph, iv_b64, ct_b64, tag_b64, ch,
                     dt0, dtn, init_dsh, dsh, ev, receipt,
-                    received_server_ts, valid_q, valid_h, valid_dsh,
+                    received_server_ts, valid_q, valid_h, valid_ch, valid_dsh,
                     valid_n, freshness_status
                 )
                 VALUES (
                     %s, %s, %s, %s, %s, %s, %s, %s,
                     %s, %s, %s, %s, %s, %s,
-                    %s, %s, %s, %s,
+                    %s, %s, %s, %s, %s,
                     %s, %s
                 )
                 """,
@@ -520,6 +520,7 @@ def append_block(block: dict[str, Any]) -> dict[str, Any]:
                     Jsonb(receipt),
                     server_ts,
                     valid_q,
+                    valid_h,
                     valid_ch,
                     valid_dsh,
                     valid_n,
@@ -548,8 +549,8 @@ def append_block(block: dict[str, Any]) -> dict[str, Any]:
         "sid": sid,
         "q": q,
         "valid_q": valid_q,
-        "valid_h": valid_ch,
-        "valid_ch": valid_current_hash,
+        "valid_h": valid_h,
+        "valid_ch": valid_ch,
         "valid_dsh": valid_dsh,
         "valid_n": valid_n,
         "freshness_status": freshness_status,
