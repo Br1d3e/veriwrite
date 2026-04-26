@@ -159,21 +159,15 @@ function runSessions() {
   if (state.playing === false) return;
 
   const session = state.sessions[state.currentSession];
-  let ev;
+  const ev = session.ev || [];
+
   if (state.online) {
-    const blocks = session.b || session.blocks;
-
-    for (let block of blocks) {
-      // TODO: block brief stats panel + progress bar
-      renderIntegrityPanel(null, block);
-
-      ev = block.ev;
-      step(ev);
-    }
+    const block = getBlockForEvent(session, state.i);
+    if (block) renderIntegrityPanel(null, block);
   } else {
-    ev = session.ev;
-    step(ev);
+    resetIntegrityPanel();
   }
+  step(ev);
 
   // Forward to next session
   if (state.i >= ev.length) {
@@ -181,6 +175,7 @@ function runSessions() {
     // Stop playing when finished all
     if (state.currentSession >= state.sessions.length - 1) {
       console.log(`Finished All Sessions`);
+      state.playing = false;
       // resetStatus();
       return;
     }
@@ -189,6 +184,20 @@ function runSessions() {
   }
 
   requestAnimationFrame(runSessions);
+}
+
+function getBlockForEvent(session, eventIdx) {
+  const blocks = session?.b || session?.blocks;
+  if (!Array.isArray(blocks) || blocks.length === 0) return null;
+
+  let seen = 0;
+  for (const block of blocks) {
+    const count = Array.isArray(block.ev) ? block.ev.length : 0;
+    if (eventIdx < seen + count) return block;
+    seen += count;
+  }
+
+  return blocks[blocks.length - 1];
 }
 
 /**
@@ -214,7 +223,7 @@ export function seekToSession(sid) {
     state.caretPos = state.docText.length;
     renderCursor();
     resetIntegrityPanel();
-
+    renderIntegrityPanel(state.sessions[state.currentSession], getBlockForEvent(state.sessions[state.currentSession], state.i));
     return state.sessions[state.currentSession];   
 }
 
