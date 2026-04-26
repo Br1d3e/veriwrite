@@ -270,6 +270,7 @@ pauseBtn.addEventListener("click", stopPlaying);
 resetBtn.addEventListener("click", () => {
   resetStatus();
   resetSessionStatsPanel();
+  firstBlockIntegrity(getSession());
 });
 speedSlider.addEventListener("change", () => {
   changeSpeed(Number(speedSlider.value))
