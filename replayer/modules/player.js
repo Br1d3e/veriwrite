@@ -5,6 +5,7 @@
 
 // import { processData } from "./loader.js";
 import { applyPatch, updateState, renderCursor } from "./renderer.js";
+import { renderIntegrityPanel, resetIntegrityPanel } from "./stats/ui/integrityPanel.js";
 
 
 // Global Variables & State Machine
@@ -17,7 +18,7 @@ let state = {
   budget: 0,
   lastFrameTs: 0,
   playTs: 0,     // Playback timestamp in ms
-  record: null,      // Normalized flightRecorder
+  record: null,      // Normalized flightRecord
   sessions: null,     // Sessions Array
   currentSession: 0,    // index in session
   caretPos: 0,
@@ -46,7 +47,7 @@ export function loadRecord(flightRecord) {
     if (flightRecord.v === 3) {
       state.online = true;
     } else if (flightRecord.v === 2) {
-      state.online = false;
+      state.online = state.record.v === 3;
     }
 
     return flightRecord; 
@@ -105,7 +106,7 @@ export function resetStatus() {
       state.playTs = 0;
       state.currentSession = 0;
       state.evCount = 0;
-      state.online = false;
+      state.online = state.record.v === 3;
       titleEl.textContent = `Title: ${state.record.m.title}`;
       sessionsEl.textContent = `Session: ${state.currentSession + 1} / ${state.sessions.length}`;
       eventsEl.textContent = `Events: 0 /${state.sessions[0].ev.length}`;
@@ -114,6 +115,8 @@ export function resetStatus() {
       state.evTotal = calculateTotalEv(state.sessions.length);
       progressEl.value = calDocProgress();
       sessionProgEl.value = calSesProgress();
+      resetIntegrityPanel();
+
       // Reset caret
       state.caretPos = state.docText.length;
       caretEl.hidden = false;
@@ -132,7 +135,8 @@ function calculateTotalEv(totalS) {     // Total session numbers
 }
 
 function calSesProgress() {
-  return state.i / state.sessions[state.currentSession].ev.length * 100;
+  const sessionLength = state.sessions[state.currentSession].ev.length;
+  return sessionLength === 0 ? 0 : state.i / sessionLength * 100;
 }
 
 function calDocProgress() {
@@ -160,10 +164,11 @@ function runSessions() {
     const blocks = session.b || session.blocks;
 
     for (let block of blocks) {
+      // TODO: block brief stats panel + progress bar
+      renderIntegrityPanel(null, block);
+
       ev = block.ev;
       step(ev);
-      
-      // TODO: block brief stats panel + progress bar
     }
   } else {
     ev = session.ev;
@@ -208,6 +213,7 @@ export function seekToSession(sid) {
     state.docText = init;
     state.caretPos = state.docText.length;
     renderCursor();
+    resetIntegrityPanel();
 
     return state.sessions[state.currentSession];   
 }
