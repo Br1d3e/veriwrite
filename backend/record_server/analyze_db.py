@@ -191,7 +191,11 @@ class AnalyzeDB:
                 "ev": session["ev"],
                 "b": blocks.drop(columns=["ch"]).to_dict(orient="records"),
                 "cs": mapping.get(session["continuity_status"]),
-                "mr": session["merkle_root"] == merkle_tree_root(blocks["ch"].to_list())
+                "mr": session["merkle_root"] == merkle_tree_root(blocks["ch"].to_list()),
+                "ct": int(session["closed_server_ts"]),
+                "fr": session["final_receipt"],
+                "bc": int(session["block_count"]),
+                "status": mapping.get(session["continuity_status"]) and session["final_receipt"] is not None
             })
         self.record["sessions"] = s
         return s            

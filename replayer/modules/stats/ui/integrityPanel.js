@@ -6,16 +6,26 @@
 const integrityEl = document.getElementById("integrity-stats");
 const integrityToggleEl = document.getElementById("integrity-stats-toggle");
 const integrityBodyEl = document.getElementById("integrity-stats-body");
-const blockIntegrityEl = document.getElementById("block-integrity-card");
-const iconEl = document.getElementById("status-icon");
-const descEl = document.getElementById("block-integrity-desc");
-const infoEl = document.getElementById("block-integrity-info");
+const blockIntegrityEl = document.getElementById("block-integrity-section");
+const blockIconEl = document.getElementById("block-status-icon");
+const blockDescEl = document.getElementById("block-integrity-desc");
+const blockInfoEl = document.getElementById("block-integrity-info");
 const bSeqEl = document.getElementById("b-seq");
 const freshnessEl = document.getElementById("freshness");
 const hashChainEl = document.getElementById("hash-chain");
 const docStateEl = document.getElementById("doc-state");
 const receivedTimeEl = document.getElementById("received-time");
 const receiptEl = document.getElementById("receipt");
+const sessionIntegrityEl = document.getElementById("session-integrity-section");
+const sessionIconEl = document.getElementById("session-status-icon");
+const sessionDescEl = document.getElementById("session-integrity-desc");
+const sessionInfoEl = document.getElementById("session-integrity-info");
+const sidEl = document.getElementById("sid");
+const bCountEl = document.getElementById("b-count");
+const continuityEl = document.getElementById("s-continuity");
+const closedTsEl = document.getElementById("closed-ts");
+const finalReceiptEl = document.getElementById("final-receipt");
+
 
 export function renderIntegrityPanel(session, block) {
     integrityEl.hidden = false;
@@ -32,17 +42,24 @@ export function renderIntegrityPanel(session, block) {
 export function resetIntegrityPanel() {
     integrityEl.hidden = true;
     blockIntegrityEl.hidden = true;
-    iconEl.textContent = "";
-    iconEl.style.backgroundColor = "";
-    iconEl.style.boxShadow = "";
-    infoEl.textContent = "";
-    descEl.textContent = "";
+    blockIconEl.style.backgroundColor = "";
+    blockIconEl.style.boxShadow = "";
+    blockInfoEl.textContent = "";
+    blockDescEl.textContent = "";
     freshnessEl.textContent = "";
     hashChainEl.textContent = "";
     docStateEl.textContent = "";
     receivedTimeEl.textContent = "";
     receiptEl.textContent = "";
     bSeqEl.textContent = "";
+    sessionIntegrityEl.hidden = true;
+    sessionInfoEl.textContent = "";
+    sessionDescEl.textContent = "";
+    sidEl.textContent = "";
+    bCountEl.textContent = "";
+    continuityEl.textContent = "";
+    closedTsEl.textContent = "";
+    finalReceiptEl.textContent = "";
     setStatsCollapsed(integrityBodyEl, integrityToggleEl, true);
 }
 
@@ -50,7 +67,6 @@ function genBlockIntegrityUI(block) {
     if (!block || !block.status) {
         return;
     }
-
 
     blockIntegrityEl.hidden = false;
 
@@ -78,15 +94,14 @@ function genBlockIntegrityUI(block) {
         state = "Verified";
         message = "Server authenticated this writing period.";
     }
+    blockIconEl.style.backgroundColor = color;
+    blockIconEl.style.boxShadow = `0 0 0 3px ${bgColor}`;
+    blockInfoEl.textContent = `${state}`;
+    blockInfoEl.style.color = color;
+    blockInfoEl.style.backgroundColor = bgColor;
+    blockDescEl.textContent = message;
 
-    iconEl.style.backgroundColor = color;
-    iconEl.style.boxShadow = `0 0 0 3px ${bgColor}`;
-    infoEl.textContent = `Block #${block.q ?? "?"}: ${state}`;
-    infoEl.style.color = color;
-    infoEl.style.backgroundColor = bgColor;
-    descEl.textContent = message;
-
-    bSeqEl.textContent = `Block #${block.q ?? "?"}`
+    bSeqEl.textContent = `#${block.q ?? "?"}`
     freshnessEl.textContent = status.includes("INVALID_FRESHNESS") ? "Delayed" : "Fresh";
     freshnessEl.style.color = block.freshness_status === "FRESH" ? "#0bc847" : "#ffa200";
     hashChainEl.textContent = block.valid_h === false || status.includes("INVALID_HASH") ? "Invalid" : "Valid";
@@ -103,6 +118,38 @@ function genSessionIntegrityUI(session) {
         return;
     }
 
+    sessionIntegrityEl.hidden = false;
+
+    let color = "#666";
+    let bgColor = "#eee";
+    let state = "Unverified";
+    let message = "Server integrity status is unavailable."; 
+
+    if (session.status === true) {
+        color = "#0bc847";
+        bgColor = "#b6f4aa";
+        state = "Verified";
+        message = "Server authenticated this session.";
+    } else {
+        color = "#c62828";
+        bgColor = "#f8ced2";
+        state = "Invalid";
+        message = "This session is not authorized by the server.";
+    }
+    sessionIconEl.style.backgroundColor = color;
+    sessionIconEl.style.boxShadow = `0 0 0 3px ${bgColor}`;
+    sessionInfoEl.textContent = state;
+    sessionInfoEl.style.color = color;
+    sessionInfoEl.style.backgroundColor = bgColor;
+    sessionDescEl.textContent = message;
+
+    sidEl.textContent = `${(session.sid.length <= 30 ? session.sid : session.sid.slice(0, 30) + "...") ?? "?"}`;
+    bCountEl.textContent = `${session.bc}`;
+    continuityEl.textContent = session.cs ? "Valid" : "Invalid";
+    continuityEl.style.color = session.cs ? "#0bc847" : "#c62828";
+    closedTsEl.textContent = session.ct ? new Date(session.ct).toLocaleString() : "Unknown";
+    finalReceiptEl.textContent = session.fr ? "Signed" : "Missing";
+    finalReceiptEl.style.color = session.fr ? "#03a2f1" : "#c62828";
 }
 
 function setStatsCollapsed(bodyEl, toggleEl, collapsed) {

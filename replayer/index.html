@@ -62,10 +62,32 @@
       <button class="stats-toggle" id="integrity-stats-toggle" type="button" aria-expanded="true" aria-controls="integrity-stats-body">-</button>
     </div>
     <div id="integrity-stats-body">
-      <div class="integrity-card" id="block-integrity-card">
-        <section class="integrity-section integrity-block-section">
+      <div class="integrity-card">
+        <section class="integrity-section integrity-session-section" id="session-integrity-section">
+          <h3>Session Integrity</h3>
           <div class="integrity-status-row">
-            <div id="status-icon" class="status-icon"></div>
+            <div id="session-status-icon" class="status-icon"></div>
+            <span class="integrity-info" id="session-integrity-info"></span>
+          </div>
+          <span class="integrity-desc" id="session-integrity-desc"></span>
+          <div class="integrity-details-grid" id="session-integrity-details">
+            <span class="integrity-label">Session ID</span>
+            <span class="integrity-value" id="sid"></span>
+            <span class="integrity-label">Block Count</span>
+            <span class="integrity-value" id="b-count"></span>
+            <span class="integrity-label">Hash Continuity</span>
+            <span class="integrity-value" id="s-continuity"></span>
+            <span class="integrity-label">Closed Time</span>
+            <span class="integrity-value" id="closed-ts"></span>
+            <span class="integrity-label">Receipt</span>
+            <span class="integrity-value" id="final-receipt"></span>
+          </div>
+        </section>
+        <div class="integrity-divider" aria-hidden="true"></div>
+        <section class="integrity-section integrity-block-section" id="block-integrity-section">
+          <h3>Block Integrity</h3>
+          <div class="integrity-status-row">
+            <div id="block-status-icon" class="status-icon"></div>
             <span class="integrity-info" id="block-integrity-info"></span>
           </div>
           <span class="integrity-desc" id="block-integrity-desc"></span>
@@ -83,10 +105,6 @@
             <span class="integrity-label">Receipt</span>
             <span class="integrity-value" id="receipt"></span>
           </div>
-        </section>
-        <div class="integrity-divider" aria-hidden="true"></div>
-        <section class="integrity-section integrity-session-section" id="session-integrity-section">
-
         </section>
       </div>
     </div>
