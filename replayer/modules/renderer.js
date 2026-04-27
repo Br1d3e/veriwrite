@@ -53,11 +53,11 @@ export function renderCursor() {
     caretEl.hidden = false;
     beforeEl.textContent = state.docText.slice(0, state.caretPos);
     afterEl.textContent = state.docText.slice(state.caretPos);
-    caretEl.scrollIntoView({
-        behavior: "smooth",
-        block: "center",
-        inline: "center"
-    })
+    // caretEl.scrollIntoView({
+    //     behavior: "smooth",
+    //     block: "center",
+    //     inline: "center"
+    // })
 }
 
 

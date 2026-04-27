@@ -573,11 +573,11 @@ function updateSessionStatsPanel(sessionStats) {
   const desc = sessionStats.desc;
   const interpret = sessionStats.interpret;
   genOverviewUI(desc);
-  overviewEl.scrollIntoView({
-    behavior: "smooth",
-    block: "end",
-    inline: "end"
-  })
+  // overviewEl.scrollIntoView({
+  //   behavior: "smooth",
+  //   block: "end",
+  //   inline: "end"
+  // })
   genPasteCards(interpret.pasteIns);
   genFlowUI(interpret.flow);
   genRevisionUI(interpret.revisionIntensity);
