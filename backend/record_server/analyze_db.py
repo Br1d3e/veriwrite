@@ -158,7 +158,7 @@ class AnalyzeDB:
             valid_n = block["valid_n"]
             freshness_status = block["freshness_status"]
             block_status = []
-            if valid_q and valid_h and valid_dsh and valid_n and freshness_status == "FRESH":
+            if valid_q and valid_h and valid_ch and valid_dsh and valid_n and freshness_status == "FRESH":
                 block_status.append("VALID")
             if not valid_q:
                 block_status.append("INVALID_Q")
