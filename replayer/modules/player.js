@@ -200,6 +200,17 @@ function getBlockForEvent(session, eventIdx) {
   return blocks[blocks.length - 1];
 }
 
+function getBlockFirstEventIdx(bSeq) {
+  const blocks = state.sessions[state.currentSession].b || state.sessions[state.currentSession].blocks;
+  if (bSeq < 0 || bSeq >= blocks.length) return;
+
+  let count = 0;
+  for (let i = 0; i < bSeq; i++){
+    count += Array.isArray(blocks[i].ev) ? blocks[i].ev.length : 0;
+  }
+  return count;
+}
+
 /**
  * Switch to destinated session with sid
  * @param {number} sid session id starting from 0
@@ -222,8 +233,10 @@ export function seekToSession(sid) {
     state.docText = init;
     state.caretPos = state.docText.length;
     renderCursor();
-    resetIntegrityPanel();
-    renderIntegrityPanel(state.sessions[state.currentSession], getBlockForEvent(state.sessions[state.currentSession], state.i));
+    if (state.online) {
+      resetIntegrityPanel();
+      renderIntegrityPanel(state.sessions[state.currentSession], getBlockForEvent(state.sessions[state.currentSession], state.i));
+    }
     return state.sessions[state.currentSession];   
 }
 
@@ -239,14 +252,13 @@ export function seekPrevSession() {
 
 
 export function seekToEvent(eventIdx) {
-  if (eventIdx < 0 || eventIdx >= state.sessions[state.currentSession].ev.length) return;
+  if (eventIdx < 0 || eventIdx > state.sessions[state.currentSession].ev.length) return;
 
   state.i = 0;
-  // (falsely) skip events to eventIdx
   const sessions = state.sessions[state.currentSession];
   const ev = sessions.ev;
   state.docText = sessions.init;
-  for (; state.i <= eventIdx; state.i++) {
+  for (; state.i < eventIdx; state.i++) {
     const pos = ev[state.i][1];
     const delLen = ev[state.i][2];
     const ins = ev[state.i][3];
@@ -262,9 +274,25 @@ export function seekToEvent(eventIdx) {
   eventsEl.textContent = `Events: ${state.i} /${state.sessions[state.currentSession].ev.length}`;
   durationEl.textContent = `Session Time: ${convertTs()}`;
 
+  if (state.online) {
+    resetIntegrityPanel();
+    renderIntegrityPanel(sessions, getBlockForEvent(sessions, state.i))
+  }
+
   renderCursor();
 }
 
+export function seekToBlock(bSeq) {
+  const targetSeq = Number(bSeq);
+  const session = state.sessions[state.currentSession];
+  const blocks = session?.b || session?.blocks;
+  const blockIdx = Array.isArray(blocks) ? blocks.findIndex((block) => Number(block.q) === targetSeq) : -1;
+  const eventIdx = getBlockFirstEventIdx(blockIdx);
+
+  if (blockIdx < 0 || eventIdx === undefined) return;
+
+  seekToEvent(eventIdx);
+}
 
 // let onRender = null;
 // export function regOnRender(callback) {

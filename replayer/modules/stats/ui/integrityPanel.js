@@ -2,6 +2,7 @@
  * @fileoverview Display ev block integrity stats using data from record server
  */
 
+import { seekToBlock } from "../../player.js";
 
 const integrityEl = document.getElementById("integrity-stats");
 const integrityToggleEl = document.getElementById("integrity-stats-toggle");
@@ -190,7 +191,14 @@ function genSessionIntegrityUI(session) {
 }
 
 function renderBlockStrip(blocks) {
+    if (!Array.isArray(blocks) || blocks.length === 0) {
+        blockStripEl.hidden = true;
+        blockStripEl.replaceChildren();
+        return;
+    }
+
     blockStripEl.hidden = false;
+    blockStripEl.replaceChildren();
 
     const blockPercent = 100 / blocks.length;
     for (let block of blocks) {
@@ -201,9 +209,8 @@ function renderBlockStrip(blocks) {
         const bar = document.createElement("div");
         bar.className = "block-strip-bar";
         bar.title = `Block #${block.q} · ${freshness} · ${hashChain}`;
-        bar.id = `block-${block.q}`;
+        bar.dataset.blockSeq = String(block.q);
         bar.style.backgroundColor = color;
-        bar.style.borderColor = color;
         bar.style.width = `${blockPercent}%`;
         blockStripEl.appendChild(bar);
     }
@@ -217,4 +224,12 @@ function setStatsCollapsed(bodyEl, toggleEl, collapsed) {
 
 integrityToggleEl.addEventListener("click", () => {
     setStatsCollapsed(integrityBodyEl, integrityToggleEl, !integrityBodyEl.hidden);
+})
+
+blockStripEl.addEventListener("click", (e) => {
+    const bar = e.target.closest(".block-strip-bar");
+    if (!bar || !blockStripEl.contains(bar)) return;
+
+    const targetBlock = Number(bar.dataset.blockSeq);
+    if (Number.isInteger(targetBlock)) seekToBlock(targetBlock);
 })
