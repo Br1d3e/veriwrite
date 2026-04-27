@@ -119,6 +119,35 @@ body {
     word-break: keep-all;
 }
 
+.session-prog-wrap {
+  display: block;
+  margin-bottom: 2px;
+}
+
+.block-status-strip {
+  display: flex;
+  height: 8px;
+  background-color: #ccc;
+  margin-top: 2px;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.block-strip-bar {
+  height: 100%;
+  min-width: 2px;
+}
+
+.block-strip-bar:first-child {
+  border-top-left-radius: 999px;
+  border-bottom-left-radius: 999px;
+}
+
+.block-strip-bar:last-child {
+  border-top-right-radius: 999px;
+  border-bottom-right-radius: 999px;
+}
+
 .integrity-card {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr);

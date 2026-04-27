@@ -26,6 +26,7 @@ const bCountEl = document.getElementById("b-count");
 const continuityEl = document.getElementById("s-continuity");
 const closedTsEl = document.getElementById("closed-ts");
 const finalReceiptEl = document.getElementById("final-receipt");
+const blockStripEl = document.getElementById("block-status-strip");
 
 
 export function renderIntegrityPanel(session, block) {
@@ -37,6 +38,7 @@ export function renderIntegrityPanel(session, block) {
     }
     if (session) {
         genSessionIntegrityUI(session);
+        renderBlockStrip(session.b || session.blocks);
     }
 } 
 
@@ -62,22 +64,21 @@ export function resetIntegrityPanel() {
     continuityEl.textContent = "";
     closedTsEl.textContent = "";
     finalReceiptEl.textContent = "";
+    blockStripEl.hidden = true;
+    blockStripEl.replaceChildren();
     setStatsCollapsed(integrityBodyEl, integrityToggleEl, true);
 }
 
-function genBlockIntegrityUI(block) {
-    if (!block || !block.status) {
-        return;
-    }
-
-    blockIntegrityEl.hidden = false;
-
-    const status = Array.isArray(block.status) ? block.status : [block.status];
-
+function getBlockStatusMsg(status) {
     let color = "#666";
     let bgColor = "#eee";
     let state = "Unverified";
     let message = "Server integrity status is unavailable.";
+    let freshness = "Fresh";
+    let hashChain = "Valid";
+    let hash = "Valid";
+    let docState = "Valid";
+    let receipt = "Signed";
 
     if (status.includes("INVALID_Q")) {
         color = "#c62828";
@@ -89,27 +90,45 @@ function genBlockIntegrityUI(block) {
         bgColor = "#f8ced2";
         state = "Invalid";
         message = "Hash chain verification failed.";
+        hashChain = "Invalid";
     } else if (status.includes("INVALID_STATE")) {
         color = "#c62828";
         bgColor = "#f8ced2";
         state = "Invalid";
         message = "Document state verification failed.";
+        docState = "Invalid";
     } else if (status.includes("INVALID_COMMITMENT")) {
         color = "#c62828";
         bgColor = "#f8ced2";
         state = "Invalid";
         message = "Block Commitment is not verified by server.";
+        hash = "Invalid";
     } else if (status.includes("INVALID_FRESHNESS")) {
         color = "#dfb601";
         bgColor = "#fef1c4";
         state = "Delayed";
         message = "Server did not receive this writing period in the fresh window.";
+        freshness = "Delayed";
     } else if (status.includes("VALID")) {
         color = "#0bc847";
         bgColor = "#b6f4aa";
         state = "Verified";
         message = "Server authenticated this writing period.";
     }
+    return { color, bgColor, state, message, freshness, hashChain, hash, docState, receipt}; 
+}
+
+function genBlockIntegrityUI(block) {
+    if (!block || !block.status) {
+        return;
+    }
+
+    blockIntegrityEl.hidden = false;
+
+    const status = Array.isArray(block.status) ? block.status : [block.status];
+
+    const { color, bgColor, state, message, freshness, hashChain, hash, docState, receipt} = getBlockStatusMsg(status);
+
     blockIconEl.style.backgroundColor = color;
     blockIconEl.style.boxShadow = `0 0 0 3px ${bgColor}`;
     blockInfoEl.textContent = `${state}`;
@@ -118,16 +137,16 @@ function genBlockIntegrityUI(block) {
     blockDescEl.textContent = message;
 
     bSeqEl.textContent = `#${block.q ?? "?"}`
-    freshnessEl.textContent = status.includes("INVALID_FRESHNESS") ? "Delayed" : "Fresh";
+    freshnessEl.textContent = freshness;
     freshnessEl.style.color = block.freshness_status === "FRESH" ? "#0bc847" : "#ffa200";
-    hashChainEl.textContent = block.valid_h === false || status.includes("INVALID_HASH") ? "Invalid" : "Valid";
+    hashChainEl.textContent = hashChain;
     hashChainEl.style.color = block.valid_h === false ? "#c62828" : "#0bc847";
-    hashEl.textContent = block.valid_ch === false ? "Invalid" : "Valid";
+    hashEl.textContent = hash;
     hashEl.style.color = block.valid_ch === false ? "#c62828" : "#0bc847";
-    docStateEl.textContent = block.valid_dsh === false ? "Invalid" : "Valid";
+    docStateEl.textContent = docState;
     docStateEl.style.color = block.valid_dsh === false ? "#c62828" : "#0bc847";
     receivedTimeEl.textContent = block.received_server_ts ? new Date(block.received_server_ts).toLocaleString() : "Unknown";
-    receiptEl.textContent = block.receipt ? "Signed" : "Missing";
+    receiptEl.textContent = receipt;
     receiptEl.style.color = block.receipt ? "#03a2f1" : "#c62828";
 }
 
@@ -170,13 +189,32 @@ function genSessionIntegrityUI(session) {
     finalReceiptEl.style.color = session.fr ? "#03a2f1" : "#c62828";
 }
 
+function renderBlockStrip(blocks) {
+    blockStripEl.hidden = false;
+
+    const blockPercent = 100 / blocks.length;
+    for (let block of blocks) {
+        const status = block.status;
+        const color = getBlockStatusMsg(status).color;
+        const freshness = getBlockStatusMsg(status).freshness;
+        const hashChain = getBlockStatusMsg(status).hashChain;
+        const bar = document.createElement("div");
+        bar.className = "block-strip-bar";
+        bar.title = `Block #${block.q} · ${freshness} · ${hashChain}`;
+        bar.id = `block-${block.q}`;
+        bar.style.backgroundColor = color;
+        bar.style.borderColor = color;
+        bar.style.width = `${blockPercent}%`;
+        blockStripEl.appendChild(bar);
+    }
+}
+
 function setStatsCollapsed(bodyEl, toggleEl, collapsed) {
   bodyEl.hidden = collapsed;
   toggleEl.textContent = collapsed ? "+" : "-";
   toggleEl.setAttribute("aria-expanded", String(!collapsed));
 }
 
-
 integrityToggleEl.addEventListener("click", () => {
-    setStatsCollapsed(integrityBodyEl, integrityToggleEl, !integrityBodyEl.hidden)
+    setStatsCollapsed(integrityBodyEl, integrityToggleEl, !integrityBodyEl.hidden);
 })

@@ -43,7 +43,10 @@
   <div id="screen"><span id="before"></span><span id="caret" class="cursor" hidden="true"></span><span id="after"></span></div>
   <div id="sessionBtns"></div>
   <div class="controls">
-    <progress id="session-prog" value="0" min="0" max="100" style="width: 100%; height: 1"></progress>
+    <div class="session-prog-wrap">
+      <progress id="session-prog" value="0" min="0" max="100" style="width: 100%; height: 1"></progress>
+      <div class="block-status-strip" id="block-status-strip" hidden></div>
+    </div>
     <progress id="replayProg" value="0" min="0" max="100" style="width: 100%; height: 1"></progress>  
     <button id="playBtn" disabled>Play</button>
     <button id="pauseBtn" disabled>Pause</button>
