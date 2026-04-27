@@ -212,8 +212,9 @@ body {
 .integrity-details-grid {
   font-size: 14px;
   display: grid;
-  grid-template-columns: max-content minmax(0, 1fr);
-  gap: 7px 30%;
+  grid-template-columns: minmax(120px, max-content) minmax(160px, 1fr);
+  column-gap: 80px;
+  row-gap: 7px;
   margin-top: 14px;
   padding-top: 12px;
   border-top: 1px solid #ececec;
@@ -230,7 +231,7 @@ body {
   font-size: 0.78rem;
   min-width: 0;
   font-weight: 400;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 @media (max-width: 720px) {
