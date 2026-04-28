@@ -10,3 +10,4 @@ replayer/modules/stats/session/test/*.txt
 .vite
 __pycache__
 test_*
+.editorconfig
