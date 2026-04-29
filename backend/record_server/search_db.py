@@ -7,7 +7,7 @@ except ImportError:
 def connect():
     return psycopg.connect(DATABASE_URL)
 
-def query_title(title: str):
+def query_title(title: str, limit: int = 10):
     with connect() as conn:
         with conn.cursor() as cursor:
             cursor.execute(
@@ -17,9 +17,9 @@ def query_title(title: str):
                 WHERE title IS NOT NULL
                   AND similarity(title, %(query)s) > 0.3
                 ORDER BY sim DESC
-                LIMIT 5
+                LIMIT %(limit)s
                 """,
-                {"query": title}
+                {"query": title, "limit": limit}
             )
             rows = cursor.fetchall()
             return [
@@ -27,7 +27,7 @@ def query_title(title: str):
                 for row in rows
             ]
 
-def query_author(author: str):
+def query_author(author: str, limit: int = 10):
     with connect() as conn:
         with conn.cursor() as cursor:
             cursor.execute(
@@ -37,9 +37,9 @@ def query_author(author: str):
                 WHERE author IS NOT NULL
                   AND similarity(author, %(query)s) > 0.5
                 ORDER BY sim DESC
-                LIMIT 5
+                LIMIT %(limit)s
                 """,
-                {"query": author}
+                {"query": author, "limit": limit}
             )
             rows = cursor.fetchall()
             return [

@@ -5,6 +5,49 @@ import {
   queryTitle,
 } from "../../modules/recordApi.js";
 
+function SearchResults({ results, handleResultClick }) {
+  return (
+    <>
+      {results.length > 0 ? (
+        <div className="mt-3 grid max-h-80 gap-2 overflow-y-auto scroll-smooth rounded-md pr-1">
+          {results.map((result) => (
+            <button
+              className="rounded-md border border-gray-200 bg-white px-3 py-2 text-left text-sm hover:bg-gray-50 snap-start"
+              key={result.d_id}
+              type="button"
+              onClick={() => handleResultClick(result)}
+            >
+              <span className="block font-semibold text-gray-900">
+                {result.title || "Untitled"}
+              </span>
+              <span className="block text-xs text-gray-500">
+                {result.author || "Unknown author"} ·{" "}
+                {new Date(result.t0).toLocaleString() || "Unknown date"}
+              </span>
+            </button>
+          ))}
+        </div>
+      ) : (
+        <span className="mt-3 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-500">
+          No results found.
+        </span>
+      )}
+    </>
+  );
+}
+
+function SearchError({ error }) {
+  return (
+    <>
+      {error ? (
+        <p className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {error}
+        </p>
+      ) : null}
+    </>
+  );
+}
+
 export default function SearchBar({ onRecordLoaded }) {
   const [searchOption, setSearchOption] = useState("title");
   const [query, setQuery] = useState("");
@@ -26,8 +69,9 @@ export default function SearchBar({ onRecordLoaded }) {
       setError("");
       const nextResults =
         searchOption === "title"
-          ? await queryTitle(trimmedQuery)
-          : await queryAuthor(trimmedQuery);
+          ? await queryTitle(trimmedQuery, 30)
+          : await queryAuthor(trimmedQuery, 30);
+      console.log(nextResults);
       setResults(nextResults || []);
       setStatus("idle");
     } catch (err) {
@@ -57,7 +101,7 @@ export default function SearchBar({ onRecordLoaded }) {
 
   return (
     <>
-      {/* <!-- From Uiverse.io by emmanuelh-dev -->  */}
+      {/* Search bar design <!-- From Uiverse.io by emmanuelh-dev -->  */}
       <div className="grid items-center justify-center p-5 mt-10 grid-rows-1">
         <form
           className="rounded-lg border border-gray-200"
@@ -116,31 +160,11 @@ export default function SearchBar({ onRecordLoaded }) {
             })}
           </div>
         </fieldset>
-        {error ? (
-          <p className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-            {error}
-          </p>
-        ) : null}
-        {results.length > 0 ? (
-          <div className="mt-3 grid gap-2">
-            {results.map((result) => (
-              <button
-                className="rounded-md border border-gray-200 bg-white px-3 py-2 text-left text-sm hover:bg-gray-50"
-                key={result.d_id}
-                type="button"
-                onClick={() => handleResultClick(result)}
-              >
-                <span className="block font-semibold text-gray-900">
-                  {result.title || "Untitled"}
-                </span>
-                <span className="block text-xs text-gray-500">
-                  {result.author || "Unknown author"} ·{" "}
-                  {new Date(result.t0).toLocaleString() || "Unknown date"}
-                </span>
-              </button>
-            ))}
-          </div>
-        ) : null}
+        <SearchError error={error} />
+        <SearchResults
+          results={results}
+          handleResultClick={handleResultClick}
+        />
       </div>
     </>
   );

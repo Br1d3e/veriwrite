@@ -58,7 +58,11 @@ async def query_record_title(payload: dict[str, Any]):
     title = payload.get("title")
     if not isinstance(title, str) or not title.strip():
         raise ValueError(f"missing title query")
-    return query_title(title)
+    limit = payload.get("limit", 10)
+    if not isinstance(limit, int):
+        limit = 10
+    limit = max(1, min(limit, 50))
+    return query_title(title, limit=limit)
 
 
 @app.post("/query/author")
@@ -66,7 +70,11 @@ async def query_record_author(payload: dict[str, Any]):
     author = payload.get("author")
     if not isinstance(author, str) or not author.strip():
         raise ValueError(f"missing author query")
-    return query_author(author)
+    limit = payload.get("limit", 10)
+    if not isinstance(limit, int):
+        limit = 10
+    limit = max(1, min(limit, 50))
+    return query_author(author, limit=limit)
 
 
 @app.post("/record/load")

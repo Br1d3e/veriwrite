@@ -19,12 +19,12 @@ async function postJson(path, body) {
 }
 
 
-export async function queryTitle(title) {
-    return await postJson("/query/title", {title});
+export async function queryTitle(title, limit = 10) {
+    return await postJson("/query/title", {title, limit});
 }
 
-export async function queryAuthor(author) {
-    return await postJson("/query/author", {author});
+export async function queryAuthor(author, limit = 10) {
+    return await postJson("/query/author", {author, limit});
 }
 
 export async function getRecordById(docId) {
