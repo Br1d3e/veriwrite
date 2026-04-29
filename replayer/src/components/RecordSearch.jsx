@@ -7,10 +7,12 @@ import {
 import { Search } from "lucide-react";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "./ui/input-group";
 import { Button } from "./ui/button.jsx";
+import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
+import { toast } from "sonner";
 
 function SearchBar({ handleSearch, status, query, setQuery }) {
   return (
-    <InputGroup className="rounded-lg border w-80 border-gray-200">
+    <InputGroup className="rounded-lg border w-full flex-1 border-gray-200">
       <InputGroupAddon>
         <Search />
       </InputGroupAddon>
@@ -27,7 +29,6 @@ function SearchBar({ handleSearch, status, query, setQuery }) {
       <InputGroupAddon align="right">
         <Button
           type="button"
-          className={"bg-blue-500 hover:bg-blue-400 text-white"}
           onClick={handleSearch}
           disabled={status === "loading"}
         >
@@ -35,6 +36,29 @@ function SearchBar({ handleSearch, status, query, setQuery }) {
         </Button>
       </InputGroupAddon>
     </InputGroup>
+  );
+}
+
+function SearchMode({
+  options,
+  searchOption,
+  setSearchOption,
+  className = "",
+}) {
+  return (
+    <Tabs
+      value={searchOption}
+      onValueChange={setSearchOption}
+      className={`mt-5 w-full ${className}`}
+    >
+      <TabsList className="grid w-full grid-cols-2">
+        {options.map((option) => (
+          <TabsTrigger key={option.value} value={option.value}>
+            {option.label}
+          </TabsTrigger>
+        ))}
+      </TabsList>
+    </Tabs>
   );
 }
 
@@ -69,18 +93,6 @@ function SearchResults({ results, handleResultClick }) {
   );
 }
 
-function SearchError({ error }) {
-  return (
-    <>
-      {error ? (
-        <p className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-          {error}
-        </p>
-      ) : null}
-    </>
-  );
-}
-
 export default function RecordSearch({ onRecordLoaded }) {
   const [searchOption, setSearchOption] = useState("title");
   const [query, setQuery] = useState("");
@@ -104,7 +116,6 @@ export default function RecordSearch({ onRecordLoaded }) {
         searchOption === "title"
           ? await queryTitle(trimmedQuery, 30)
           : await queryAuthor(trimmedQuery, 30);
-      console.log(nextResults);
       setResults(nextResults || []);
       setStatus("idle");
     } catch (err) {
@@ -125,55 +136,31 @@ export default function RecordSearch({ onRecordLoaded }) {
         nextRecord: record,
         source: "server",
       });
+      toast.success(
+        `Loaded record: ${record?.m?.title || record?.title || "Untitled"}`,
+      );
       setStatus("idle");
     } catch (err) {
       setStatus("idle");
       setError(err.message || "Unable to load record.");
+      toast.error(err.message || "Unable to load record.");
     }
   }
 
   return (
-    <>
-      {/* Search bar design <!-- From Uiverse.io by emmanuelh-dev -->  */}
-      <div className={`grid items-center justify-center grid-rows-1`}>
-        <SearchBar
-          handleSearch={handleSearch}
-          status={status}
-          query={query}
-          setQuery={setQuery}
-        />
-        <fieldset className="mt-5 w-full">
-          <legend className="mb-2 text-sm font-semibold text-gray-600">
-            Search Mode
-          </legend>
-          <div className="grid grid-cols-2 rounded-xl bg-gray-100 p-1 shadow-sm">
-            {options.map((option) => {
-              const isSelected = searchOption === option.value;
-
-              return (
-                <button
-                  key={option.value}
-                  type="button"
-                  aria-pressed={isSelected}
-                  className={`flex h-8 items-center cursor-pointer justify-center rounded-lg px-8 text-base font-semibold transition ${
-                    isSelected
-                      ? "bg-white text-gray-950 shadow-sm ring-1 ring-gray-100 border-2 border-blue-400"
-                      : "text-gray-500 hover:text-gray-800 hover:bg-gray-200"
-                  }`}
-                  onClick={() => setSearchOption(option.value)}
-                >
-                  {option.label}
-                </button>
-              );
-            })}
-          </div>
-        </fieldset>
-        <SearchError error={error} />
-        <SearchResults
-          results={results}
-          handleResultClick={handleResultClick}
-        />
-      </div>
-    </>
+    <div className="grid w-full grid-rows-1">
+      <SearchBar
+        handleSearch={handleSearch}
+        status={status}
+        query={query}
+        setQuery={setQuery}
+      />
+      <SearchMode
+        options={options}
+        searchOption={searchOption}
+        setSearchOption={setSearchOption}
+      />
+      <SearchResults results={results} handleResultClick={handleResultClick} />
+    </div>
   );
 }

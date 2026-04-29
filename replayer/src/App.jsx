@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Toaster } from "@/components/ui/sonner";
 import RecordPicker from "./views/RecordPicker";
 
 export default function App() {
@@ -13,11 +14,7 @@ export default function App() {
   return (
     <main className="min-h-screen bg-slate-50 text-slate-950">
       <RecordPicker onRecordLoaded={handleRecordLoaded} />
-      {record ? (
-        <div className="mx-auto mt-3 max-w-md rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">
-          Loaded record: {record?.m?.title || record?.title || "Untitled"}
-        </div>
-      ) : null}
+      <Toaster position="bottom-center" richColors />
     </main>
   );
 }

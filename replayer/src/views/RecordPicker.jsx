@@ -14,7 +14,7 @@ export default function RecordPicker({ onRecordLoaded }) {
           text={"Begin writing process analysis."}
         />
       </section>
-      <Card className="mx-auto flex min-h-screen max-w-xl flex-col items-center px-6">
+      <Card className="mx-auto flex w-full max-w-2xl flex-col px-6">
         <RecordSearch onRecordLoaded={onRecordLoaded} />
         <FileUpload onRecordLoaded={onRecordLoaded} />
       </Card>
