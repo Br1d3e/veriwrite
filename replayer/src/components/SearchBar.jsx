@@ -134,7 +134,8 @@ export default function SearchBar({ onRecordLoaded }) {
                   {result.title || "Untitled"}
                 </span>
                 <span className="block text-xs text-gray-500">
-                  {result.author || "Unknown author"}
+                  {result.author || "Unknown author"} ·{" "}
+                  {new Date(result.t0).toLocaleString() || "Unknown date"}
                 </span>
               </button>
             ))}
