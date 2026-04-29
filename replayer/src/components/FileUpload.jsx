@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { checkStruct, processData } from "../../modules/loader";
 
 function ExpandBtnSvg({ expanded }) {
   return expanded ? (
@@ -55,9 +56,13 @@ export default function FileUpload({ onRecordLoaded }) {
     try {
       setError("");
       const text = await file.text();
-      const nextRecord = JSON.parse(text);
+      const record = JSON.parse(text);
+      const validStruct = checkStruct(record, 2);
+      if (!validStruct) {
+        throw new Error("Invalid flight record file format.");
+      }
       onRecordLoaded?.({
-        nextRecord,
+        nextRecord: processData(record),
         source: "file",
       });
     } catch (err) {
@@ -105,7 +110,10 @@ export default function FileUpload({ onRecordLoaded }) {
         </span>
       </label>
       {error ? (
-        <p className="mx-auto mt-3 w-64 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p
+          id="upload-error-msg"
+          className="mx-auto mt-3 w-64 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+        >
           {error}
         </p>
       ) : null}
