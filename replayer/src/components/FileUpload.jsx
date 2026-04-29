@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { checkStruct, processData } from "../../modules/loader";
 
 function ExpandBtnSvg({ expanded }) {
@@ -47,7 +47,19 @@ function FileIconSvg() {
 export default function FileUpload({ onRecordLoaded }) {
   const [expanded, setExpanded] = useState(false);
   const [error, setError] = useState("");
+  const uploadPanelRef = useRef(null);
   const uploadPanelId = "flight-record-upload-panel";
+
+  useEffect(
+    function handleScroll() {
+      if (!expanded) return;
+      uploadPanelRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    },
+    [expanded],
+  );
 
   async function handleFileChange(event) {
     const file = event.target.files?.[0];
@@ -91,6 +103,7 @@ export default function FileUpload({ onRecordLoaded }) {
       </div>
       <label
         id={uploadPanelId}
+        ref={uploadPanelRef}
         className="relative mx-auto mt-5 flex h-64 w-120 cursor-pointer flex-col items-center justify-center border-2 border-dashed border-gray-400 p-8 transition-colors hover:bg-gray-100"
         hidden={!expanded}
       >
