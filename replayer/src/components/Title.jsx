@@ -1,7 +1,12 @@
-export default function Title({ title = "VeriWrite Record Replayer" }) {
+export default function Title({
+  title = "VeriWrite Record Replayer",
+  className = "",
+}) {
   return (
     <>
-      <h1 className="text-3xl font-bold justify-self-center mt-20">{title}</h1>
+      <h1 className={`text-3xl font-bold justify-self-center ${className}`}>
+        {title}
+      </h1>
     </>
   );
 }
