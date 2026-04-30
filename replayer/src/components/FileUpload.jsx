@@ -77,7 +77,7 @@ export default function FileUpload({ onRecordLoaded, className = "" }) {
         <div className="flex gap-3">
           <FileIconSvg />
           <span className="block text-primary text-center mt-3">
-            Upload a flightRecord file
+            Upload a Flight Record
           </span>
         </div>
       </label>

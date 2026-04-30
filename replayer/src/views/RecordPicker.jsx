@@ -11,7 +11,7 @@ export default function RecordPicker({ onRecordLoaded }) {
         <Title className="mt-8" />
         <CaptionText
           className="p-5 justify-center"
-          text={"Begin writing process analysis."}
+          text={"Search or upload a record to begin writing process analysis."}
         />
       </section>
       <Card className="mx-auto flex w-full max-w-2xl flex-col px-6">
