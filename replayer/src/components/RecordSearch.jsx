@@ -9,6 +9,8 @@ import { InputGroup, InputGroupAddon, InputGroupInput } from "./ui/input-group";
 import { Button } from "./ui/button.jsx";
 import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
 import { toast } from "sonner";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { ChevronRightIcon } from "lucide-react";
 
 function SearchBar({ handleSearch, status, query, setQuery }) {
   return (
@@ -32,7 +34,7 @@ function SearchBar({ handleSearch, status, query, setQuery }) {
           onClick={handleSearch}
           disabled={status === "loading"}
         >
-          {status === "loading" ? "Searching" : "Search"}
+          {status === "loading" ? "Loading" : "Search"}
         </Button>
       </InputGroupAddon>
     </InputGroup>
@@ -51,9 +53,17 @@ function SearchMode({
       onValueChange={setSearchOption}
       className={`mt-5 w-full ${className}`}
     >
-      <TabsList className="grid w-full grid-cols-2">
+      <TabsList className="grid w-full grid-cols-3">
+        <TabsTrigger
+          key="search-mode"
+          value=""
+          className="bg-primary-foreground text-foreground"
+          disabled
+        >
+          Search Mode
+        </TabsTrigger>
         {options.map((option) => (
-          <TabsTrigger key={option.value} value={option.value}>
+          <TabsTrigger key={option.value} value={option.value} className="">
             {option.label}
           </TabsTrigger>
         ))}
@@ -62,30 +72,36 @@ function SearchMode({
   );
 }
 
-function SearchResults({ results, handleResultClick }) {
+function SearchResults({ results, handleResultClick, className = "" }) {
   return (
     <>
       {results.length > 0 ? (
-        <div className="mt-3 grid max-h-80 gap-2 overflow-y-auto scroll-smooth rounded-md pr-1">
-          {results.map((result) => (
-            <button
-              className="rounded-md border border-gray-200 bg-white px-3 py-2 text-left text-sm hover:bg-gray-50 snap-start"
-              key={result.d_id}
-              type="button"
-              onClick={() => handleResultClick(result)}
-            >
-              <span className="block font-semibold text-gray-900">
-                {result.title || "Untitled"}
-              </span>
-              <span className="block text-xs text-gray-500">
-                {result.author || "Unknown author"} ·{" "}
-                {new Date(result.t0).toLocaleString() || "Unknown date"}
-              </span>
-            </button>
-          ))}
-        </div>
+        <ScrollArea className={`max-h-80 rounded-md border ${className}`}>
+          <div className="grid gap-2 p-2">
+            {results.map((result) => (
+              <Button
+                className="h-auto justify-start rounded-md border border-border bg-background px-3 py-2 text-left text-sm text-foreground hover:bg-accent"
+                key={result.d_id}
+                type="button"
+                variant="ghost"
+                onClick={() => handleResultClick(result)}
+              >
+                <span className="grid gap-1">
+                  <span className="block font-semibold">
+                    {result.title || "Untitled"}
+                  </span>
+                  <span className="block text-xs text-muted-foreground">
+                    {result.author || "Unknown author"} ·{" "}
+                    {new Date(result.t0).toLocaleString() || "Unknown date"}
+                  </span>
+                </span>
+                <ChevronRightIcon className="size-4 ml-auto" />
+              </Button>
+            ))}
+          </div>
+        </ScrollArea>
       ) : (
-        <span className="mt-3 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-500">
+        <span className="mt-3 rounded-md border-border bg-background px-3 py-2 text-sm text-muted-foreground">
           No results found.
         </span>
       )}
@@ -160,7 +176,11 @@ export default function RecordSearch({ onRecordLoaded }) {
         searchOption={searchOption}
         setSearchOption={setSearchOption}
       />
-      <SearchResults results={results} handleResultClick={handleResultClick} />
+      <SearchResults
+        results={results}
+        handleResultClick={handleResultClick}
+        className="mt-5"
+      />
     </div>
   );
 }
