@@ -32,6 +32,42 @@ SIGNING_PRIVATE_KEY_B64 = os.getenv("VERIWRITE_ED25519_PRIVATE_KEY_B64")
 _PROCESS_SIGNING_KEY = Ed25519PrivateKey.generate()
 
 FRESHNESS_WINDOW = 10_000
+INTEGRITY_LEVELS = {
+    "UNVERIFIED": -1,
+    "VERIFIED": 0,
+    "NEEDS_REVIEW": 1,
+    "RISK": 2,
+}
+
+
+def worse_integrity_status(prev: str | None, curr: str) -> str:
+    prev = prev if prev in INTEGRITY_LEVELS else "UNVERIFIED"
+    curr = curr if curr in INTEGRITY_LEVELS else "UNVERIFIED"
+    return prev if INTEGRITY_LEVELS[prev] > INTEGRITY_LEVELS[curr] else curr
+
+
+def update_doc_integrity_status(cursor, d_id: str, curr_doc_integrity: str) -> str:
+    cursor.execute(
+        """
+        SELECT integrity_status
+        FROM docs
+        WHERE d_id = %s
+        """,
+        (d_id,),
+    )
+    row = cursor.fetchone()
+    prev_doc_integrity = row["integrity_status"] if row else "UNVERIFIED"
+    next_doc_integrity = worse_integrity_status(prev_doc_integrity, curr_doc_integrity)
+    cursor.execute(
+        """
+        UPDATE docs
+        SET integrity_status = %s
+        WHERE d_id = %s
+        """,
+        (next_doc_integrity, d_id),
+    )
+    return next_doc_integrity
+
 
 def verify_protocol(v):
     return v == 3
@@ -448,21 +484,21 @@ def append_block(block: dict[str, Any]) -> dict[str, Any]:
             expected_dsh = sha256_hex(next_text)
             valid_dsh = init_dsh == current_dsh and doc_state_hash == expected_dsh
 
-            if not valid_q:
-                return {
-                    "status": "INVALID BLOCK",
-                    "op": "session/block",
-                    "sid": sid,
-                    "q": q,
-                    "valid_q": valid_q,
-                    "valid_h": valid_h,
-                    "valid_ch": valid_ch,
-                    "valid_dsh": valid_dsh,
-                    "valid_n": valid_n,
-                    "freshness_status": freshness_status,
-                }
+            # if not valid_q:
+            #     return {
+            #         "status": "INVALID BLOCK",
+            #         "op": "session/block",
+            #         "sid": sid,
+            #         "q": q,
+            #         "valid_q": valid_q,
+            #         "valid_h": valid_h,
+            #         "valid_ch": valid_ch,
+            #         "valid_dsh": valid_dsh,
+            #         "valid_n": valid_n,
+            #         "freshness_status": freshness_status,
+            #     }
 
-            valid_block = valid_h and valid_ch and valid_dsh and valid_n
+            valid_block = valid_h and valid_ch and valid_dsh and valid_n and valid_q
 
             session_ev = session["ev"] or []
             if not isinstance(session_ev, list):
@@ -542,6 +578,15 @@ def append_block(block: dict[str, Any]) -> dict[str, Any]:
                 """,
                 (d_id, sid, Jsonb(session_ev), next_text, expected_dsh, d_id, sid),
             )
+
+            if valid_block:
+                curr_doc_integrity = "VERIFIED"
+            elif valid_dsh and valid_ch and valid_h and valid_q and freshness_status != "FRESH":
+                curr_doc_integrity = "NEEDS_REVIEW"
+            else:
+                curr_doc_integrity = "RISK"
+            update_doc_integrity_status(cursor, d_id, curr_doc_integrity)
+
 
     return {
         "status": "SUCCESS",
@@ -648,6 +693,14 @@ def end_session(session_end: dict[str, Any]) -> dict[str, Any]:
                  d_id, 
                  sid)
             )
+            
+            if valid_continuity and valid_end_hash:
+                curr_doc_integrity = "VERIFIED"
+            elif not valid_end_hash:
+                curr_doc_integrity = "RISK"
+            else:
+                curr_doc_integrity = "NEEDS_REVIEW"
+            update_doc_integrity_status(cursor, d_id, curr_doc_integrity)
 
     return {
         "status": session_status,

@@ -4,13 +4,20 @@ import {
   queryAuthor,
   queryTitle,
 } from "../../modules/recordApi.js";
-import { Search } from "lucide-react";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "./ui/input-group";
 import { Button } from "./ui/button.jsx";
 import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
 import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ChevronRightIcon } from "lucide-react";
+import {
+  AlertCircleIcon,
+  BanIcon,
+  CheckCircle2Icon,
+  ChevronRightIcon,
+  FileQuestionMark,
+  Search,
+} from "lucide-react";
+import { Badge } from "./ui/badge.jsx";
 
 function SearchBar({ handleSearch, status, query, setQuery }) {
   return (
@@ -28,7 +35,7 @@ function SearchBar({ handleSearch, status, query, setQuery }) {
           }
         }}
       />
-      <InputGroupAddon align="right">
+      <InputGroupAddon align="inline-end">
         <Button
           type="button"
           onClick={handleSearch}
@@ -53,15 +60,7 @@ function SearchMode({
       onValueChange={setSearchOption}
       className={`mt-5 w-full ${className}`}
     >
-      <TabsList className="grid w-full grid-cols-3">
-        <TabsTrigger
-          key="search-mode"
-          value=""
-          className="bg-primary-foreground text-foreground"
-          disabled
-        >
-          Search Mode
-        </TabsTrigger>
+      <TabsList className="grid w-full grid-cols-2">
         {options.map((option) => (
           <TabsTrigger
             key={option.value}
@@ -76,6 +75,57 @@ function SearchMode({
   );
 }
 
+function BadgeVerified() {
+  return (
+    <Badge className="border-none bg-green-600/10 text-green-600 focus-visible:ring-green-600/20 focus-visible:outline-none dark:bg-green-400/10 dark:text-green-400 dark:focus-visible:ring-green-400/40 [a&]:hover:bg-green-600/5 dark:[a&]:hover:bg-green-400/5">
+      <CheckCircle2Icon className="size-3" />
+      Verified
+    </Badge>
+  );
+}
+
+function BadgeNeedsReview() {
+  return (
+    <Badge className="border-none bg-amber-600/10 text-amber-600 focus-visible:ring-amber-600/20 focus-visible:outline-none dark:bg-amber-400/10 dark:text-amber-400 dark:focus-visible:ring-amber-400/40 [a&]:hover:bg-amber-600/5 dark:[a&]:hover:bg-amber-400/5">
+      <AlertCircleIcon className="size-3" />
+      Needs review
+    </Badge>
+  );
+}
+
+function BadgeRisk() {
+  return (
+    <Badge className="bg-destructive/10 [a&]:hover:bg-destructive/5 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 text-destructive border-none focus-visible:outline-none">
+      <BanIcon className="size-3" />
+      Risk
+    </Badge>
+  );
+}
+
+function BadgeUnverified() {
+  return (
+    <Badge className="border-none" variant="secondary">
+      <FileQuestionMark className="size-3" />
+      Unverified
+    </Badge>
+  );
+}
+
+function IntegrityBadge({ status = "UNVERIFIED" }) {
+  switch (status) {
+    case "VERIFIED":
+      return <BadgeVerified />;
+    case "NEEDS_REVIEW":
+      return <BadgeNeedsReview />;
+    case "RISK":
+      return <BadgeRisk />;
+    case "UNVERIFIED":
+      return <BadgeUnverified />;
+    default:
+      return <BadgeUnverified />;
+  }
+}
+
 function SearchResults({
   results,
   handleResultClick,
@@ -83,33 +133,41 @@ function SearchResults({
   setHasSearched,
   className = "",
 }) {
+  const resultRows = results.map((result) => ({
+    ...result,
+    metaText: `${result.author || "Unknown author"} · ${
+      result.t0 ? new Date(result.t0).toLocaleString() : "Unknown date"
+    }`,
+  }));
+
   return (
     <>
       {results.length > 0 ? (
-        <ScrollArea className={`max-h-80 rounded-md border ${className}`}>
+        <ScrollArea className={`max-h-100 rounded-md border ${className}`}>
           <div className="grid gap-2 p-2">
-            {results.map((result) => (
-              <Button
-                className="h-auto justify-start rounded-md border border-border bg-background px-3 py-2 text-left text-sm text-foreground hover:bg-accent"
+            {resultRows.map((result) => (
+              <button
+                className="grid w-full grid-cols-[minmax(0,1fr)_9.5rem_1rem] items-center gap-4 rounded-md border border-border bg-background px-5 py-3 text-left text-sm text-foreground transition-colors hover:bg-accent focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
                 key={result.d_id}
                 type="button"
-                variant="ghost"
                 onClick={() => {
                   handleResultClick(result);
                   setHasSearched(true);
                 }}
               >
-                <span className="grid gap-1">
-                  <span className="block font-semibold">
+                <span className="min-w-0 space-y-1">
+                  <span className="block truncate font-semibold">
                     {result.title || "Untitled"}
                   </span>
-                  <span className="block text-xs text-muted-foreground">
-                    {result.author || "Unknown author"} ·{" "}
-                    {new Date(result.t0).toLocaleString() || "Unknown date"}
+                  <span className="block overflow-hidden text-ellipsis whitespace-nowrap text-xs leading-5 text-muted-foreground">
+                    {result.metaText}
                   </span>
                 </span>
-                <ChevronRightIcon className="size-4 ml-auto" />
-              </Button>
+                <span className="justify-self-end">
+                  <IntegrityBadge status={result.status} />
+                </span>
+                <ChevronRightIcon className="size-4 shrink-0" />
+              </button>
             ))}
           </div>
         </ScrollArea>

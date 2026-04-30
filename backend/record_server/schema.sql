@@ -7,6 +7,8 @@ CREATE TABLE IF NOT EXISTS docs (
     t0 BIGINT NOT NULL,
     title TEXT,
     author TEXT,
+    integrity_status TEXT NOT NULL DEFAULT 'UNVERIFIED'
+        CHECK (integrity_status IN ('VERIFIED', 'NEEDS_REVIEW', 'RISK', 'UNVERIFIED')),
     created_server_ts BIGINT NOT NULL,
     updated_server_ts BIGINT NOT NULL
 );

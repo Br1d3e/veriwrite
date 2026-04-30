@@ -12,7 +12,7 @@ def query_title(title: str, limit: int = 10):
         with conn.cursor() as cursor:
             cursor.execute(
                 """
-                SELECT d_id, title, author, similarity(title, %(query)s) AS sim, created_server_ts, updated_server_ts
+                SELECT d_id, title, author, similarity(title, %(query)s) AS sim, created_server_ts, updated_server_ts, integrity_status
                 FROM docs
                 WHERE title IS NOT NULL
                   AND similarity(title, %(query)s) > 0.3
@@ -23,7 +23,7 @@ def query_title(title: str, limit: int = 10):
             )
             rows = cursor.fetchall()
             return [
-                {"d_id": row[0], "title": row[1], "author": row[2], "sim": float(row[3]), "t0": row[4], "tn": row[5]}
+                {"d_id": row[0], "title": row[1], "author": row[2], "sim": float(row[3]), "t0": row[4], "tn": row[5], "status": row[6]}
                 for row in rows
             ]
 
@@ -32,7 +32,7 @@ def query_author(author: str, limit: int = 10):
         with conn.cursor() as cursor:
             cursor.execute(
                 """
-                SELECT d_id, author, title, similarity(author, %(query)s) AS sim, created_server_ts, updated_server_ts
+                SELECT d_id, author, title, similarity(author, %(query)s) AS sim, created_server_ts, updated_server_ts, integrity_status
                 FROM docs
                 WHERE author IS NOT NULL
                   AND similarity(author, %(query)s) > 0.5
@@ -43,6 +43,6 @@ def query_author(author: str, limit: int = 10):
             )
             rows = cursor.fetchall()
             return [
-                {"d_id": row[0], "author": row[1], "title": row[2], "sim": float(row[3]), "t0": row[4], "tn": row[5]}
+                {"d_id": row[0], "author": row[1], "title": row[2], "sim": float(row[3]), "t0": row[4], "tn": row[5], "status": row[6]}
                 for row in rows
             ]

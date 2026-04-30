@@ -12,7 +12,8 @@ class AnalyzeDB:
         self.record = {
             "v": 3,
             "m": None,
-            "sessions": None
+            "sessions": None,
+            "status": None
         }
         self.doc = None
         self.sessions = None
@@ -211,6 +212,8 @@ class AnalyzeDB:
             raise ValueError("d_id is not loaded")
         if self.record["m"] is None:
             self.fetch_doc_meta()
+        if self.record["status"] is None:
+            self.record["status"] = self.doc["integrity_status"] or "UNVERIFIED"
         if self.record["sessions"] is None:
             self.fetch_sessions()
         return self.record
