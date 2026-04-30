@@ -16,7 +16,7 @@ export default function RecordPicker({ onRecordLoaded }) {
       </section>
       <Card className="mx-auto flex w-full max-w-2xl flex-col px-6">
         <RecordSearch onRecordLoaded={onRecordLoaded} />
-        <FileUpload onRecordLoaded={onRecordLoaded} />
+        <FileUpload onRecordLoaded={onRecordLoaded} className="mt-2" />
       </Card>
     </>
   );
