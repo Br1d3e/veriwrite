@@ -63,7 +63,11 @@ function SearchMode({
           Search Mode
         </TabsTrigger>
         {options.map((option) => (
-          <TabsTrigger key={option.value} value={option.value} className="">
+          <TabsTrigger
+            key={option.value}
+            value={option.value}
+            className="focus:border-primary"
+          >
             {option.label}
           </TabsTrigger>
         ))}
@@ -72,7 +76,13 @@ function SearchMode({
   );
 }
 
-function SearchResults({ results, handleResultClick, className = "" }) {
+function SearchResults({
+  results,
+  handleResultClick,
+  hasSearched,
+  setHasSearched,
+  className = "",
+}) {
   return (
     <>
       {results.length > 0 ? (
@@ -84,7 +94,10 @@ function SearchResults({ results, handleResultClick, className = "" }) {
                 key={result.d_id}
                 type="button"
                 variant="ghost"
-                onClick={() => handleResultClick(result)}
+                onClick={() => {
+                  handleResultClick(result);
+                  setHasSearched(true);
+                }}
               >
                 <span className="grid gap-1">
                   <span className="block font-semibold">
@@ -100,11 +113,11 @@ function SearchResults({ results, handleResultClick, className = "" }) {
             ))}
           </div>
         </ScrollArea>
-      ) : (
+      ) : hasSearched ? (
         <span className="mt-3 rounded-md border-border bg-background px-3 py-2 text-sm text-muted-foreground">
           No results found.
         </span>
-      )}
+      ) : null}
     </>
   );
 }
@@ -112,6 +125,7 @@ function SearchResults({ results, handleResultClick, className = "" }) {
 export default function RecordSearch({ onRecordLoaded }) {
   const [searchOption, setSearchOption] = useState("title");
   const [query, setQuery] = useState("");
+  const [hasSearched, setHasSearched] = useState(false);
   const [results, setResults] = useState([]);
   const [status, setStatus] = useState("idle");
   const [error, setError] = useState("");
@@ -124,6 +138,7 @@ export default function RecordSearch({ onRecordLoaded }) {
     event.preventDefault();
     const trimmedQuery = query.trim();
     if (!trimmedQuery) return;
+    setHasSearched(true);
 
     try {
       setStatus("loading");
@@ -179,6 +194,8 @@ export default function RecordSearch({ onRecordLoaded }) {
       <SearchResults
         results={results}
         handleResultClick={handleResultClick}
+        hasSearched={hasSearched}
+        setHasSearched={setHasSearched}
         className="mt-5"
       />
     </div>
