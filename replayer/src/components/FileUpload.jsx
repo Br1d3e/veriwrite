@@ -47,6 +47,9 @@ export default function FileUpload({ onRecordLoaded, className = "" }) {
         nextRecord: processData(record),
         source: "file",
       });
+      toast.success(
+        `Loaded record: ${record?.m?.title || record?.title || "Untitled"}`,
+      );
     } catch (err) {
       console.log(err);
       setError("Invalid JSON flight record file.");

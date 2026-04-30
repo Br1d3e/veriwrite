@@ -35,11 +35,12 @@ function SearchBar({ handleSearch, status, query, setQuery }) {
           }
         }}
       />
-      <InputGroupAddon align="inline-end">
+      <InputGroupAddon align="right">
         <Button
           type="button"
           onClick={handleSearch}
           disabled={status === "loading"}
+          className="cursor-pointer hover:bg-primary/80"
         >
           {status === "loading" ? "Loading" : "Search"}
         </Button>
@@ -65,7 +66,7 @@ function SearchMode({
           <TabsTrigger
             key={option.value}
             value={option.value}
-            className="focus:border-primary"
+            className="focus:border-primary cursor-pointer"
           >
             {option.label}
           </TabsTrigger>
