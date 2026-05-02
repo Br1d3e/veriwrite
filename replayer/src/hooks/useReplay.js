@@ -10,6 +10,7 @@ import {
   calSesProgress,
   calDocProgress,
   calculateTs,
+  resetStatus,
 } from "../lib/replayEngine";
 
 function initializeSnapshot(record) {
@@ -87,6 +88,24 @@ export default function useReplay(record) {
         ...prev,
         playing: false,
       }));
+    },
+    resetStatus: (prev) => {
+      setSnapshot(resetStatus(prev));
+    },
+    setSpeed: (newSpeed) => {
+      setSnapshot((prev) => ({
+        ...prev,
+        speed: newSpeed,
+      }));
+    },
+    seekToSession: (sid) => {
+      setSnapshot((prev) => seekToSession(prev, sid));
+    },
+    seekNextSession: () => {
+      setSnapshot((prev) => seekNextSession(prev));
+    },
+    seekPrevSession: () => {
+      setSnapshot((prev) => seekPrevSession(prev));
     },
   };
   return [snapshot, actions];

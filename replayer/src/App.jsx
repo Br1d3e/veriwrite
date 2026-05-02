@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import RecordPicker from "./views/RecordPicker";
 import Workspace from "./views/Workspace";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 export default function App() {
   const states = {
@@ -23,7 +24,7 @@ export default function App() {
       {appState === states.pick ? (
         <RecordPicker onRecordLoaded={handleRecordLoaded} />
       ) : (
-        <Workspace record={record} />
+        <TooltipProvider>{<Workspace record={record} />}</TooltipProvider>
       )}
       <Toaster position="bottom-center" richColors />
     </main>
