@@ -9,15 +9,8 @@ import { Button } from "./ui/button.jsx";
 import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
 import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  AlertCircleIcon,
-  BanIcon,
-  CheckCircle2Icon,
-  ChevronRightIcon,
-  FileQuestionMark,
-  Search,
-} from "lucide-react";
-import { Badge } from "./ui/badge.jsx";
+import { ChevronRightIcon, Search } from "lucide-react";
+import IntegrityBadge from "@/components/IntegrityBadge";
 
 function SearchBar({ handleSearch, status, query, setQuery }) {
   return (
@@ -74,57 +67,6 @@ function SearchMode({
       </TabsList>
     </Tabs>
   );
-}
-
-function BadgeVerified() {
-  return (
-    <Badge className="border-none bg-green-600/10 text-green-600 focus-visible:ring-green-600/20 focus-visible:outline-none dark:bg-green-400/10 dark:text-green-400 dark:focus-visible:ring-green-400/40 [a&]:hover:bg-green-600/5 dark:[a&]:hover:bg-green-400/5">
-      <CheckCircle2Icon className="size-3" />
-      Verified
-    </Badge>
-  );
-}
-
-function BadgeNeedsReview() {
-  return (
-    <Badge className="border-none bg-amber-600/10 text-amber-600 focus-visible:ring-amber-600/20 focus-visible:outline-none dark:bg-amber-400/10 dark:text-amber-400 dark:focus-visible:ring-amber-400/40 [a&]:hover:bg-amber-600/5 dark:[a&]:hover:bg-amber-400/5">
-      <AlertCircleIcon className="size-3" />
-      Needs review
-    </Badge>
-  );
-}
-
-function BadgeRisk() {
-  return (
-    <Badge className="bg-destructive/10 [a&]:hover:bg-destructive/5 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 text-destructive border-none focus-visible:outline-none">
-      <BanIcon className="size-3" />
-      Risk
-    </Badge>
-  );
-}
-
-function BadgeUnverified() {
-  return (
-    <Badge className="border-none" variant="secondary">
-      <FileQuestionMark className="size-3" />
-      Unverified
-    </Badge>
-  );
-}
-
-function IntegrityBadge({ status = "UNVERIFIED" }) {
-  switch (status) {
-    case "VERIFIED":
-      return <BadgeVerified />;
-    case "NEEDS_REVIEW":
-      return <BadgeNeedsReview />;
-    case "RISK":
-      return <BadgeRisk />;
-    case "UNVERIFIED":
-      return <BadgeUnverified />;
-    default:
-      return <BadgeUnverified />;
-  }
 }
 
 function SearchResults({

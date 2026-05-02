@@ -4,6 +4,12 @@ import {
   seekToSession,
   seekNextSession,
   seekPrevSession,
+  convertTs,
+  calculateTotalEv,
+  totalSessionEv,
+  calSesProgress,
+  calDocProgress,
+  calculateTs,
 } from "../lib/replayEngine";
 
 function initializeSnapshot(record) {
@@ -21,8 +27,11 @@ function initializeSnapshot(record) {
     record: record,
     sessions: sessions,
     currentSession: 0,
+    sesTotalEv: totalSessionEv(record, 0),
     caretPos: docText.length,
     docText: docText,
+    docTotalEv: calculateTotalEv(record),
+    online: record.v === 3,
   };
 }
 
