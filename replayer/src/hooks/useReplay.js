@@ -32,6 +32,8 @@ function initializeSnapshot(record) {
     caretPos: docText.length,
     docText: docText,
     docTotalEv: calculateTotalEv(record),
+    sesProg: 0,
+    docProg: 0,
     online: record.v === 3,
   };
 }

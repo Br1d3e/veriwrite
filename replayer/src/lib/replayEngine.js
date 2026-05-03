@@ -35,6 +35,8 @@ export function step(currentSnapshot, ev) {
       budget: nextSnapshot.budget - ev[nextSnapshot.i][0],
       i: nextSnapshot.i + 1,
       evCount: nextSnapshot.evCount + 1,
+      sesProg: calSesProgress(nextSnapshot),
+      docProg: calDocProgress(nextSnapshot),
     };
   }
 
@@ -67,6 +69,11 @@ export function seekToSession(currentSnapshot, sid) {
     caretPos: init.length,
     evCount,
     sesTotalEv,
+    sesProg: 0,
+    docProg: calDocProgress({
+      ...currentSnapshot,
+      evCount,
+    }),
   };
 }
 
@@ -100,6 +107,8 @@ export function resetStatus(currentSnapshot) {
     budget: 0,
     lastFrameTs: 0,
     docTotalEv: calculateTotalEv(currentSnapshot),
+    sesProg: calSesProgress(currentSnapshot),
+    docProg: calDocProgress(currentSnapshot),
   };
 }
 
