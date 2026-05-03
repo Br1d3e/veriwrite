@@ -1,14 +1,14 @@
 import { CardTitle, CardDescription } from "@/components/ui/card";
 import IntegrityBadge from "@/components/IntegrityBadge";
 import { IntegrityHoverCard } from "@/components/IntegrityBadge";
+import { convertTs } from "@/lib/replayEngine";
 
-export default function DocMeta({
-  record,
-  currentSession = null,
-  evIdx = 0,
-  evTotal = 0,
-  className = "",
-}) {
+export default function DocMeta({ snapshot, className = "" }) {
+  const record = snapshot.record;
+  const currentSession = snapshot.currentSession;
+  const evIdx = snapshot.i;
+  const evTotal = snapshot.sesTotalEv;
+  const playTime = convertTs(snapshot);
   const title = record?.m?.title || record?.title || "Untitled";
   const author = record?.m?.author || record?.author || "Unknown author";
   const integrityStatus = record?.status || "UNVERIFIED";
@@ -25,6 +25,9 @@ export default function DocMeta({
           <span className="block truncate font-semibold text-xl">{title}</span>
           <span className="block overflow-hidden whitespace-nowrap text-xs leading-5 text-muted-foreground">
             {metaText}
+          </span>
+          <span className="block text-xs text-muted-foreground overflow-hidden gap-2">
+            Session time: {playTime}
           </span>
         </span>
         <span className="justify-self-end">
