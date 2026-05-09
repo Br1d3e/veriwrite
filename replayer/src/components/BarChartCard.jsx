@@ -42,7 +42,7 @@ export function BarChartCard({
         <CardTitle>{title}</CardTitle>
         <CardDescription>{desc}</CardDescription>
       </CardHeader>
-      <CardContent className="pb-8">
+      <CardContent className="pb-2">
         <ChartContainer config={chartConfig} className={chartClassName}>
           <BarChart
             accessibilityLayer

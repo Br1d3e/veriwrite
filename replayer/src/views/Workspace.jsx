@@ -15,8 +15,8 @@ export default function Workspace({
   const [snapshot, actions] = useReplay(record);
 
   return (
-    <div className="grid flex-1 grid-cols-[minmax(0,1fr)_600px] gap-2">
-      <Card className="mx-auto my-5 grid h-190 w-full max-w-3xl">
+    <div className="grid h-screen min-h-0 grid-cols-[minmax(0,1fr)_600px] gap-2 overflow-hidden p-5">
+      <Card className="mx-auto grid h-full min-h-0 w-full max-w-3xl">
         <DocMeta snapshot={snapshot} className="mx-auto w-full px-5" />
         <CardContent className="mx-auto w-full h-130">
           <Screen docText={snapshot.docText} caretPos={snapshot.caretPos} />

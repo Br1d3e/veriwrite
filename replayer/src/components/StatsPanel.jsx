@@ -4,10 +4,10 @@ import DocStatsPanel from "@/components/DocStats";
 
 export default function StatsPanel({ docStats, sessionStats, integrityStats }) {
   return (
-    <aside>
+    <aside className="h-full min-h-0 overflow-hidden">
       <Tabs
         defaultValue="stats"
-        className="flex w-full h-full flex-col bg-background"
+        className="flex h-full min-h-0 w-full flex-col bg-background"
       >
         <h2 className="font-heading mt-2 mx-3">Stats</h2>
         <TabsList className="mx-4 mt-1 grid grid-cols-3">
@@ -16,7 +16,7 @@ export default function StatsPanel({ docStats, sessionStats, integrityStats }) {
           <TabsTrigger value="integrity">Integrity</TabsTrigger>
         </TabsList>
 
-        <ScrollArea className="min-h-0 max-h-full flex-1 p-4">
+        <ScrollArea className="min-h-0 flex-1 p-4">
           <TabsContent value="doc">
             <DocStatsPanel docStats={docStats} />
           </TabsContent>

@@ -201,7 +201,7 @@ export default function DocStatsPanel({ docStats }) {
           value={<ActiveDaysValue activeDays={timeline.activeDays} />}
         />
       </div>
-      <div className="grid gap-3">
+      <div className="grid gap-3 px-1">
         <BarChartCard
           title={"Session Durations"}
           desc={"How long each session took."}
@@ -243,7 +243,7 @@ export default function DocStatsPanel({ docStats }) {
           </Tooltip>
         </div>
       </div>
-      <div>
+      <div className="px-1">
         <BarChartCard
           title={"Session Inserted Characters"}
           desc={"Writing contribution per session."}
