@@ -16,7 +16,7 @@ export default function StatsPanel({ docStats, sessionStats, integrityStats }) {
           <TabsTrigger value="integrity">Integrity</TabsTrigger>
         </TabsList>
 
-        <ScrollArea className="min-h-0 flex-1 p-4">
+        <ScrollArea className="min-h-0 max-h-full flex-1 p-4">
           <TabsContent value="doc">
             <DocStatsPanel docStats={docStats} />
           </TabsContent>

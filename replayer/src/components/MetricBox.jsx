@@ -1,10 +1,17 @@
-export function MetricBox({ label, value, description }) {
+export function MetricBox({ label, value, description, className = "" }) {
   return (
-    <div className="flex flex-col relative border-l border-secondary p-2">
-      <span className="block uppercase text-sm font-light text-muted-foreground">
+    <div
+      className={`relative flex min-w-0 flex-col gap-1 bg-background p-3 ${className}`}
+    >
+      <span className="block truncate text-xs font-medium uppercase text-muted-foreground/85">
         {label}
       </span>
-      <div className="text-sm font-sans">{value}</div>
+      <div className="min-w-0 text-sm font-medium leading-5">{value}</div>
+      {description ? (
+        <div className="text-xs leading-4 text-muted-foreground">
+          {description}
+        </div>
+      ) : null}
     </div>
   );
 }
