@@ -111,6 +111,7 @@ function SpeedSlider({ snapshot, actions, className = "" }) {
 function SessionButtons({
   snapshot,
   actions,
+  onClearHighlight,
   onSwitchSession,
   className = "",
 }) {
@@ -138,6 +139,7 @@ function SessionButtons({
     }
 
     actions.seekToSession(nextSession - 1);
+    onClearHighlight?.();
     onSwitchSession?.(snapshot.sessions[nextSession - 1]);
   }
 
@@ -154,6 +156,7 @@ function SessionButtons({
                 event.preventDefault();
                 actions.pause();
                 actions.seekPrevSession();
+                onClearHighlight?.();
                 onSwitchSession?.(
                   snapshot.sessions[Math.max(0, currentSession - 1)],
                 );
@@ -179,6 +182,7 @@ function SessionButtons({
                     event.preventDefault();
                     actions.pause();
                     actions.seekToSession(index);
+                    onClearHighlight?.();
                     onSwitchSession?.(session);
                   }}
                 >
@@ -201,6 +205,7 @@ function SessionButtons({
                 event.preventDefault();
                 actions.pause();
                 actions.seekNextSession();
+                onClearHighlight?.();
                 onSwitchSession?.(
                   snapshot.sessions[Math.min(sessionCount - 1, currentSession + 1)],
                 );
@@ -251,6 +256,7 @@ export default function PlaybackControls({
       <SessionButtons
         snapshot={snapshot}
         actions={actions}
+        onClearHighlight={onClearHighlight}
         onSwitchSession={onSwitchSession}
         className="min-w-0 justify-self-center overflow-hidden"
       />

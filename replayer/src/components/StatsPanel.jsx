@@ -35,7 +35,11 @@ function StatsPanel({
             />
           </TabsContent>
           <TabsContent value="session">
-            <SessionStatsPanel sessionStats={sessionStats} />
+            <SessionStatsPanel
+              sessionStats={sessionStats}
+              actions={actions}
+              onPasteHighlight={onGapHighlight}
+            />
           </TabsContent>
           <TabsContent value="integrity"></TabsContent>
         </ScrollArea>

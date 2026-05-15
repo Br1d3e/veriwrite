@@ -20,20 +20,12 @@ export default function App() {
 
   function handleRecordLoaded({ nextRecord, source }) {
     const sessions = nextRecord?.sessions || nextRecord?.s || [];
-    const firstActiveSession =
-      sessions.find(
-        (session) =>
-          Array.isArray(session?.ev) &&
-          session.ev.some(
-            (event) => (event[2] ?? 0) > 0 || (event[3] ?? "").length > 0,
-          ),
-      ) || null;
 
     setRecord(nextRecord);
     setOnline(source === "server");
     setAppState(states.play);
     setDocStats(calDocStats(nextRecord));
-    setSessionStats(calSession(firstActiveSession));
+    setSessionStats(calSession(sessions.length > 0 ? sessions[0] : null));
   }
 
   return (
