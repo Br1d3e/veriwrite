@@ -66,7 +66,7 @@ export function BarChartCard({
               label={{
                 value: yLabel,
                 position: "insideLeft",
-                dx: -52,
+                dx: -10,
                 dy: 24,
                 angle: -90,
               }}

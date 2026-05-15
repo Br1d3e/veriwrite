@@ -1,7 +1,11 @@
 import { ScrollArea } from "./ui/scroll-area";
 import { useEffect, useRef } from "react";
 
-export default function Screen({ docText = "", caretPos = 0, highlight = null }) {
+export default function Screen({
+  docText = "",
+  caretPos = 0,
+  highlight = null,
+}) {
   const highlightRef = useRef(null);
   caretPos = Math.min(Math.max(caretPos, 0), docText.length);
   const highlightParts = Array.isArray(highlight?.parts)
@@ -19,7 +23,9 @@ export default function Screen({ docText = "", caretPos = 0, highlight = null })
       ? Math.min(Math.max(highlight.end, highlightStart ?? 0), docText.length)
       : null;
   const shouldRenderHighlight =
-    highlightStart !== null && highlightEnd !== null && highlightEnd > highlightStart;
+    highlightStart !== null &&
+    highlightEnd !== null &&
+    highlightEnd > highlightStart;
 
   useEffect(() => {
     if (!shouldRenderHighlight && !shouldRenderParts) return;
@@ -86,10 +92,7 @@ export default function Screen({ docText = "", caretPos = 0, highlight = null })
     }
 
     return (
-      <ScrollArea
-        id="screen"
-        className="flex w-full h-full justify-center items-center border border-border whitespace-pre-wrap overflow-auto font-sans p-5"
-      >
+      <ScrollArea className="flex w-full h-full justify-center items-center border border-border rounded-2xl whitespace-pre-wrap overflow-auto font-sans p-5 leading-loose space-y-2">
         <article>{nodes}</article>
       </ScrollArea>
     );
@@ -97,10 +100,7 @@ export default function Screen({ docText = "", caretPos = 0, highlight = null })
 
   if (shouldRenderHighlight) {
     return (
-      <ScrollArea
-        id="screen"
-        className="flex w-full h-full justify-center items-center border border-border whitespace-pre-wrap overflow-auto font-sans p-5"
-      >
+      <ScrollArea className="flex w-full h-full justify-center items-center border border-border rounded-2xl whitespace-pre-wrap overflow-auto font-sans p-5 leading-loose space-y-2">
         <article>
           {docText.slice(0, highlightStart)}
           <mark
@@ -120,10 +120,7 @@ export default function Screen({ docText = "", caretPos = 0, highlight = null })
   }
 
   return (
-    <ScrollArea
-      id="screen"
-      className="flex w-full h-full justify-center items-center border border-border whitespace-pre-wrap overflow-auto font-sans p-5"
-    >
+    <ScrollArea className="flex w-full h-full justify-center items-center border border-border rounded-2xl whitespace-pre-wrap overflow-auto font-sans p-5 leading-loose space-y-2">
       <article>{docText.slice(0, caretPos)}</article>
       <span className="inline-block w-0 h-3 m-0 p-0 align-text-bottom animate-pulse"></span>
       <article>{docText.slice(caretPos)}</article>

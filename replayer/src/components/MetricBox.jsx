@@ -7,7 +7,7 @@ export function MetricBox({
 }) {
   return (
     <div
-      className={`relative flex min-w-0 flex-col gap-1 bg-background p-1 ${className}`}
+      className={`relative flex min-w-0 flex-col gap-1 my-1 bg-background p-1 ${className}`}
     >
       <span className="block truncate text-xs font-medium uppercase text-muted-foreground/85">
         {label}

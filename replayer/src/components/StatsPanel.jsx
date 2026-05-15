@@ -14,11 +14,11 @@ function StatsPanel({
   return (
     <aside className="h-full min-h-0 overflow-hidden">
       <Tabs
-        defaultValue="stats"
+        defaultValue="doc"
         className="flex h-full min-h-0 w-full flex-col bg-background"
       >
-        <h2 className="font-heading mt-2 mx-3">Stats</h2>
-        <TabsList className="mx-4 mt-1 grid grid-cols-3">
+        <h2 className="font-heading mt-2 mx-3 text-xl">Stats</h2>
+        <TabsList className="mx-4 mt-1 grid grid-cols-3" variant="line">
           <TabsTrigger value="doc">Document</TabsTrigger>
           <TabsTrigger value="session">Session</TabsTrigger>
           <TabsTrigger value="integrity">Integrity</TabsTrigger>

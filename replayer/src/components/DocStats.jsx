@@ -24,7 +24,7 @@ function formatDuration(ms) {
   const totalMinutes = Math.max(0, Math.floor(ms / 60000));
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
-  return `${hours}h ${minutes}m`;
+  return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}min`;
 }
 
 function formatDateLabel(dateText) {
@@ -94,14 +94,14 @@ function ActiveDaysValue({ activeDays }) {
   );
 }
 
-function DaysHeatmapCard({ activeDays, heatmap }) {
+function DaysHeatmapCard({ activeDays, heatmap, className = "" }) {
   const days = Array.from(activeDays || []);
   const heatmapRows = Array.isArray(heatmap) ? heatmap : [];
   const maxValue = Math.max(0, ...heatmapRows.flat());
   const hourLabels = new Set([0, 6, 12, 18, 23]);
 
   return (
-    <Card>
+    <Card className={className}>
       <CardHeader className="gap-0.5">
         <CardTitle>Writing Heatmap</CardTitle>
         <CardDescription>
@@ -202,6 +202,26 @@ function getPatchHighlightRange(textPatch, textLength) {
   return { start: 0, end: 0 };
 }
 
+function getPatchLengths(textPatch) {
+  let del = 0;
+  let ins = 0;
+  for (let patch of textPatch) {
+    for (let diff of patch.diffs) {
+      const [op, text] = diff;
+
+      if (op === 1) {
+        ins += text.length;
+      }
+
+      if (op === -1) {
+        del += text.length;
+      }
+    }
+  }
+
+  return { del, ins };
+}
+
 function getPatchHighlightParts(textPatch, textLength, color) {
   const parts = [];
 
@@ -250,7 +270,10 @@ function getPatchHighlightParts(textPatch, textLength, color) {
 
 function GapCards({ gaps, sessions, actions, onGapHighlight, className = "" }) {
   return (
-    <div className="grid p-2 gap-2">
+    <div className="grid p-1 gap-1">
+      <h2 className="font-medium text-muted-foreground pb-2">
+        {gaps.length} gaps detected between writing sessions.
+      </h2>
       {gaps.map((gap) => {
         const prevSession = gap.prevSession;
         const nextSession = gap.nextSession;
@@ -259,16 +282,31 @@ function GapCards({ gaps, sessions, actions, onGapHighlight, className = "" }) {
         const charsDiff = gap.charsDiff;
         const majorDiff = gap.majorDiff;
 
+        const { del: delLen, ins: insLen } = getPatchLengths(textPatch);
+        let diffDisplay;
+        if (delLen > 0 && insLen > 0) {
+          diffDisplay = (
+            <div className="gap-3">
+              <span className="text-green-500">+{insLen}</span>
+              <span className="text-muted-foreground"> {"/"}</span>
+              <span className="text-red-500">-{delLen}</span>
+            </div>
+          );
+        } else if (delLen > 0) {
+          diffDisplay = <span className="text-red-500">-{delLen}</span>;
+        } else if (insLen > 0) {
+          diffDisplay = <span className="text-green-500">+{insLen}</span>;
+        }
+
         const maxChars = 240;
         let charCount = 0;
         return (
           <Card
-            className={`cursor-pointer hover:bg-accent gap-5${className}`}
+            className={`cursor-pointer ring-0 hover:bg-accent gap-1${className}`}
             key={prevSession}
             onClick={() => {
               const targetSessionIndex = nextSession - 1;
-              const targetText =
-                sessions?.[targetSessionIndex]?.init || "";
+              const targetText = sessions?.[targetSessionIndex]?.init || "";
               const { start, end } = getPatchHighlightRange(
                 gap.textPatch,
                 targetText.length,
@@ -288,24 +326,15 @@ function GapCards({ gaps, sessions, actions, onGapHighlight, className = "" }) {
               });
             }}
           >
-            <CardHeader>
-              <CardTitle className="text-muted-foreground">
-                Session {prevSession} ~ {nextSession}
-              </CardTitle>
+            <CardHeader className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)_60px]">
+              <span className="text-muted-foreground">
+                {"["}Session {prevSession} {"->"} {nextSession}
+                {"]"}
+              </span>
+              <span className="font-medium">{gapDuration} gap</span>
+              <span className="font-medium">{diffDisplay}</span>
             </CardHeader>
-            <CardContent className="grid bg-inherit hover:bg-inherit">
-              <MetricBox
-                label={"Gap Duration"}
-                value={gapDuration}
-                className="bg-inherit hover:bg-inherit"
-              />
-              <MetricBox
-                label={"Chars Diff"}
-                value={charsDiff}
-                valueColor={majorDiff ? "text-red-500" : ""}
-                className="bg-inherit hover:bg-inherit"
-              />
-
+            {/* <CardContent className="grid bg-inherit hover:bg-inherit">
               {textPatch.length > 0 ? (
                 textPatch.flatMap((patch, patchIndex) => {
                   const lines = [];
@@ -348,7 +377,7 @@ function GapCards({ gaps, sessions, actions, onGapHighlight, className = "" }) {
               ) : (
                 <span>No visible text patch.</span>
               )}
-            </CardContent>
+            </CardContent> */}
           </Card>
         );
       })}
@@ -369,9 +398,9 @@ export default function DocStatsPanel({
   const insCharsGraph = edit.insCharsGraph;
 
   return (
-    <div className="grid gap-5">
+    <div className="grid gap-2">
       <StatsHeading text="Timeline" />
-      <div className="grid grid-cols-2 gap-1">
+      <div className="grid grid-cols-2 gap-2">
         <MetricBox label={"Session Count"} value={timeline.sessionCount} />
         <MetricBox
           label={"Document Start"}
@@ -391,7 +420,7 @@ export default function DocStatsPanel({
           value={<ActiveDaysValue activeDays={timeline.activeDays} />}
         />
       </div>
-      <div className="grid gap-3 px-1">
+      <div className="grid gap-3 px-1 my-2">
         <BarChartCard
           title={"Session Durations"}
           desc={"How long each session took."}
@@ -403,8 +432,11 @@ export default function DocStatsPanel({
         <DaysHeatmapCard
           activeDays={timeline.activeDays}
           heatmap={edit.heatmap}
+          className="my-2"
         />
       </div>
+
+      <br />
       <StatsHeading text="Edit" />
       <div className="grid grid-cols-2 gap-2">
         <MetricBox label={"Inserted Chars"} value={edit.insertedChars} />
@@ -441,8 +473,10 @@ export default function DocStatsPanel({
           xLabel="Session"
           yLabel="Insertion (characters)"
           chartClassName="h-64 aspect-auto"
+          className="gap-3"
         />
       </div>
+      <br />
       <StatsHeading text="Continuity" />
       <GapCards
         gaps={continuity.gaps}

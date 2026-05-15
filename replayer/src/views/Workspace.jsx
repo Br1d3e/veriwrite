@@ -17,8 +17,8 @@ export default function Workspace({
   const [screenHighlight, setScreenHighlight] = useState(null);
 
   return (
-    <div className="grid h-screen min-h-0 grid-cols-[minmax(0,1fr)_600px] gap-2 overflow-hidden p-5">
-      <Card className="mx-auto grid h-full min-h-0 w-full max-w-3xl">
+    <div className="grid h-screen min-h-0 max-h-10/12 grid-cols-[minmax(0,1fr)_minmax(0,0.5fr)] gap-10 overflow-hidden p-2">
+      <Card className="mx-auto grid h-full min-h-0 w-full max-w-3xl border-0 ring-0">
         <DocMeta snapshot={snapshot} className="mx-auto w-full px-5" />
         <CardContent className="mx-auto w-full h-130">
           <Screen
