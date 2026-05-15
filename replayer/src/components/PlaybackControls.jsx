@@ -21,14 +21,22 @@ import {
 } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 
-function PlaybackButtonGroup({ snapshot, actions, className = "" }) {
+function PlaybackButtonGroup({
+  snapshot,
+  actions,
+  onClearHighlight,
+  className = "",
+}) {
   return (
     <ButtonGroup className={className}>
       <Tooltip delayDuration={1000}>
         <TooltipTrigger asChild>
           <Button
             className="cursor-pointer bg-muted-foreground/80"
-            onClick={() => actions.resetStatus(snapshot)}
+            onClick={() => {
+              actions.resetStatus(snapshot);
+              onClearHighlight();
+            }}
           >
             <RotateCcw />
           </Button>
@@ -43,6 +51,7 @@ function PlaybackButtonGroup({ snapshot, actions, className = "" }) {
             className="cursor-pointer"
             onClick={() => {
               if (snapshot.playing === false) {
+                onClearHighlight?.();
                 actions.play();
               }
             }}
@@ -137,6 +146,7 @@ function SessionButtons({ snapshot, actions, className = "" }) {
               href="#"
               onClick={(event) => {
                 event.preventDefault();
+                actions.pause();
                 actions.seekPrevSession();
               }}
             />
@@ -158,6 +168,7 @@ function SessionButtons({ snapshot, actions, className = "" }) {
                   isActive={currentSession === index}
                   onClick={(event) => {
                     event.preventDefault();
+                    actions.pause();
                     actions.seekToSession(index);
                   }}
                 >
@@ -178,6 +189,7 @@ function SessionButtons({ snapshot, actions, className = "" }) {
               href="#"
               onClick={(event) => {
                 event.preventDefault();
+                actions.pause();
                 actions.seekNextSession();
               }}
             />
@@ -209,16 +221,18 @@ function SessionButtons({ snapshot, actions, className = "" }) {
 export default function PlaybackControls({
   snapshot,
   actions,
+  onClearHighlight,
   className = "",
 }) {
   return (
     <section
-      className={`grid w-full grid-cols-[auto_minmax(0,1fr)_12rem] items-center gap-4 ${className}`}
+      className={`grid w-full grid-cols-[auto_minmax(0,1fr)_12rem] items-center gap-4 bg-slate-50 ${className}`}
     >
       <PlaybackButtonGroup
         snapshot={snapshot}
         actions={actions}
         className="justify-self-start"
+        onClearHighlight={onClearHighlight}
       />
       <SessionButtons
         snapshot={snapshot}

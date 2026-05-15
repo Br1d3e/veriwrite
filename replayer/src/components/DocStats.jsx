@@ -44,7 +44,7 @@ function getDurationsData(durationsGraph) {
   for (let i = 0; i < x.length; i++) {
     chartData.push({
       name: x[i],
-      desktop: (y[i] / 1000).toFixed(1),
+      desktop: (y[i] / 1000 / 60).toFixed(1),
     });
   }
   return chartData;
@@ -65,7 +65,7 @@ function getInsertData(insCharsGraph) {
 }
 
 function StatsHeading({ text }) {
-  return <h2 className="text-sm font-semibold text-foreground">{text}</h2>;
+  return <h2 className="text-lg font-semibold text-foreground">{text}</h2>;
 }
 
 function ActiveDaysValue({ activeDays }) {
@@ -171,7 +171,197 @@ function DaysHeatmapCard({ activeDays, heatmap }) {
   );
 }
 
-export default function DocStatsPanel({ docStats }) {
+function getPatchHighlightRange(textPatch, textLength) {
+  for (let patch of textPatch) {
+    let pos = patch.start2;
+    let start = null;
+    let end = pos;
+
+    for (let [op, text] of patch.diffs) {
+      if (op === 0) {
+        pos += text.length;
+        continue;
+      }
+
+      if (start === null) start = pos;
+
+      if (op === 1) {
+        pos += text.length;
+        end = pos;
+      } else {
+        end = Math.max(end, pos);
+      }
+    }
+
+    if (start !== null) {
+      start = Math.max(0, Math.min(start, textLength));
+      end = Math.max(start, Math.min(end, textLength));
+      return { start, end };
+    }
+  }
+  return { start: 0, end: 0 };
+}
+
+function getPatchHighlightParts(textPatch, textLength, color) {
+  const parts = [];
+
+  for (let patchIndex = 0; patchIndex < textPatch.length; patchIndex++) {
+    const patch = textPatch[patchIndex];
+    let pos = patch.start2;
+
+    for (let diffIndex = 0; diffIndex < patch.diffs.length; diffIndex++) {
+      const [op, text] = patch.diffs[diffIndex];
+
+      if (op === 0) {
+        pos += text.length;
+        continue;
+      }
+
+      const safePos = Math.max(0, Math.min(pos, textLength));
+
+      if (op === 1) {
+        const end = Math.max(
+          safePos,
+          Math.min(safePos + text.length, textLength),
+        );
+        parts.push({
+          color,
+          end,
+          key: `${patchIndex}-${diffIndex}`,
+          start: safePos,
+          type: "insert",
+        });
+        pos += text.length;
+        continue;
+      }
+
+      parts.push({
+        color: "red",
+        key: `${patchIndex}-${diffIndex}`,
+        pos: safePos,
+        text,
+        type: "delete",
+      });
+    }
+  }
+
+  return parts;
+}
+
+function GapCards({ gaps, sessions, actions, onGapHighlight, className = "" }) {
+  return (
+    <div className="grid p-2 gap-2">
+      {gaps.map((gap) => {
+        const prevSession = gap.prevSession;
+        const nextSession = gap.nextSession;
+        const gapDuration = formatDuration(gap.gapMs);
+        const textPatch = gap.textPatch;
+        const charsDiff = gap.charsDiff;
+        const majorDiff = gap.majorDiff;
+
+        const maxChars = 240;
+        let charCount = 0;
+        return (
+          <Card
+            className={`cursor-pointer hover:bg-accent gap-5${className}`}
+            key={prevSession}
+            onClick={() => {
+              const targetSessionIndex = nextSession - 1;
+              const targetText =
+                sessions?.[targetSessionIndex]?.init || "";
+              const { start, end } = getPatchHighlightRange(
+                gap.textPatch,
+                targetText.length,
+              );
+              const color = majorDiff ? "red" : "green";
+
+              actions.seekToSession(targetSessionIndex);
+              onGapHighlight?.({
+                parts: getPatchHighlightParts(
+                  gap.textPatch,
+                  targetText.length,
+                  color,
+                ),
+                start,
+                end,
+                color,
+              });
+            }}
+          >
+            <CardHeader>
+              <CardTitle className="text-muted-foreground">
+                Session {prevSession} ~ {nextSession}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid bg-inherit hover:bg-inherit">
+              <MetricBox
+                label={"Gap Duration"}
+                value={gapDuration}
+                className="bg-inherit hover:bg-inherit"
+              />
+              <MetricBox
+                label={"Chars Diff"}
+                value={charsDiff}
+                valueColor={majorDiff ? "text-red-500" : ""}
+                className="bg-inherit hover:bg-inherit"
+              />
+
+              {textPatch.length > 0 ? (
+                textPatch.flatMap((patch, patchIndex) => {
+                  const lines = [];
+
+                  for (
+                    let diffIndex = 0;
+                    diffIndex < patch.diffs.length;
+                    diffIndex++
+                  ) {
+                    const [op, text] = patch.diffs[diffIndex];
+                    if (op === 0) continue;
+
+                    const prefix = op === 1 ? "+ " : "- ";
+                    const patchColor =
+                      op === 1 ? "text-green-500" : "text-red-500";
+                    const patchLine = prefix + text;
+                    const remaining = maxChars - charCount;
+                    if (remaining <= 0) break;
+
+                    const patchDisplay =
+                      patchLine.length <= remaining
+                        ? patchLine
+                        : patchLine.slice(0, remaining) + "...";
+                    charCount += patchDisplay.length;
+
+                    lines.push(
+                      <span
+                        className={`${patchColor} text-sm bg-inherit hover:bg-inherit`}
+                        key={`${patchIndex}-${diffIndex}`}
+                      >
+                        {patchDisplay}
+                      </span>,
+                    );
+
+                    if (charCount >= maxChars) break;
+                  }
+
+                  return lines;
+                })
+              ) : (
+                <span>No visible text patch.</span>
+              )}
+            </CardContent>
+          </Card>
+        );
+      })}
+    </div>
+  );
+}
+
+export default function DocStatsPanel({
+  docStats,
+  sessions,
+  actions,
+  onGapHighlight,
+}) {
   if (!docStats) return null;
 
   const { timeline, edit, continuity } = docStats;
@@ -181,7 +371,7 @@ export default function DocStatsPanel({ docStats }) {
   return (
     <div className="grid gap-5">
       <StatsHeading text="Timeline" />
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-2 gap-1">
         <MetricBox label={"Session Count"} value={timeline.sessionCount} />
         <MetricBox
           label={"Document Start"}
@@ -207,7 +397,7 @@ export default function DocStatsPanel({ docStats }) {
           desc={"How long each session took."}
           chartData={getDurationsData(durationsGraph)}
           xLabel="Session"
-          yLabel="Duration (s)"
+          yLabel="Duration (min) "
           chartClassName="h-64 aspect-auto"
         />
         <DaysHeatmapCard
@@ -253,6 +443,13 @@ export default function DocStatsPanel({ docStats }) {
           chartClassName="h-64 aspect-auto"
         />
       </div>
+      <StatsHeading text="Continuity" />
+      <GapCards
+        gaps={continuity.gaps}
+        sessions={sessions}
+        actions={actions}
+        onGapHighlight={onGapHighlight}
+      />
     </div>
   );
 }

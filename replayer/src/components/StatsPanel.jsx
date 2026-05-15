@@ -1,8 +1,16 @@
+import { memo } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import DocStatsPanel from "@/components/DocStats";
 
-export default function StatsPanel({ docStats, sessionStats, integrityStats }) {
+function StatsPanel({
+  docStats,
+  sessionStats,
+  integrityStats,
+  sessions,
+  actions,
+  onGapHighlight,
+}) {
   return (
     <aside className="h-full min-h-0 overflow-hidden">
       <Tabs
@@ -18,7 +26,12 @@ export default function StatsPanel({ docStats, sessionStats, integrityStats }) {
 
         <ScrollArea className="min-h-0 flex-1 p-4">
           <TabsContent value="doc">
-            <DocStatsPanel docStats={docStats} />
+            <DocStatsPanel
+              docStats={docStats}
+              sessions={sessions}
+              actions={actions}
+              onGapHighlight={onGapHighlight}
+            />
           </TabsContent>
           <TabsContent value="session"></TabsContent>
 
@@ -28,3 +41,12 @@ export default function StatsPanel({ docStats, sessionStats, integrityStats }) {
     </aside>
   );
 }
+
+export default memo(StatsPanel, (prev, next) => {
+  return (
+    prev.docStats === next.docStats &&
+    prev.sessionStats === next.sessionStats &&
+    prev.integrityStats === next.integrityStats &&
+    prev.sessions === next.sessions
+  );
+});

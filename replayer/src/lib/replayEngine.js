@@ -91,6 +91,50 @@ export function seekPrevSession(currentSnapshot) {
   return seekToSession(currentSnapshot, currentSnapshot.currentSession - 1);
 }
 
+export function seekToEvent(eventIdx, currentSnapshot) {
+  if (
+    eventIdx < 0 ||
+    eventIdx >
+      currentSnapshot.sessions[currentSnapshot.currentSession].ev.length
+  )
+    return;
+
+  const sessions = currentSnapshot.sessions[currentSnapshot.currentSession];
+  const ev = sessions.ev;
+  let docText = sessions.init;
+  for (let i = 0; i < eventIdx; i++) {
+    const pos = ev[i][1];
+    const delLen = ev[i][2];
+    const ins = ev[i][3];
+
+    docText = docText.slice(0, pos) + ins + docText.slice(pos + delLen);
+  }
+
+  return {
+    ...currentSnapshot,
+    i: eventIdx,
+    docText: docText,
+    playTs: calculateTs(eventIdx, currentSnapshot),
+    playing: false,
+    evCount: calculateTotalEv(currentSnapshot, currentSnapshot.currentSession - 1) + eventIdx,
+    sesTotalEv: totalSessionEv(currentSnapshot),
+    caretPos: docText.length,
+    sesProg: calSesProgress({
+      ...currentSnapshot,
+      i: eventIdx,
+    }),
+    docProg: calDocProgress({
+      ...currentSnapshot,
+      evCount: calculateTotalEv(currentSnapshot, currentSnapshot.currentSession - 1) + eventIdx,
+    }),
+  };
+}
+
+export function seekLastEvent(currentSnapshot) {
+  const sesEv = currentSnapshot.sessions[currentSnapshot.currentSession].ev;
+  return seekToEvent(sesEv.length, currentSnapshot);
+}
+
 export function resetStatus(currentSnapshot) {
   if (!currentSnapshot.record) return;
   console.log("reset status");
@@ -187,10 +231,12 @@ export function calDocProgress(currentSnapshot) {
   return (currentSnapshot.evCount / currentSnapshot.docTotalEv) * 100;
 }
 
-export function calculateTs(eventIdx, record) {
+export function calculateTs(eventIdx, currentSnapshot) {
+  const session = currentSnapshot.sessions?.[currentSnapshot.currentSession];
+  const ev = Array.isArray(session?.ev) ? session.ev : [];
   let totalTs = 0;
-  for (let i = 0; i < eventIdx; i++) {
-    totalTs += record.sessions[record.currentSession].ev[i][0];
+  for (let i = 0; i < eventIdx && i < ev.length; i++) {
+    totalTs += ev[i][0];
   }
   return totalTs;
 }

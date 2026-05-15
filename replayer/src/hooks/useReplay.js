@@ -4,6 +4,8 @@ import {
   seekToSession,
   seekNextSession,
   seekPrevSession,
+  seekToEvent,
+  seekLastEvent,
   convertTs,
   calculateTotalEv,
   totalSessionEv,
@@ -95,10 +97,14 @@ export default function useReplay(record) {
       setSnapshot(resetStatus(prev));
     },
     setSpeed: (newSpeed) => {
-      setSnapshot((prev) => ({
-        ...prev,
-        speed: newSpeed,
-      }));
+      setSnapshot((prev) =>
+        prev.speed === newSpeed
+          ? prev
+          : {
+              ...prev,
+              speed: newSpeed,
+            },
+      );
     },
     seekToSession: (sid) => {
       setSnapshot((prev) => seekToSession(prev, sid));
@@ -108,6 +114,12 @@ export default function useReplay(record) {
     },
     seekPrevSession: () => {
       setSnapshot((prev) => seekPrevSession(prev));
+    },
+    seekToEvent: (eventIdx) => {
+      setSnapshot((prev) => seekToEvent(eventIdx, prev));
+    },
+    seekLastEvent: () => {
+      setSnapshot((prev) => seekLastEvent(prev));
     },
   };
   return [snapshot, actions];

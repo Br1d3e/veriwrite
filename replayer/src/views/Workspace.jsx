@@ -1,3 +1,4 @@
+import { useState } from "react";
 import Screen from "@/components/Screen";
 import DocMeta from "@/components/DocMeta";
 import PlaybackControls from "@/components/PlaybackControls";
@@ -13,23 +14,35 @@ export default function Workspace({
   integrityStats,
 }) {
   const [snapshot, actions] = useReplay(record);
+  const [screenHighlight, setScreenHighlight] = useState(null);
 
   return (
     <div className="grid h-screen min-h-0 grid-cols-[minmax(0,1fr)_600px] gap-2 overflow-hidden p-5">
       <Card className="mx-auto grid h-full min-h-0 w-full max-w-3xl">
         <DocMeta snapshot={snapshot} className="mx-auto w-full px-5" />
         <CardContent className="mx-auto w-full h-130">
-          <Screen docText={snapshot.docText} caretPos={snapshot.caretPos} />
+          <Screen
+            docText={snapshot.docText}
+            caretPos={snapshot.caretPos}
+            highlight={screenHighlight}
+          />
         </CardContent>
         <CardFooter className="flex-col items-stretch gap-4">
           <ProgressBars snapshot={snapshot} className="px-1" />
-          <PlaybackControls snapshot={snapshot} actions={actions} />
+          <PlaybackControls
+            snapshot={snapshot}
+            actions={actions}
+            onClearHighlight={() => setScreenHighlight(null)}
+          />
         </CardFooter>
       </Card>
       <StatsPanel
         docStats={docStats}
         sessionStats={sessionStats}
         integrityStats={integrityStats}
+        sessions={snapshot.sessions}
+        actions={actions}
+        onGapHighlight={setScreenHighlight}
       />
     </div>
   );
