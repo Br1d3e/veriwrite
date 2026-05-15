@@ -1,7 +1,7 @@
 import { Fragment } from "react";
 import { MetricBox } from "@/components/MetricBox";
-import { BarChartCard } from "./BarChartCard";
-import { CircleQuestionMark } from "lucide-react";
+import BarChartCard from "./BarChartCard";
+import MetricTooltip from "./MetricTooltip";
 import {
   Card,
   CardContent,
@@ -9,11 +9,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Tooltip,
-  TooltipTrigger,
-  TooltipContent,
-} from "@/components/ui/tooltip";
 import StatsHeading from "./StatsHeading";
 import { formatDuration, formatTime, formatDateLabel } from "@/lib/utils";
 
@@ -425,21 +420,11 @@ export default function DocStatsPanel({
             label="Paste Origin Ratio"
             value={(100 * edit.pasteOriginRatio).toFixed(1) + "%"}
           />
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                aria-label="Paste origin ratio explanation"
-                className="absolute right-3 top-3 text-muted-foreground hover:text-foreground"
-                type="button"
-              >
-                <CircleQuestionMark className="size-4" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent className="text-secondary font-light">
-              Ratio of possibly pasted characters / original characters in the
-              document.
-            </TooltipContent>
-          </Tooltip>
+          <MetricTooltip
+            tooltip={
+              "Ratio of possibly pasted characters / original characters in the document."
+            }
+          />
         </div>
       </div>
       <div className="px-1">

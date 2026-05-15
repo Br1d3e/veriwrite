@@ -20,7 +20,7 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart";
 
-export function BarChartCard({
+export default function BarChartCard({
   title = "",
   desc = "",
   chartData,

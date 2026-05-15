@@ -5,6 +5,9 @@ import { Clipboard } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { formatDuration, formatTime, wordCount } from "@/lib/utils";
+import MetricTooltip from "./MetricTooltip";
+import LineChartCard from "./LineChartCard";
+import { useState } from "react";
 
 function LargeInsertionBadge() {
   return (
@@ -135,12 +138,31 @@ function PasteInsertionCards({
   );
 }
 
+function getFlowGraphData(graph, normalizedGraph) {
+  if (!graph || graph == {} || !graph?.x || !graph?.y) return;
+
+  const x = graph.x;
+  const y = graph.y;
+
+  let chartData = [];
+  for (let i = 0; i < x.length; i++) {
+    chartData.push({
+      x: normalizedGraph ? x[i] : x[i] / 60,
+      desktop: y[i],
+      fit: normalizedGraph ? x[i] : undefined,
+    });
+  }
+  return chartData;
+}
+
 export default function SessionStatsPanel({
   sessionStats,
   actions,
   onPasteHighlight,
   className = "",
 }) {
+  const [normalizedGraph, setNormalizedGraph] = useState(false);
+
   if (!sessionStats) {
     return (
       <div
@@ -153,6 +175,15 @@ export default function SessionStatsPanel({
 
   const overview = sessionStats.desc.overview;
   const pasteIns = sessionStats.interpret?.pasteIns || [];
+  const flow = sessionStats.interpret?.flow;
+
+  const graph = flow.graph;
+  let graphChart;
+  if (normalizedGraph) {
+    graphChart = graph.normalized;
+  } else {
+    graphChart = graph.raw;
+  }
 
   return (
     <div className={`grid gap-2 ${className}`}>
@@ -174,6 +205,44 @@ export default function SessionStatsPanel({
         onPasteHighlight={onPasteHighlight}
         className="mt-4"
       />
+
+      <StatsHeading text="Writing Flow" />
+      <div className="relative gap-1">
+        <MetricBox
+          label="Linearity Score"
+          value={`${Math.round(flow.linearity.score)} / 100`}
+        />
+        <MetricTooltip
+          tooltip={`Measures how steadily the document grows from start to finish. 
+            A higher score means the writing process mostly moves forward in order.`}
+        />
+      </div>
+
+      <div className="relative gap-1">
+        <MetricBox
+          label="Smoothness Score"
+          value={`${Math.round(flow.smoothness.score)} / 100`}
+        />
+        <MetricTooltip
+          tooltip={`Measures how even the writing progress is over time. 
+            A higher score means the text develops at a more consistent pace, 
+            `}
+        />
+      </div>
+
+      <div className="gap-3 px-1 my-2">
+        <LineChartCard
+          title={"Writing process"}
+          desc={"Inserted characters over time"}
+          chartData={getFlowGraphData(graphChart, normalizedGraph)}
+          xLabel={normalizedGraph ? "Time" : "Time (min)"}
+          yLabel={normalizedGraph ? "Insertion" : "Insertion (characters)"}
+          normalizedGraph={normalizedGraph}
+          setNormalizedGraph={setNormalizedGraph}
+          chartClassName="h-64 aspect-auto"
+          className="gap-3"
+        />
+      </div>
     </div>
   );
 }
