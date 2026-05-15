@@ -29,6 +29,7 @@ export default function LineChartCard({
   yLabel = "",
   normalizedGraph,
   setNormalizedGraph,
+  scaleDomain = false,
   className = "",
   chartClassName = "",
 }) {
@@ -102,6 +103,13 @@ export default function LineChartCard({
                 dy: 24,
                 angle: -90,
               }}
+              domain={
+                scaleDomain
+                  ? normalizedGraph
+                    ? [0, 1]
+                    : ["dataMin", "dataMax"]
+                  : null
+              }
               tickMargin={8}
             ></YAxis>
             <ChartTooltip

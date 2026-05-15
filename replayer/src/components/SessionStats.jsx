@@ -155,6 +155,23 @@ function getFlowGraphData(graph, normalizedGraph) {
   return chartData;
 }
 
+function getProductSimGraphData(graph) {
+  if (!graph || !graph?.prog || !graph?.sim) return [];
+
+  const x = graph.prog || graph.y;
+  const y = graph.sim || graph.y;
+
+  let chartData = [];
+  for (let i = 0; i < x.length; i++) {
+    chartData.push({
+      x: x[i] * 100,
+      desktop: Math.round(y[i] * 100),
+      fit: undefined,
+    });
+  }
+  return chartData;
+}
+
 export default function SessionStatsPanel({
   sessionStats,
   actions,
@@ -174,16 +191,22 @@ export default function SessionStatsPanel({
   }
 
   const overview = sessionStats.desc.overview;
-  const pasteIns = sessionStats.interpret?.pasteIns || [];
-  const flow = sessionStats.interpret?.flow;
 
-  const graph = flow.graph;
-  let graphChart;
+  const pasteIns = sessionStats.interpret?.pasteIns || [];
+
+  const flow = sessionStats.interpret?.flow;
+  const flowGraph = flow.graph;
+  let flowGraphChart;
   if (normalizedGraph) {
-    graphChart = graph.normalized;
+    flowGraphChart = flowGraph.normalized;
   } else {
-    graphChart = graph.raw;
+    flowGraphChart = flowGraph.raw;
   }
+
+  const revisionIntensity = sessionStats.interpret?.revisionIntensity;
+  const revRatios = revisionIntensity.revRatios;
+  const productProcessSim = revisionIntensity.productProcessSim;
+  const productSimGraph = productProcessSim.graph;
 
   return (
     <div className={`grid gap-2 ${className}`}>
@@ -234,12 +257,50 @@ export default function SessionStatsPanel({
         <LineChartCard
           title={"Writing process"}
           desc={"Inserted characters over time"}
-          chartData={getFlowGraphData(graphChart, normalizedGraph)}
+          chartData={getFlowGraphData(flowGraphChart, normalizedGraph)}
           xLabel={normalizedGraph ? "Time" : "Time (min)"}
           yLabel={normalizedGraph ? "Insertion" : "Insertion (characters)"}
           normalizedGraph={normalizedGraph}
           setNormalizedGraph={setNormalizedGraph}
           chartClassName="h-64 aspect-auto"
+          className="gap-3"
+        />
+      </div>
+
+      <StatsHeading text="Revision Intensity" />
+      <div className="relative gap-1">
+        <MetricBox
+          label={"Revision Ratio"}
+          value={`${(100 * revRatios.total).toFixed(1)}%`}
+        />
+        <MetricTooltip
+          tooltip={`How much of the writing activity is revision rather than forward drafting.
+            `}
+        />
+      </div>
+      <div className="relative gap-1">
+        <MetricBox
+          label={"Delete-insert Ratio"}
+          value={`${(100 * revRatios.delIns).toFixed(1)}%`}
+        />
+        <MetricTooltip
+          tooltip={`How much text was deleted compared with how much text was inserted. 
+            High values suggest heavier editing or rewriting. 
+            `}
+        />
+      </div>
+
+      <div className="gap-3 px-1 my-2">
+        <LineChartCard
+          title={"Product-process similarity"}
+          desc={
+            "How similar the document is at each stage of writing to the final submitted version."
+          }
+          chartData={getProductSimGraphData(productSimGraph)}
+          xLabel={"Progress (%)"}
+          yLabel={"Similarity (%)"}
+          chartClassName="h-64 aspect-auto"
+          scaleDomain={true}
           className="gap-3"
         />
       </div>
