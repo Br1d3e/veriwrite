@@ -12,6 +12,7 @@ export default function Workspace({
   docStats,
   sessionStats,
   integrityStats,
+  onSwitchSession,
 }) {
   const [snapshot, actions] = useReplay(record);
   const [screenHighlight, setScreenHighlight] = useState(null);
@@ -33,6 +34,7 @@ export default function Workspace({
             snapshot={snapshot}
             actions={actions}
             onClearHighlight={() => setScreenHighlight(null)}
+            onSwitchSession={onSwitchSession}
           />
         </CardFooter>
       </Card>

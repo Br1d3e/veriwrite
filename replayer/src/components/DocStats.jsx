@@ -14,6 +14,7 @@ import {
   TooltipTrigger,
   TooltipContent,
 } from "@/components/ui/tooltip";
+import StatsHeading from "./StatsHeading";
 
 function formatTime(ms) {
   const date = new Date(ms);
@@ -22,9 +23,12 @@ function formatTime(ms) {
 
 function formatDuration(ms) {
   const totalMinutes = Math.max(0, Math.floor(ms / 60000));
+  if (totalMinutes < 1) {
+    return `${Math.floor(ms / 1000)}s`;
+  }
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
-  return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}min`;
+  return hours > 0 ? `${hours}h ${minutes}m` : `${minutes} min`;
 }
 
 function formatDateLabel(dateText) {
@@ -62,10 +66,6 @@ function getInsertData(insCharsGraph) {
     });
   }
   return chartData;
-}
-
-function StatsHeading({ text }) {
-  return <h2 className="text-lg font-semibold text-foreground">{text}</h2>;
 }
 
 function ActiveDaysValue({ activeDays }) {

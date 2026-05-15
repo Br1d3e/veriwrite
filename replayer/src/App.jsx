@@ -19,11 +19,21 @@ export default function App() {
   const [integrityStats, setIntegrityStats] = useState(null);
 
   function handleRecordLoaded({ nextRecord, source }) {
+    const sessions = nextRecord?.sessions || nextRecord?.s || [];
+    const firstActiveSession =
+      sessions.find(
+        (session) =>
+          Array.isArray(session?.ev) &&
+          session.ev.some(
+            (event) => (event[2] ?? 0) > 0 || (event[3] ?? "").length > 0,
+          ),
+      ) || null;
+
     setRecord(nextRecord);
     setOnline(source === "server");
     setAppState(states.play);
     setDocStats(calDocStats(nextRecord));
-    setSessionStats(calSession(nextRecord));
+    setSessionStats(calSession(firstActiveSession));
   }
 
   return (
@@ -38,6 +48,9 @@ export default function App() {
               docStats={docStats}
               sessionStats={sessionStats}
               integrityStats={integrityStats}
+              onSwitchSession={(session) =>
+                setSessionStats(calSession(session))
+              }
             />
           }
         </TooltipProvider>

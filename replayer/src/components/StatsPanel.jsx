@@ -2,6 +2,7 @@ import { memo } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import DocStatsPanel from "@/components/DocStats";
+import SessionStatsPanel from "@/components/SessionStats";
 
 function StatsPanel({
   docStats,
@@ -33,8 +34,9 @@ function StatsPanel({
               onGapHighlight={onGapHighlight}
             />
           </TabsContent>
-          <TabsContent value="session"></TabsContent>
-
+          <TabsContent value="session">
+            <SessionStatsPanel sessionStats={sessionStats} />
+          </TabsContent>
           <TabsContent value="integrity"></TabsContent>
         </ScrollArea>
       </Tabs>

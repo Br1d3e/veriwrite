@@ -108,7 +108,12 @@ function SpeedSlider({ snapshot, actions, className = "" }) {
   );
 }
 
-function SessionButtons({ snapshot, actions, className = "" }) {
+function SessionButtons({
+  snapshot,
+  actions,
+  onSwitchSession,
+  className = "",
+}) {
   const maxVisibleSessions = 3;
   const sessionCount = snapshot.sessions.length;
   const currentSession = snapshot.currentSession ?? 0;
@@ -124,7 +129,7 @@ function SessionButtons({ snapshot, actions, className = "" }) {
 
   function handleSessionJump(event) {
     event.preventDefault();
-    const nextSession = jumpValue;
+    const nextSession = Number(jumpValue);
 
     if (nextSession < 1 || nextSession > sessionCount) {
       setJumpValue(currentSession + 1);
@@ -133,6 +138,7 @@ function SessionButtons({ snapshot, actions, className = "" }) {
     }
 
     actions.seekToSession(nextSession - 1);
+    onSwitchSession?.(snapshot.sessions[nextSession - 1]);
   }
 
   return (
@@ -148,6 +154,9 @@ function SessionButtons({ snapshot, actions, className = "" }) {
                 event.preventDefault();
                 actions.pause();
                 actions.seekPrevSession();
+                onSwitchSession?.(
+                  snapshot.sessions[Math.max(0, currentSession - 1)],
+                );
               }}
             />
           </PaginationItem>
@@ -170,6 +179,7 @@ function SessionButtons({ snapshot, actions, className = "" }) {
                     event.preventDefault();
                     actions.pause();
                     actions.seekToSession(index);
+                    onSwitchSession?.(session);
                   }}
                 >
                   {index + 1}
@@ -191,6 +201,9 @@ function SessionButtons({ snapshot, actions, className = "" }) {
                 event.preventDefault();
                 actions.pause();
                 actions.seekNextSession();
+                onSwitchSession?.(
+                  snapshot.sessions[Math.min(sessionCount - 1, currentSession + 1)],
+                );
               }}
             />
           </PaginationItem>
@@ -222,6 +235,7 @@ export default function PlaybackControls({
   snapshot,
   actions,
   onClearHighlight,
+  onSwitchSession,
   className = "",
 }) {
   return (
@@ -237,6 +251,7 @@ export default function PlaybackControls({
       <SessionButtons
         snapshot={snapshot}
         actions={actions}
+        onSwitchSession={onSwitchSession}
         className="min-w-0 justify-self-center overflow-hidden"
       />
       <SpeedSlider
