@@ -11,7 +11,7 @@ export default function Workspace({
   record,
   docStats,
   sessionStats,
-  integrityStats,
+  online,
   onSwitchSession,
 }) {
   const [snapshot, actions] = useReplay(record);
@@ -41,8 +41,10 @@ export default function Workspace({
       <StatsPanel
         docStats={docStats}
         sessionStats={sessionStats}
-        integrityStats={integrityStats}
-        sessions={snapshot.sessions}
+        record={snapshot.record}
+        evIdx={snapshot.i}
+        currentSession={snapshot.currentSession}
+        online={online}
         actions={actions}
         onGapHighlight={setScreenHighlight}
       />

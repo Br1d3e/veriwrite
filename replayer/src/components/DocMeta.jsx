@@ -13,7 +13,8 @@ export default function DocMeta({ snapshot, className = "" }) {
   const author = record?.m?.author || record?.author || "Unknown author";
   const integrityStatus = record?.status || "UNVERIFIED";
   const sessionNum = currentSession !== null ? currentSession + 1 : "NaN";
-  const sessionTotalNum = record?.sessions?.length || record?.s.length || "NaN";
+  const sessionTotalNum =
+    record?.sessions?.length || record?.s?.length || "NaN";
   const evTotalNum = evTotal !== null ? evTotal : "NaN";
   const evNum = evIdx !== null ? Math.min(evIdx, evTotalNum) : "NaN";
   const metaText = `${author}  ·  Session ${sessionNum}/${sessionTotalNum}  ·  Event ${evNum}/${evTotalNum}`;

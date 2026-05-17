@@ -16,7 +16,6 @@ export default function App() {
   const [appState, setAppState] = useState(states.pick);
   const [docStats, setDocStats] = useState(null);
   const [sessionStats, setSessionStats] = useState(null);
-  const [integrityStats, setIntegrityStats] = useState(null);
 
   function handleRecordLoaded({ nextRecord, source }) {
     const sessions = nextRecord?.sessions || nextRecord?.s || [];
@@ -38,8 +37,8 @@ export default function App() {
             <Workspace
               record={record}
               docStats={docStats}
+              online={online}
               sessionStats={sessionStats}
-              integrityStats={integrityStats}
               onSwitchSession={(session) =>
                 setSessionStats(calSession(session))
               }

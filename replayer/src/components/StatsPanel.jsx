@@ -3,15 +3,19 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import DocStatsPanel from "@/components/DocStats";
 import SessionStatsPanel from "@/components/SessionStats";
+import IntegrityStatsPanel from "@/components/IntegrityStats";
 
 function StatsPanel({
   docStats,
   sessionStats,
-  integrityStats,
-  sessions,
+  record,
   actions,
+  online,
+  evIdx,
+  currentSession,
   onGapHighlight,
 }) {
+  const sessions = record?.sessions || record?.s || [];
   return (
     <aside className="h-full min-h-0 overflow-hidden">
       <Tabs
@@ -41,7 +45,15 @@ function StatsPanel({
               onPasteHighlight={onGapHighlight}
             />
           </TabsContent>
-          <TabsContent value="integrity"></TabsContent>
+          <TabsContent value="integrity">
+            <IntegrityStatsPanel
+              record={record}
+              online={online}
+              evIdx={evIdx}
+              actions={actions}
+              currentSession={currentSession}
+            />
+          </TabsContent>
         </ScrollArea>
       </Tabs>
     </aside>
@@ -52,7 +64,10 @@ export default memo(StatsPanel, (prev, next) => {
   return (
     prev.docStats === next.docStats &&
     prev.sessionStats === next.sessionStats &&
-    prev.integrityStats === next.integrityStats &&
-    prev.sessions === next.sessions
+    prev.record === next.record &&
+    prev.online === next.online &&
+    prev.currentSession === next.currentSession &&
+    prev.actions === next.actions &&
+    prev.evIdx === next.evIdx
   );
 });
