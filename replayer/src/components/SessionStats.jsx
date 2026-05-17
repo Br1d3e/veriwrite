@@ -1,12 +1,19 @@
 import StatsHeading from "./StatsHeading";
 import { MetricBox } from "./MetricBox";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Clipboard } from "lucide-react";
+import { Clipboard, ChevronDownIcon } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { formatDuration, formatTime, wordCount } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import MetricTooltip from "./MetricTooltip";
 import LineChartCard from "./LineChartCard";
+import PieChartCard from "./PieChartCard";
 import { useState } from "react";
 
 function LargeInsertionBadge() {
@@ -155,6 +162,54 @@ function getFlowGraphData(graph, normalizedGraph) {
   return chartData;
 }
 
+function getRevisionPieData(revRatios) {
+  if (!revRatios) return [];
+
+  const replace = revRatios.replace;
+  const pureDel = revRatios.pureDel;
+  const btIns = revRatios.btIns;
+
+  return [
+    {
+      name: "Replacement",
+      value: replace * 100,
+      fill: "var(--color-replace)",
+    },
+    {
+      name: "Pure Deletion",
+      value: pureDel * 100,
+      fill: "var(--color-pureDel)",
+    },
+    {
+      name: "Backtrack Insertion",
+      value: btIns * 100,
+      fill: "var(--color-btIns)",
+    },
+  ];
+}
+
+function getRevisionPieConfig(revRatios) {
+  if (!revRatios) return {};
+
+  return {
+    desktop: {
+      label: "Ratios",
+    },
+    replace: {
+      label: "Replacement",
+      color: "#9BBFE0",
+    },
+    pureDel: {
+      label: "Pure Deletion",
+      color: "#E8A09A",
+    },
+    btIns: {
+      label: "Backtrack Insertion",
+      color: "#FBE29F",
+    },
+  };
+}
+
 function getProductSimGraphData(graph) {
   if (!graph || !graph?.prog || !graph?.sim) return [];
 
@@ -288,6 +343,26 @@ export default function SessionStatsPanel({
             High values suggest heavier editing or rewriting. 
             `}
         />
+      </div>
+      <div>
+        <Collapsible className="rounded-md">
+          <CollapsibleTrigger asChild>
+            <Button variant="ghost" className="group gap-1">
+              Show details
+              <ChevronDownIcon className="ml-auto group-data-[state=open]:rotate-180" />
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <PieChartCard
+              title="Revision Types"
+              desc=""
+              chartConfig={getRevisionPieConfig(revRatios)}
+              chartData={getRevisionPieData(revRatios)}
+              chartClassName="h-48 aspect-auto"
+              className="gap-3 my-2 mx-1"
+            />
+          </CollapsibleContent>
+        </Collapsible>
       </div>
 
       <div className="gap-3 px-1 my-2">
