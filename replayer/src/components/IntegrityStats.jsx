@@ -23,20 +23,23 @@ function getSessionIntegrityDisplay(session) {
   if (!session || session.status == null) {
     return {
       badge: <BadgeUnverified />,
-      description: "Server integrity status is unavailable.",
+      description: `VeriWrite cannot confirm this session with server records. 
+      It may still be a normal recording, but there is not enough proof to verify it.`,
     };
   }
 
   if (session.status === true) {
     return {
       badge: <BadgeVerified />,
-      description: "Server authenticated this session.",
+      description:
+        "VeriWrite has server proof that this session was recorded and saved normally.",
     };
   }
 
   return {
     badge: <BadgeRisk text="Invalid" />,
-    description: "This session is not authorized by the server.",
+    description:
+      "VeriWrite found a problem in this session. Parts of the record may be missing, changed, or inconsistent with the saved proof.",
   };
 }
 
@@ -51,7 +54,8 @@ function getBlockIntegrityDisplay(block) {
   if (status.length === 0) {
     return {
       badge: <BadgeUnverified />,
-      description: "Server integrity status is unavailable.",
+      description:
+        "No server-side verification result is available for this block.",
       freshness: "Unknown",
       hashChain: "Unknown",
       hash: "Unknown",
@@ -60,7 +64,8 @@ function getBlockIntegrityDisplay(block) {
   }
 
   let badge = <BadgeUnverified />;
-  let description = "Server integrity status is unavailable.";
+  let description =
+    "No server-side verification result is available for this block. It may come from a local-only or offline record.";
   let freshness = "Fresh";
   let hashChain = "Valid";
   let hash = "Valid";
@@ -69,28 +74,32 @@ function getBlockIntegrityDisplay(block) {
 
   if (status.includes("INVALID_Q")) {
     badge = <BadgeRisk text="Invalid" />;
-    description = "Block sequence verification failed.";
+    description =
+      "This part appears out of order, or an earlier part of the record may be missing.";
     seq = "Invalid";
   } else if (status.includes("INVALID_HASH_CHAIN")) {
     badge = <BadgeRisk text="Invalid" />;
-    description = "Hash chain verification failed.";
+    description =
+      "This part does not properly connect to the previous part of the record.";
     hashChain = "Invalid";
   } else if (status.includes("INVALID_STATE")) {
     badge = <BadgeRisk text="Invalid" />;
-    description = "Document state verification failed.";
+    description =
+      "The document content does not match the saved proof for this point in the writing process.";
     docState = "Invalid";
   } else if (status.includes("INVALID_COMMITMENT")) {
     badge = <BadgeRisk text="Invalid" />;
-    description = "Block commitment is not verified by server.";
+    description =
+      "The saved record data does not match the proof. It may have been changed or damaged.";
     hash = "Invalid";
   } else if (status.includes("INVALID_FRESHNESS")) {
     badge = <BadgeNeedsReview text="Delayed" />;
     description =
-      "Server did not receive this writing period in the fresh window.";
+      "The timing of this part looks unusual. It may have been uploaded too late or outside the expected recording time.";
     freshness = "Delayed";
   } else if (status.includes("VALID")) {
     badge = <BadgeVerified />;
-    description = "Server authenticated this writing period.";
+    description = "This block passed the available server integrity checks.";
   }
 
   if (block?.freshness_status && block.freshness_status !== "FRESH") {
@@ -214,9 +223,7 @@ export default function IntegrityStatsPanel({
       <Card className="ring-0">
         <CardHeader className="flex-row items-center justify-between gap-3">
           {badge}
-          <span className="text-right text-sm text-muted-foreground">
-            {description}
-          </span>
+          <span className="text-sm text-muted-foreground">{description}</span>
         </CardHeader>
         <Separator />
         <CardContent className="grid gap-1">
@@ -246,7 +253,7 @@ export default function IntegrityStatsPanel({
       <Card className="ring-0">
         <CardHeader className="flex-row items-center justify-between gap-3">
           {blockDisplay.badge}
-          <span className="text-right text-sm text-muted-foreground">
+          <span className="text-sm text-muted-foreground">
             {blockDisplay.description}
           </span>
         </CardHeader>
