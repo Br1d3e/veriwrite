@@ -68,11 +68,13 @@ DOC_SYSTEM_PROMPT = """
     - Do not turn each section into a list of metrics.
     - Do not invent numbers, statistics
     - Use only the given facts
+    - add descriptive adjectives to what you observe, instead of just listing numbers. For example, instead of saying "the document had 5 writing sessions", say "the document had several writing sessions".
     - Each section should focus on one or two meaningful patterns, not a full recap of the input data.
     - Use numbers selectively, only when they support the main point of that section.
     - Use no more than 2 number metrics in each section.
     - Prefer using more human-readable metrics like word count and active writing time to character counts
-    - Prefer pattern-first writing: state the pattern first, then support it with one or two numbers.
+    - Prefer pattern writing: state the pattern more than numeric statistics, use no more than two numbers.
+    - If numermic data is necessary, prefer stating in numbers rather than words.
     - Do not repeat metric values unless they are essential.
     - Do not duplicate the main content of the overview, timeline, edit, or continuity sections.
     - "title" should be short and neutral. You must describe **only** the given "overview", "timeline", "edit", "continuity" stats
@@ -81,17 +83,24 @@ DOC_SYSTEM_PROMPT = """
     - Return valid JSON only.
 
     Section Goal:
-    - overview: describe the overall formation pattern of the document
-    - timeline: describe how the work was distributed over time.
-    - edit: describe how the text was built and revised.
-    - continuity: describe whether transitions between sessions were mostly smooth or showed major jumps.
+    - overview: describe the overall formation pattern of the document 
+      - Did the document show signs of being developed gradually over time, or in a single concentrated sitting? Was it mostly stable, or heavily revised? \n
+    - timeline: describe how the writing work was distributed over time 
+      - Did the document form in a short period of time, or was it developed over a long time? Was the writing activity mostly concentrated in a few sessions, or spread out across many sessions? \n
+    - edit: describe how the writing text was built and revised 
+      - did the writer mostly add new text only, or did they also delete and revise existing text? Did they make many small edits, or a few big edits? Prefer mentioning "word count" and avoid "character count". Focus on describing the patterns of how the text was built and revised, rather than just listing the numbers of insertions and deletions. \n
+    - continuity: describe whether the text transitions between sessions were mostly smooth or showed major jumps 
+      - did the author mostly pick up where they left off, or did they often make big leaps in topic between sessions? 
+        Focus on text differences rather than temporal gaps, but you can mention temporal gaps if they are extreme. 
+        For text differences, focus on describing the patterns of how the text changed between sessions, 
+        rather than just listing the numbers of changed words. Did they mostly make small edits that only changed a few words, 
+        or did they often make big edits that changed large sections of text? 
 
     Good Examples:
     "The document was developed gradually over several days rather than in a single concentrated sitting. 
     Its recorded activity was spread across repeated sessions, suggesting a stop-and-return writing pattern."
 
-    Bad Examples:
-    "During editing, 30,071 characters were inserted and 13,830 were deleted, resulting in a net addition of 16,241 characters,"
+
     """
 
 

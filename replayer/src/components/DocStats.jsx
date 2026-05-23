@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/card";
 import StatsHeading from "./StatsHeading";
 import { formatDuration, formatTime, formatDateLabel } from "@/lib/utils";
+import { DocReport } from "./LLMReports";
 
 function getDurationsData(durationsGraph) {
   const x = durationsGraph.x;
@@ -306,50 +307,6 @@ function GapCards({ gaps, sessions, actions, onGapHighlight, className = "" }) {
               <span className="font-medium">{gapDuration} gap</span>
               <span className="font-medium">{diffDisplay}</span>
             </CardHeader>
-            {/* <CardContent className="grid bg-inherit hover:bg-inherit">
-              {textPatch.length > 0 ? (
-                textPatch.flatMap((patch, patchIndex) => {
-                  const lines = [];
-
-                  for (
-                    let diffIndex = 0;
-                    diffIndex < patch.diffs.length;
-                    diffIndex++
-                  ) {
-                    const [op, text] = patch.diffs[diffIndex];
-                    if (op === 0) continue;
-
-                    const prefix = op === 1 ? "+ " : "- ";
-                    const patchColor =
-                      op === 1 ? "text-green-500" : "text-red-500";
-                    const patchLine = prefix + text;
-                    const remaining = maxChars - charCount;
-                    if (remaining <= 0) break;
-
-                    const patchDisplay =
-                      patchLine.length <= remaining
-                        ? patchLine
-                        : patchLine.slice(0, remaining) + "...";
-                    charCount += patchDisplay.length;
-
-                    lines.push(
-                      <span
-                        className={`${patchColor} text-sm bg-inherit hover:bg-inherit`}
-                        key={`${patchIndex}-${diffIndex}`}
-                      >
-                        {patchDisplay}
-                      </span>,
-                    );
-
-                    if (charCount >= maxChars) break;
-                  }
-
-                  return lines;
-                })
-              ) : (
-                <span>No visible text patch.</span>
-              )}
-            </CardContent> */}
           </Card>
         );
       })}
@@ -371,6 +328,7 @@ export default function DocStatsPanel({
 
   return (
     <div className="grid gap-2">
+      <DocReport docStats={docStats} />
       <StatsHeading text="Timeline" />
       <div className="grid grid-cols-2 gap-2">
         <MetricBox label={"Session Count"} value={timeline.sessionCount} />
