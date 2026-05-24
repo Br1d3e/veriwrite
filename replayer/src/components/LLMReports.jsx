@@ -9,6 +9,7 @@ export async function handleReport(
   setStatus,
   setError,
   setResult,
+  onDone,
 ) {
   try {
     setStatus("generating");
@@ -26,6 +27,7 @@ export async function handleReport(
       throw new Error(data?.detail || `HTTP ${res.status}`);
     }
     setResult(data);
+    onDone?.();
     setStatus("done");
   } catch (err) {
     setError(err.message || "Failed to generate report.");
@@ -55,4 +57,13 @@ export function storeDocReportById(docId, report) {
 
 export function getDocReportById(docId) {
   return docReports[docId];
+}
+
+let sessionReports = {};
+export function storeSessionReportById(sid, report) {
+  sessionReports[sid] = report;
+}
+
+export function getSessionReportById(sid) {
+  return sessionReports[sid];
 }

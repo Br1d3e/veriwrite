@@ -15,6 +15,7 @@ import MetricTooltip from "./MetricTooltip";
 import LineChartCard from "./LineChartCard";
 import PieChartCard from "./PieChartCard";
 import { memo, useState } from "react";
+import SessionReport from "./SessionReport";
 
 function LargeInsertionBadge() {
   return (
@@ -228,6 +229,7 @@ function getProductSimGraphData(graph) {
 }
 
 function SessionStatsPanel({
+  sid,
   sessionStats,
   actions,
   onPasteHighlight,
@@ -265,6 +267,7 @@ function SessionStatsPanel({
 
   return (
     <div className={`grid gap-2 ${className}`}>
+      <SessionReport sessionStats={sessionStats} sid={sid} />
       <StatsHeading text="Overview" />
       <div className="grid grid-cols-2 gap-2">
         <MetricBox
