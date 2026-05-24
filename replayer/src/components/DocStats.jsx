@@ -326,6 +326,8 @@ export default function DocStatsPanel({
   const durationsGraph = timeline.durationsGraph;
   const insCharsGraph = edit.insCharsGraph;
 
+  console.log(continuity.offlineTextRatio);
+
   return (
     <div className="grid gap-2">
       <DocReport docStats={docStats} />
@@ -398,6 +400,17 @@ export default function DocStatsPanel({
       </div>
       <br />
       <StatsHeading text="Continuity" />
+      <div className="relative">
+        <MetricBox
+          label="Offline Text Ratio"
+          value={(100 * continuity.offlineTextRatio[0]).toFixed(1) + "%"}
+        />
+        <MetricTooltip
+          tooltip={
+            "Ratio of offline or unrecorded characters / recorded characters in the document."
+          }
+        />
+      </div>
       <GapCards
         gaps={continuity.gaps}
         sessions={sessions}
