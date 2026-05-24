@@ -1,4 +1,4 @@
-import { Fragment } from "react";
+import { Fragment, memo } from "react";
 import { MetricBox } from "@/components/MetricBox";
 import BarChartCard from "./BarChartCard";
 import MetricTooltip from "./MetricTooltip";
@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/card";
 import StatsHeading from "./StatsHeading";
 import { formatDuration, formatTime, formatDateLabel } from "@/lib/utils";
-import { DocReport } from "./LLMReports";
+import DocReport from "./DocReport";
 
 function getDurationsData(durationsGraph) {
   const x = durationsGraph.x;
@@ -314,10 +314,11 @@ function GapCards({ gaps, sessions, actions, onGapHighlight, className = "" }) {
   );
 }
 
-export default function DocStatsPanel({
+function DocStatsPanel({
   docStats,
   sessions,
   actions,
+  docId,
   onGapHighlight,
 }) {
   if (!docStats) return null;
@@ -326,11 +327,9 @@ export default function DocStatsPanel({
   const durationsGraph = timeline.durationsGraph;
   const insCharsGraph = edit.insCharsGraph;
 
-  console.log(continuity.offlineTextRatio);
-
   return (
     <div className="grid gap-2">
-      <DocReport docStats={docStats} />
+      <DocReport docStats={docStats} docId={docId} />
       <StatsHeading text="Timeline" />
       <div className="grid grid-cols-2 gap-2">
         <MetricBox label={"Session Count"} value={timeline.sessionCount} />
@@ -403,7 +402,7 @@ export default function DocStatsPanel({
       <div className="relative">
         <MetricBox
           label="Offline Text Ratio"
-          value={(100 * continuity.offlineTextRatio[0]).toFixed(1) + "%"}
+          value={(100 * continuity.offlineTextRatio).toFixed(1) + "%"}
         />
         <MetricTooltip
           tooltip={
@@ -420,3 +419,13 @@ export default function DocStatsPanel({
     </div>
   );
 }
+
+export default memo(DocStatsPanel, (prev, next) => {
+  return (
+    prev.docStats === next.docStats &&
+    prev.sessions === next.sessions &&
+    prev.actions === next.actions &&
+    prev.docId === next.docId &&
+    prev.onGapHighlight === next.onGapHighlight
+  );
+});

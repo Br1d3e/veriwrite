@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   step,
   seekToSession,
@@ -79,48 +79,51 @@ export default function useReplay(record) {
     });
   }
 
-  const actions = {
-    play: () => {
-      setSnapshot((prev) => ({
-        ...prev,
-        playing: true,
-        lastFrameTs: performance.now(),
-      }));
-    },
-    pause: () => {
-      setSnapshot((prev) => ({
-        ...prev,
-        playing: false,
-      }));
-    },
-    resetStatus: (prev) => {
-      setSnapshot(resetStatus(prev));
-    },
-    setSpeed: (newSpeed) => {
-      setSnapshot((prev) =>
-        prev.speed === newSpeed
-          ? prev
-          : {
-              ...prev,
-              speed: newSpeed,
-            },
-      );
-    },
-    seekToSession: (sid) => {
-      setSnapshot((prev) => seekToSession(prev, sid));
-    },
-    seekNextSession: () => {
-      setSnapshot((prev) => seekNextSession(prev));
-    },
-    seekPrevSession: () => {
-      setSnapshot((prev) => seekPrevSession(prev));
-    },
-    seekToEvent: (eventIdx) => {
-      setSnapshot((prev) => seekToEvent(eventIdx, prev));
-    },
-    seekLastEvent: () => {
-      setSnapshot((prev) => seekLastEvent(prev));
-    },
-  };
+  const actions = useMemo(
+    () => ({
+      play: () => {
+        setSnapshot((prev) => ({
+          ...prev,
+          playing: true,
+          lastFrameTs: performance.now(),
+        }));
+      },
+      pause: () => {
+        setSnapshot((prev) => ({
+          ...prev,
+          playing: false,
+        }));
+      },
+      resetStatus: (prev) => {
+        setSnapshot(resetStatus(prev));
+      },
+      setSpeed: (newSpeed) => {
+        setSnapshot((prev) =>
+          prev.speed === newSpeed
+            ? prev
+            : {
+                ...prev,
+                speed: newSpeed,
+              },
+        );
+      },
+      seekToSession: (sid) => {
+        setSnapshot((prev) => seekToSession(prev, sid));
+      },
+      seekNextSession: () => {
+        setSnapshot((prev) => seekNextSession(prev));
+      },
+      seekPrevSession: () => {
+        setSnapshot((prev) => seekPrevSession(prev));
+      },
+      seekToEvent: (eventIdx) => {
+        setSnapshot((prev) => seekToEvent(eventIdx, prev));
+      },
+      seekLastEvent: () => {
+        setSnapshot((prev) => seekLastEvent(prev));
+      },
+    }),
+    [],
+  );
   return [snapshot, actions];
 }

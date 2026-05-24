@@ -36,6 +36,7 @@ function StatsPanel({
               sessions={sessions}
               actions={actions}
               onGapHighlight={onGapHighlight}
+              docId={record.m?.docId || record.m?.d_id || record.m?.dId}
             />
           </TabsContent>
           <TabsContent value="session">

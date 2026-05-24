@@ -14,7 +14,7 @@ import {
 import MetricTooltip from "./MetricTooltip";
 import LineChartCard from "./LineChartCard";
 import PieChartCard from "./PieChartCard";
-import { useState } from "react";
+import { memo, useState } from "react";
 
 function LargeInsertionBadge() {
   return (
@@ -227,7 +227,7 @@ function getProductSimGraphData(graph) {
   return chartData;
 }
 
-export default function SessionStatsPanel({
+function SessionStatsPanel({
   sessionStats,
   actions,
   onPasteHighlight,
@@ -382,3 +382,11 @@ export default function SessionStatsPanel({
     </div>
   );
 }
+
+export default memo(SessionStatsPanel, (prev, next) => {
+  return (
+    prev.sessionStats === next.sessionStats &&
+    prev.actions === next.actions &&
+    prev.onPasteHighlight === next.onPasteHighlight
+  );
+});
