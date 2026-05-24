@@ -27,6 +27,14 @@ export default function App() {
     setSessionStats(calSession(sessions.length > 0 ? sessions[0] : null));
   }
 
+  function onReturn() {
+    setAppState(states.pick);
+    setRecord(null);
+    setDocStats(null);
+    setSessionStats(null);
+    setOnline(false);
+  }
+
   return (
     <main className="bg-slate-50 text-slate-950">
       {appState === states.pick ? (
@@ -42,6 +50,7 @@ export default function App() {
               onSwitchSession={(session) =>
                 setSessionStats(calSession(session))
               }
+              onReturn={onReturn}
             />
           }
         </TooltipProvider>

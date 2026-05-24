@@ -17,7 +17,7 @@ function StatsPanel({
 }) {
   const sessions = record?.sessions || record?.s || [];
   return (
-    <aside className="h-full min-h-0 overflow-hidden">
+    <aside className="h-full min-h-0 overflow-hidden shadow-xl">
       <Tabs
         defaultValue="doc"
         className="flex h-full min-h-0 w-full flex-col bg-background"

@@ -21,7 +21,7 @@ export default function DocMeta({ snapshot, className = "" }) {
 
   return (
     <section className={`${className}`}>
-      <CardTitle className="grid w-full grid-cols-[minmax(0,1fr)_9.5rem_1rem] items-center gap-4 text-accent-foreground font-sans">
+      <div className="grid w-full grid-cols-[minmax(0,1fr)_9.5rem_1rem] items-center gap-4 text-accent-foreground font-sans">
         <span className="min-w-0 space-y-1">
           <span className="block truncate font-semibold text-xl">{title}</span>
           <span className="block overflow-hidden whitespace-nowrap text-xs leading-5 text-muted-foreground">
@@ -37,7 +37,7 @@ export default function DocMeta({ snapshot, className = "" }) {
             trigger={<IntegrityBadge status={integrityStatus} />}
           />
         </span>
-      </CardTitle>
+      </div>
     </section>
   );
 }

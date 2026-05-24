@@ -79,6 +79,7 @@ DOC_SYSTEM_PROMPT = """
     - Do not duplicate the main content of the overview, timeline, edit, or continuity sections.
     - "title" should be short and neutral. You must describe **only** the given "overview", "timeline", "edit", "continuity" stats
     - "observation" should be 2~4 sentences
+    - Name the "user" as "the student" in the report, and refer to the document as "the text" or "the writing".
     - Use plain, concrete English.
     - Return valid JSON only.
 
