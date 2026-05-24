@@ -140,3 +140,9 @@ body {
     @apply font-sans;
   }
 }
+
+@keyframes blink {
+  30% {
+    opacity: 0;
+  }
+}

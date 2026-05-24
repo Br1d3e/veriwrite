@@ -6,14 +6,18 @@ export default function Screen({
   caretPos = 0,
   highlight = null,
 }) {
-  const highlightRef = useRef(null);
   caretPos = Math.min(Math.max(caretPos, 0), docText.length);
+
+  // session gaps highlight
+  const highlightRef = useRef(null);
   const highlightParts = Array.isArray(highlight?.parts)
     ? [...highlight.parts].sort(
         (a, b) => (a.start ?? a.pos ?? 0) - (b.start ?? b.pos ?? 0),
       )
     : [];
   const shouldRenderParts = highlightParts.length > 0;
+
+  // paste insertion highlight
   const highlightStart =
     highlight && typeof highlight.start === "number"
       ? Math.min(Math.max(highlight.start, 0), docText.length)
@@ -92,7 +96,7 @@ export default function Screen({
     }
 
     return (
-      <ScrollArea className="flex w-full h-full justify-center items-center border border-border rounded-2xl whitespace-pre-wrap overflow-auto font-sans p-5 leading-loose space-y-2">
+      <ScrollArea className="flex w-full h-full justify-center items-center whitespace-pre-wrap overflow-auto font-sans p-2 leading-loose space-y-2">
         <article>{nodes}</article>
       </ScrollArea>
     );
@@ -100,7 +104,7 @@ export default function Screen({
 
   if (shouldRenderHighlight) {
     return (
-      <ScrollArea className="flex w-full h-full justify-center items-center border border-border rounded-2xl whitespace-pre-wrap overflow-auto font-sans p-5 leading-loose space-y-2">
+      <ScrollArea className="flex w-full h-full justify-center items-center whitespace-pre-wrap overflow-auto font-sans p-2 leading-loose space-y-2">
         <article>
           {docText.slice(0, highlightStart)}
           <mark
@@ -120,10 +124,12 @@ export default function Screen({
   }
 
   return (
-    <ScrollArea className="flex w-full h-full justify-center items-center border border-border rounded-2xl whitespace-pre-wrap overflow-auto font-sans p-5 leading-loose space-y-2">
-      <article>{docText.slice(0, caretPos)}</article>
-      <span className="inline-block w-0 h-3 m-0 p-0 align-text-bottom animate-pulse"></span>
-      <article>{docText.slice(caretPos)}</article>
+    <ScrollArea className="flex w-full h-full justify-center items-center whitespace-pre-wrap overflow-auto font-sans p-2 leading-loose space-y-2">
+      <article>
+        {docText.slice(0, caretPos)}
+        <span className="inline-block h-5 border-l border-foreground align-text-bottom animate-[blink_1s_linear_infinite]" />
+        {docText.slice(caretPos)}
+      </article>
     </ScrollArea>
   );
 }

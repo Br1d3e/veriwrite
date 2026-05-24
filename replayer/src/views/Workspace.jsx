@@ -1,17 +1,28 @@
 import { useState } from "react";
-import Screen from "@/components/Screen";
-import DocMeta from "@/components/DocMeta";
-import PlaybackControls from "@/components/PlaybackControls";
-import ProgressBars from "@/components/ProgressBars";
-import { Card, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import useReplay from "@/hooks/useReplay";
 import StatsPanel from "@/components/StatsPanel";
-import { Undo2 } from "lucide-react";
+import { ChevronLeftIcon } from "lucide-react";
 import {
-  Tooltip,
-  TooltipTrigger,
-  TooltipContent,
-} from "@/components/ui/tooltip";
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "@/components/ui/resizable";
+import ReplayCard from "@/components/ReplayCard";
+
+function StatsRail({ onShow }) {
+  return (
+    <aside className="relative h-full min-h-0">
+      <button
+        aria-label="Show stats panel"
+        className="absolute left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+        onClick={onShow}
+        type="button"
+      >
+        <ChevronLeftIcon className="size-5" />
+      </button>
+    </aside>
+  );
+}
 
 export default function Workspace({
   record,
@@ -23,51 +34,57 @@ export default function Workspace({
 }) {
   const [snapshot, actions] = useReplay(record);
   const [screenHighlight, setScreenHighlight] = useState(null);
+  const [view, setView] = useState("split");
 
-  return (
-    <div className="grid h-screen min-h-0 max-h-10/12 grid-cols-[minmax(0,1fr)_minmax(0,0.5fr)] gap-8 overflow-hidden p-2">
-      <Card className="mx-auto grid h-full min-h-0 w-full max-w-3xl border-0 ring-0 shadow-xl">
-        <CardTitle>
-          <Tooltip delayDuration={1000}>
-            <TooltipTrigger asChild>
-              <Undo2
-                className="mr-5 size-4 text-muted-foreground justify-self-end cursor-pointer hover:text-accent-foreground"
-                onClick={onReturn}
-              />
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Load another record</p>
-            </TooltipContent>
-          </Tooltip>
-          <DocMeta snapshot={snapshot} className="mx-auto w-full px-5" />
-        </CardTitle>
-        <CardContent className="mx-auto w-full h-130">
-          <Screen
-            docText={snapshot.docText}
-            caretPos={snapshot.caretPos}
-            highlight={screenHighlight}
-          />
-        </CardContent>
-        <CardFooter className="flex-col items-stretch gap-4">
-          <ProgressBars snapshot={snapshot} className="px-1" />
-          <PlaybackControls
-            snapshot={snapshot}
-            actions={actions}
-            onClearHighlight={() => setScreenHighlight(null)}
-            onSwitchSession={onSwitchSession}
-          />
-        </CardFooter>
-      </Card>
-      <StatsPanel
-        docStats={docStats}
-        sessionStats={sessionStats}
-        record={snapshot.record}
-        evIdx={snapshot.i}
-        currentSession={snapshot.currentSession}
-        online={online}
-        actions={actions}
-        onGapHighlight={setScreenHighlight}
-      />
-    </div>
-  );
+  if (view === "split") {
+    return (
+      <div className="h-screen min-h-0 max-h-10/12">
+        <ResizablePanelGroup
+          direction="horizontal"
+          className="overflow-hidden p-2"
+        >
+          <ResizablePanel defaultSize={65}>
+            <ReplayCard
+              snapshot={snapshot}
+              actions={actions}
+              onSwitchSession={onSwitchSession}
+              onReturn={onReturn}
+              screenHighlight={screenHighlight}
+              setScreenHighlight={setScreenHighlight}
+              className="min-w-0"
+            />
+          </ResizablePanel>
+          <ResizableHandle withHandle />
+          <ResizablePanel defaultSize={32} minSize={20}>
+            <StatsPanel
+              docStats={docStats}
+              sessionStats={sessionStats}
+              record={snapshot.record}
+              evIdx={snapshot.i}
+              currentSession={snapshot.currentSession}
+              online={online}
+              actions={actions}
+              onGapHighlight={setScreenHighlight}
+              onCollapse={() => setView("focus")}
+            />
+          </ResizablePanel>
+        </ResizablePanelGroup>
+      </div>
+    );
+  } else if (view === "focus") {
+    return (
+      <div className="grid h-screen min-h-0 max-h-10/12 grid-cols-[minmax(0,1fr)_3rem] gap-0 overflow-hidden p-2">
+        <ReplayCard
+          snapshot={snapshot}
+          actions={actions}
+          onSwitchSession={onSwitchSession}
+          onReturn={onReturn}
+          screenHighlight={screenHighlight}
+          setScreenHighlight={setScreenHighlight}
+          className="max-w-5xl min-w-0"
+        />
+        <StatsRail onShow={() => setView("split")} />
+      </div>
+    );
+  }
 }
