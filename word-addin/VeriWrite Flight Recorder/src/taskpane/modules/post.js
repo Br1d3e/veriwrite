@@ -144,13 +144,7 @@ async function deriveSessionKey(clientPrivateKey, serverPublicKeyBytes, saltB64,
     256
   );
 
-  const hkdfKey = await crypto.subtle.importKey(
-    "raw",
-    sharedBits,
-    "HKDF",
-    false,
-    ["deriveBits"]
-  );
+  const hkdfKey = await crypto.subtle.importKey("raw", sharedBits, "HKDF", false, ["deriveBits"]);
 
   const derivedBits = await crypto.subtle.deriveBits(
     {
@@ -163,13 +157,10 @@ async function deriveSessionKey(clientPrivateKey, serverPublicKeyBytes, saltB64,
     256
   );
 
-  return crypto.subtle.importKey(
-    "raw",
-    derivedBits,
-    { name: "AES-GCM" },
-    false,
-    ["encrypt", "decrypt"]
-  );
+  return crypto.subtle.importKey("raw", derivedBits, { name: "AES-GCM" }, false, [
+    "encrypt",
+    "decrypt",
+  ]);
 }
 
 async function encryptText(text, key, additionalData) {
@@ -217,7 +208,9 @@ async function ensureDocSettings() {
 
   if (parsedVersion !== PROTOCOL_VERSION) {
     if (storedVersion) {
-      console.warn(`Migrating VeriWrite protocol setting from v${storedVersion} to v${PROTOCOL_VERSION}`);
+      console.warn(
+        `Migrating VeriWrite protocol setting from v${storedVersion} to v${PROTOCOL_VERSION}`
+      );
     }
     await updateSettings("v", PROTOCOL_VERSION);
   }
@@ -265,21 +258,21 @@ function assertOnlineResponse(response, op) {
 }
 
 export function docReady() {
-    return serverDocReady;
+  return serverDocReady;
 }
 
 export function sessionReady() {
-    return serverDocReady && serverSessionReady;
+  return serverDocReady && serverSessionReady;
 }
 
-export async function startDoc() {
+export async function startDoc(t0Override = null, titleOverride = null, authorOverride = null) {
   resetSessionState();
   serverDocReady = false;
   await ensureDocSettings();
 
-  const title = await getDocTitle();
-  const author = await getDocAuthor();
-  const t0 = Date.now();
+  const title = titleOverride || (await getDocTitle());
+  const author = authorOverride || (await getDocAuthor());
+  const t0 = Number.isFinite(t0Override) ? t0Override : Date.now();
   const path = "/doc/start";
   const body = {
     v,
@@ -287,10 +280,10 @@ export async function startDoc() {
     t0,
     ttl: title,
     a: author,
-  }
+  };
 
   let response = await postJson(path, body);
-  response = await retryPost(response, path, body)
+  response = await retryPost(response, path, body);
   response = assertOnlineResponse(response, "doc/start");
   if (response.status === OFFLINE_STATUS) return response;
   if (response.status !== "SUCCESS") {
@@ -300,7 +293,7 @@ export async function startDoc() {
   return response;
 }
 
-export async function startSession(initTextOverride = null) {
+export async function startSession(initTextOverride = null, delayed = false, overrideT0 = null) {
   if (!docId) {
     await ensureDocSettings();
   }
@@ -310,7 +303,8 @@ export async function startSession(initTextOverride = null) {
 
   resetSessionState();
   sid = generateUUID();
-  st0 = Date.now();
+
+  st0 = overrideT0 || Date.now();
 
   const initText = typeof initTextOverride === "string" ? initTextOverride : await readBodyText();
   const initHash = await sha256Hex(initText);
@@ -326,17 +320,18 @@ export async function startSession(initTextOverride = null) {
     cp: generatedKey.pubKeyB64,
     it: initText,
     ih: initHash,
-  }
+    freshness: delayed ? "DELAYED" : "FRESH",
+  };
 
   let response = await postJson(path, body);
-  response = await retryPost(response, path, body)
+  response = await retryPost(response, path, body);
   response = assertOnlineResponse(response, "session/start");
   if (response.status === OFFLINE_STATUS) return response;
 
   if (response.status && response.status !== "SUCCESS") {
     throw new Error(`Record server rejected session start: ${JSON.stringify(response)}`);
   }
-  
+
   const sKeyInfo = response.s_key;
   const serverPub = base64ToBytes(sKeyInfo.sp);
   const salt = sKeyInfo.salt;
@@ -349,12 +344,17 @@ export async function startSession(initTextOverride = null) {
   return response;
 }
 
-export async function endSession(docText = null) {
+export async function endSession(
+  docText = null,
+  delayed = false,
+  overrideT0 = null,
+  overrideTn = null
+) {
   if (!sid) {
     throw new Error("Cannot end session before startSession()");
   }
 
-  const dt = Date.now() - st0;
+  const dt = overrideTn ? overrideTn - (overrideT0 || st0) : Date.now() - (overrideT0 || st0);
   const endHash = await hashDocText(docText);
   const path = "/session/end";
   const body = {
@@ -363,10 +363,11 @@ export async function endSession(docText = null) {
     sid,
     dt,
     eh: endHash,
+    freshness: delayed ? "DELAYED" : "FRESH",
   };
 
   let response = await postJson(path, body);
-  response = await retryPost(response, path, body)
+  response = await retryPost(response, path, body);
   response = assertOnlineResponse(response, "session/end");
 
   return response;
@@ -393,7 +394,7 @@ export async function getChallenge(challenge) {
     sid: sid,
   };
   let response = await postJson(path, body);
-  response = await retryPost(response, path, body)
+  response = await retryPost(response, path, body);
   response = assertOnlineResponse(response, "session/challenge");
   if (response.status === OFFLINE_STATUS) return response;
 
@@ -444,14 +445,14 @@ export async function postBlock(ev = [], docText = null, delayed = false) {
     ct,
     tag,
     ch,
-  }
+  };
   if (delayed) {
     body.freshness = "DELAYED";
   } else {
     body.freshness = "FRESH";
   }
   let response = await postJson(path, body);
-  response = await retryPost(response, path, body)
+  response = await retryPost(response, path, body);
   response = assertOnlineResponse(response, `session/block ${q}`);
   if (response.status === OFFLINE_STATUS) return response;
 

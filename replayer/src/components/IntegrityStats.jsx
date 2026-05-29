@@ -20,7 +20,12 @@ function formatServerTime(ts) {
 }
 
 function getSessionIntegrityDisplay(session) {
-  if (!session || session.status == null) {
+  if (
+    !session ||
+    session.status === null ||
+    session.status === "UNKNOWN" ||
+    session.status === "UNVERIFIED"
+  ) {
     return {
       badge: <BadgeUnverified />,
       description: `VeriWrite cannot confirm this session with server records. 
@@ -28,7 +33,7 @@ function getSessionIntegrityDisplay(session) {
     };
   }
 
-  if (session.status === true) {
+  if (session.status === "VERIFIED") {
     return {
       badge: <BadgeVerified />,
       description:
@@ -36,11 +41,21 @@ function getSessionIntegrityDisplay(session) {
     };
   }
 
-  return {
-    badge: <BadgeRisk text="Invalid" />,
-    description:
-      "VeriWrite found a problem in this session. Parts of the record may be missing, changed, or inconsistent with the saved proof.",
-  };
+  if (session.status === "RISK") {
+    return {
+      badge: <BadgeRisk />,
+      description:
+        "VeriWrite found a problem in this session. Parts of the record may be missing, changed, or inconsistent with the saved proof.",
+    };
+  }
+
+  if (session.status === "NEEDS_REVIEW") {
+    return {
+      badge: <BadgeNeedsReview />,
+      description:
+        "VeriWrite did not receive this session in a normal time window. It may be sent out of time due to network disconnectivity.",
+    };
+  }
 }
 
 function getBlockStatuses(block) {

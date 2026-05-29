@@ -85,6 +85,13 @@ module.exports = async (env, options) => {
       headers: {
         "Access-Control-Allow-Origin": "*",
       },
+      proxy: [
+        {
+          context: ["/ping", "/doc", "/session"],
+          target: "http://127.0.0.1:8443",
+          changeOrigin: true,
+        },
+      ],
       server: {
         type: "https",
         options: env.WEBPACK_BUILD || options.https !== undefined ? options.https : await getHttpsOptions(),

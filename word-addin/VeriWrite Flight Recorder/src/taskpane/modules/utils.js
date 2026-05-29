@@ -1,4 +1,4 @@
-export const SERVER_URL = "https://localhost:8443";
+export const SERVER_URL = "";
 
 // uuid generator
 export function generateUUID() {

@@ -1,8 +1,17 @@
-
 import { generateUUID, b64Encoder, b64Decoder, computeDiff, isUserOnline } from "./utils";
-import { saveCustomXml, loadSettings, loadRecord, updateSettings} from "./store";
+import { saveCustomXml, loadSettings, loadRecord, updateSettings } from "./store";
 import { getDocTitle, getDocAuthor, readBodyText } from "./docInfo";
-import { startDoc, startSession, endSession, postBlock, hashText, getSessionPostState, getRetryMs, OFFLINE_STATUS, sessionReady } from "./post";
+import {
+  startDoc,
+  startSession,
+  endSession,
+  postBlock,
+  hashText,
+  getSessionPostState,
+  getRetryMs,
+  OFFLINE_STATUS,
+  sessionReady,
+} from "./post";
 
 // Initialize record
 let flightRecord = null;
@@ -29,13 +38,12 @@ let finalReceipt = null;
 let lastError = null;
 let lastRetryMs = 0;
 
-
-export function setOnlineMode(value, auto=false) {
+export function setOnlineMode(value, auto = false) {
   ONLINE = Boolean(value);
   if (auto) {
-    onlineStatus = value ? "ONLINE_AUTO" : "OFFLINE_AUTO"
+    onlineStatus = value ? "ONLINE_AUTO" : "OFFLINE_AUTO";
   } else {
-    onlineStatus = value ? "ONLINE" : "OFFLINE"
+    onlineStatus = value ? "ONLINE" : "OFFLINE";
   }
 }
 
@@ -49,15 +57,15 @@ export function getPostState() {
     sesState,
     blockReceipt,
     finalReceipt,
-    lastError
-  }
+    lastError,
+  };
 }
 
 export function getEvBlock() {
   return {
     timeElapsed: (Date.now() - lastPost) / 1000,
-    evBuffer
-  }
+    evBuffer,
+  };
 }
 
 async function newRecord() {
@@ -68,10 +76,10 @@ async function newRecord() {
       created: Date.now(),
       lastModified: Date.now(),
       title: await getDocTitle(),
-      author: await getDocAuthor()
+      author: await getDocAuthor(),
     },
-    sessions: []
-  }
+    sessions: [],
+  };
   return flightRecord;
 }
 
@@ -85,7 +93,7 @@ async function initializeSession(initTextOverride = null) {
     ev: [],
     fullOnline: false,
     localPh: null,
-    localEh: null
+    localEh: null,
   };
 }
 
@@ -121,7 +129,11 @@ async function syncPendingSessions() {
   const pendingSessions = flightRecord.sessions.filter((s) => s && s.fullOnline !== true);
   if (pendingSessions.length === 0) return;
 
-  const docResponse = await startDoc();
+  const pendingStarts = pendingSessions.map((s) => s.t0).filter(Number.isFinite);
+  const docStart = Math.min(flightRecord.m.created || Date.now(), ...pendingStarts);
+  const titleOverride = flightRecord.m.title === "Untitled" ? null : flightRecord.m.title;
+  const authorOverride = flightRecord.m.author === "Unknown" ? null : flightRecord.m.author;
+  const docResponse = await startDoc(docStart, titleOverride, authorOverride);
   if (isOfflineResponse(docResponse)) {
     switchOffline(docResponse);
     return;
@@ -131,7 +143,12 @@ async function syncPendingSessions() {
   for (const pendingSession of pendingSessions) {
     const initText = pendingSession.init || "";
     const events = Array.isArray(pendingSession.ev) ? pendingSession.ev : [];
-    const sessionResponse = await startSession(initText);
+    const sessionResponse = await startSession(
+      initText,
+      true,
+      pendingSession.t0,
+      pendingSession.tn
+    );
     if (isOfflineResponse(sessionResponse)) {
       switchOffline(sessionResponse);
       break;
@@ -146,7 +163,7 @@ async function syncPendingSessions() {
       }
     }
 
-    const endResponse = await endSession(finalText);
+    const endResponse = await endSession(finalText, true, pendingSession.t0, pendingSession.tn);
     if (isOfflineResponse(endResponse)) {
       switchOffline(endResponse);
       break;
@@ -168,7 +185,7 @@ async function syncPendingSessions() {
   finalReceipt = null;
 }
 
-async function flushBlock(docText, delayed=false) {
+async function flushBlock(docText, delayed = false) {
   if (posting) {
     await posting;
   }
@@ -205,7 +222,7 @@ function failRecording(error) {
 
 function switchOffline(error) {
   setOnlineMode(false, true);
-  pending = true; 
+  pending = true;
   if (error && error.status === OFFLINE_STATUS) {
     lastError = `${error.op || "record server"} unavailable`;
     lastRetryMs = error.retryMs || 0;
@@ -244,16 +261,15 @@ export function getRetryStatus() {
     return {
       retrying: true,
       error: "Retrying record server connection",
-      retryMs
+      retryMs,
     };
   }
   if (lastError && ONLINE === false) {
     return {
       error: lastError,
-      retryMs: lastRetryMs
+      retryMs: lastRetryMs,
     };
-  }
-  else return null;
+  } else return null;
 }
 
 async function poll() {
@@ -285,10 +301,13 @@ async function poll() {
   }
 }
 
-async function captureDiff(pending=false) {
+async function captureDiff(pending = false) {
   const newText = await readBodyText();
   const diff = computeDiff(lastText, newText, lastPoll);
   lastPoll = Date.now();
+  if (session) {
+    session.tn = lastPoll;
+  }
   if (!diff) return newText;
 
   lastText = newText;
@@ -306,73 +325,72 @@ async function updateSessions() {
 }
 
 export async function startRecording() {
-    if (recording) return;
-    // setOnlineMode();
-    failed = false;
-    lastError = null;
-    lastRetryMs = 0;
-    blockReceipt = null;
-    finalReceipt = null;
-    posting = null;
-    pending = false;
-    evBuffer = [];
-    session = null;
+  if (recording) return;
+  // setOnlineMode();
+  failed = false;
+  lastError = null;
+  lastRetryMs = 0;
+  blockReceipt = null;
+  finalReceipt = null;
+  posting = null;
+  pending = false;
+  evBuffer = [];
+  session = null;
 
-    [docId, schema, xmlId] = await loadSettings();
-    const sessionInitText = await readBodyText();
+  [docId, schema, xmlId] = await loadSettings();
+  const sessionInitText = await readBodyText();
 
-    // Load existing record
-    if (xmlId) {
-        flightRecord = await loadRecord(xmlId);
+  // Load existing record
+  if (xmlId) {
+    flightRecord = await loadRecord(xmlId);
+  }
+
+  // No docId, create new document
+  if (!docId || !schema || !flightRecord) {
+    console.log("Record load failed or is new, initializing fresh record...");
+    flightRecord = await newRecord();
+    await updateSettings("docId", flightRecord.m.docId);
+    await updateSettings("v", 2);
+  }
+
+  await checkConnectivity();
+
+  if (ONLINE) {
+    try {
+      await syncPendingSessions();
+    } catch (error) {
+      switchOffline(error);
     }
+  }
 
-    // No docId, create new document
-    if (!docId || !schema || !flightRecord) {
-        console.log("Record load failed or is new, initializing fresh record...");
-        flightRecord = await newRecord();
-        await updateSettings("docId", flightRecord.m.docId);
-        await updateSettings("v", 2);
-    }
-
-    await checkConnectivity();
-
-    if (ONLINE) {
-      try {
-        await syncPendingSessions();
-      } catch (error) {
-        switchOffline(error);
-      }
-    }
-
-    if (ONLINE) {
-      try {
-        docState = await startDoc();
-        if (isOfflineResponse(docState)) {
-          switchOffline(docState);
+  if (ONLINE) {
+    try {
+      docState = await startDoc();
+      if (isOfflineResponse(docState)) {
+        switchOffline(docState);
+      } else {
+        sesState = await startSession(sessionInitText);
+        if (isOfflineResponse(sesState)) {
+          switchOffline(sesState);
         } else {
-          sesState = await startSession(sessionInitText);
-          if (isOfflineResponse(sesState)) {
-            switchOffline(sesState);
-          } else {
-            evBuffer = [];
-            lastPost = Date.now();
-            pending = false;
-          }
+          evBuffer = [];
+          lastPost = Date.now();
+          pending = false;
         }
-      } catch (error) {
-        switchOffline(error);
       }
+    } catch (error) {
+      switchOffline(error);
     }
-    // Start new session
-    await initializeSession(sessionInitText);
-    lastPoll = Date.now();
-    lastText = sessionInitText;
-        
-    recording = true;
+  }
+  // Start new session
+  await initializeSession(sessionInitText);
+  lastPoll = Date.now();
+  lastText = sessionInitText;
 
-    poll();
+  recording = true;
+
+  poll();
 }
-
 
 export async function stopRecording() {
   if (!recording && !session) return;
@@ -399,7 +417,9 @@ export async function stopRecording() {
         const finalHash = await hashText(finalText);
         const { currentDocHash } = getSessionPostState();
         if (currentDocHash !== finalHash) {
-          throw new Error("Final document state changed, but no pending events were captured for the record server.");
+          throw new Error(
+            "Final document state changed, but no pending events were captured for the record server."
+          );
         }
       }
       finalReceipt = await endSession(finalText);

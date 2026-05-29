@@ -39,6 +39,18 @@ INTEGRITY_LEVELS = {
     "RISK": 2,
 }
 
+RISK_REASONS = [
+    "INVALID_BLOCK_H",
+    "INVALID_BLOCK_DSH",
+    "INVALID_BLOCK_Q",
+    "INVALID_BLOCK_CH",
+    "INVALID_BLOCK_N",
+    "INVALID_END_HASH",
+    "INVALID_CONTINUITY",
+    "INVALID_MERKLE_ROOT",
+]
+
+NEEDS_REVIEW_REASONS = ["STALE_BLOCK"]
 
 def worse_integrity_status(prev: str | None, curr: str) -> str:
     prev = prev if prev in INTEGRITY_LEVELS else "UNVERIFIED"
@@ -188,6 +200,16 @@ def gen_challenge(sid: Any | str, freshness_window: int) -> dict[str, Any]:
         "et": expires_ts,
     }
 
+def update_server_ts(cursor, d_id: str, server_ts = now_ms()) -> int:
+    cursor.execute(
+        """
+        UPDATE docs 
+        SET updated_server_ts = %s 
+        WHERE d_id = %s
+        """,
+        (server_ts, d_id),
+    )
+    return server_ts
 
 def start_doc(doc: dict[str, Any]) -> dict[str, Any]:
     d_id = doc.get("dId")
@@ -207,7 +229,7 @@ def start_doc(doc: dict[str, Any]) -> dict[str, Any]:
                 INSERT INTO docs (d_id, v, t0, title, author, created_server_ts, updated_server_ts)
                 VALUES (%s, %s, %s, %s, %s, %s, %s)
                 ON CONFLICT (d_id) DO UPDATE
-                SET t0 = EXCLUDED.t0,
+                SET t0 = LEAST(docs.t0, EXCLUDED.t0),
                     title = EXCLUDED.title,
                     author = EXCLUDED.author,
                     updated_server_ts = EXCLUDED.updated_server_ts
@@ -226,6 +248,7 @@ def start_session(session: dict[str, Any]) -> dict[str, Any]:
         return {"status": "INVALID PROTOCOL", "op": "session/start", "sid": sid}
 
     st0 = session.get("st0")
+    freshness = session.get("freshness", "UNKNOWN")
     
     c_pub = session.get("cp")
     info = {
@@ -275,9 +298,10 @@ def start_session(session: dict[str, Any]) -> dict[str, Any]:
                 """
                 INSERT INTO sessions (
                     d_id, sid, v, st0, session_key_b64, chal_nonce, chal_expire, init_text,
-                    current_text, current_dsh, ih, continuity_status, created_server_ts
+                    current_text, current_dsh, ih, continuity_status, created_server_ts, freshness_status,
+                    session_status, session_status_desc
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """,
                 (
                     d_id,
@@ -293,12 +317,12 @@ def start_session(session: dict[str, Any]) -> dict[str, Any]:
                     init_hash,
                     continuity_status,
                     server_ts,
+                    freshness,
+                    "UNVERIFIED",
+                    Jsonb([]),
                 ),
             )
-            cursor.execute(
-                "UPDATE docs SET updated_server_ts = %s WHERE d_id = %s",
-                (server_ts, d_id),
-            )
+            update_server_ts(cursor, d_id, server_ts)
 
     return {
         "status": "SUCCESS", 
@@ -500,6 +524,21 @@ def append_block(block: dict[str, Any]) -> dict[str, Any]:
 
             valid_block = valid_h and valid_ch and valid_dsh and valid_n and valid_q
 
+            session_status_desc = set(session.get("session_status_desc") or [])
+            if not valid_q:
+                session_status_desc.add("INVALID_BLOCK_Q")
+            if not valid_h:
+                session_status_desc.add("INVALID_BLOCK_H")
+            if not valid_ch:
+                session_status_desc.add("INVALID_BLOCK_CH")
+            if not valid_dsh:
+                session_status_desc.add("INVALID_BLOCK_DSH")
+            if not valid_n:
+                session_status_desc.add("INVALID_BLOCK_N")
+            if freshness_status != "FRESH":
+                session_status_desc.add("STALE_BLOCK")
+            session_status_desc = list(session_status_desc)
+
             session_ev = session["ev"] or []
             if not isinstance(session_ev, list):
                 session_ev = []
@@ -573,11 +612,15 @@ def append_block(block: dict[str, Any]) -> dict[str, Any]:
                     ),
                     ev = %s,
                     current_text = %s,
-                    current_dsh = %s
+                    current_dsh = %s,
+                    session_status_desc = %s,
+                    freshness_status = %s
                 WHERE d_id = %s AND sid = %s
                 """,
-                (d_id, sid, Jsonb(session_ev), next_text, expected_dsh, d_id, sid),
+                (d_id, sid, Jsonb(session_ev), next_text, expected_dsh, Jsonb(session_status_desc), freshness_status, d_id, sid),
             )
+
+            update_server_ts(cursor, d_id, server_ts)
 
             if valid_block:
                 curr_doc_integrity = "VERIFIED"
@@ -610,7 +653,7 @@ def end_session(session_end: dict[str, Any]) -> dict[str, Any]:
     if not verify_protocol(v):
         return {"status": "INVALID PROTOCOL", "op": "session/end", "sid": sid}
 
-    dt = session_end.get("dt")  # ?
+    dt = session_end.get("dt")
     end_hash = session_end.get("eh")
 
     with connect() as conn:
@@ -629,16 +672,26 @@ def end_session(session_end: dict[str, Any]) -> dict[str, Any]:
                 return {"status": "SESSION NOT FOUND", "op": "session/end", "sid": sid}
 
             continuity_status = session["continuity_status"] or "UNKNOWN"
+            freshness_status = session["freshness_status"] or "UNKNOWN"
             valid_continuity = continuity_status == "TRUE"
             valid_end_hash = end_hash == session["current_dsh"]
-            if valid_continuity and valid_end_hash:
-                session_status = "SUCCESS"
-            elif not valid_continuity and not valid_end_hash:
-                session_status = "INVALID CONTINUITY AND END HASH"
+            
+            session_status = "UNVERIFIED"  # one word summary of session validity, priority order
+            session_status_desc = set(session.get("session_status_desc") or [])
+            if not valid_end_hash:
+                session_status_desc.add("INVALID_END_HASH")
             elif not valid_continuity:
-                session_status = "INVALID CONTINUITY STATUS"
+                session_status_desc.add("INVALID_CONTINUITY")
+            elif freshness_status != "FRESH":
+                session_status_desc.add("STALE_BLOCK")
+            
+            if any([desc in RISK_REASONS for desc in session_status_desc]):
+                session_status = "RISK"
+            elif any([desc in NEEDS_REVIEW_REASONS for desc in session_status_desc]):
+                session_status = "NEEDS_REVIEW"
             else:
-                session_status = "INVALID END HASH"
+                session_status = "VERIFIED"
+
 
             init_hash = session["ih"]
             closed_server_ts = now_ms()
@@ -669,6 +722,7 @@ def end_session(session_end: dict[str, Any]) -> dict[str, Any]:
                 "valid_continuity": valid_continuity,
                 "valid_end_hash": valid_end_hash,
                 "session_status": session_status,
+                "freshness_status": freshness_status,
                 "last_ch": last_block_hash,
                 "merkle_root": merkle_root,
                 "block_count": len(block_hashes),
@@ -682,7 +736,9 @@ def end_session(session_end: dict[str, Any]) -> dict[str, Any]:
                     dt = %s,
                     merkle_root = %s,
                     final_receipt = %s,
-                    closed_server_ts = %s
+                    closed_server_ts = %s,
+                    session_status = %s,
+                    session_status_desc = %s
                 WHERE d_id = %s AND sid = %s
                 """,
                 (end_hash, 
@@ -690,15 +746,19 @@ def end_session(session_end: dict[str, Any]) -> dict[str, Any]:
                  merkle_root,
                  Jsonb(final_receipt), 
                  closed_server_ts, 
+                 session_status,
+                 Jsonb(list(session_status_desc)),
                  d_id, 
                  sid)
             )
+
+            update_server_ts(cursor, d_id)
             
-            if valid_continuity and valid_end_hash:
+            if valid_continuity and valid_end_hash and freshness_status == "FRESH":
                 curr_doc_integrity = "VERIFIED"
             elif not valid_end_hash:
                 curr_doc_integrity = "RISK"
-            else:
+            elif freshness_status != "FRESH":
                 curr_doc_integrity = "NEEDS_REVIEW"
             update_doc_integrity_status(cursor, d_id, curr_doc_integrity)
 
