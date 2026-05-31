@@ -8,5 +8,11 @@
         }
       }
     ],
+    [
+      "@babel/preset-react",
+      {
+        "runtime": "automatic"
+      }
+    ]
   ]
 }
