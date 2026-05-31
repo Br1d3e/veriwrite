@@ -7,6 +7,7 @@ import {
   Text,
   Title3,
   MessageBar,
+  Switch,
 } from "@fluentui/react-components";
 import {
   ArrowDownloadRegular,
@@ -25,6 +26,7 @@ import {
   startRecording,
   stopRecording,
 } from "./modules/recorder";
+import { loadSettingById, updateSettings } from "./modules/store";
 import { useInterval } from "./hooks/useInterval";
 import { useTimeout } from "./hooks/useTimeout";
 
@@ -69,6 +71,8 @@ export default function App() {
   const [online, setOnline] = useState(true);
   const [statusMessage, setStatusMessage] = useState("");
   const [retryMessage, setRetryMessage] = useState("");
+  const [autoRecord, setAutoRecord] = useState(false);
+  const [recordedOnce, setRecordedOnce] = useState(false);
   const lastOnlineRef = useRef(null);
   const lastRetryRef = useRef("");
 
@@ -84,6 +88,7 @@ export default function App() {
         lastOnlineRef.current = nextOnline;
         setOnline(nextOnline);
       });
+      handleAutoStartDefault();
     });
   }, []);
 
@@ -112,12 +117,6 @@ export default function App() {
     }
   }, 1000);
 
-  // useEffect(() => {
-  //   if (!statusMessage) return undefined;
-  //   const timeout = setTimeout(() => setStatusMessage(""), AUTO_MESSAGE_MS);
-  //   return () => clearTimeout(timeout);
-  // }, [statusMessage]);
-
   useTimeout(
     () => {
       setStatusMessage("");
@@ -131,6 +130,40 @@ export default function App() {
     },
     retryMessage ? AUTO_MESSAGE_MS : null
   );
+
+  useEffect(() => {
+    if (!isWord || !autoRecord || recording || recordedOnce) return;
+
+    startRecording().then(() => {
+      setRecording(true);
+      setStatusMessage("Recording started automatically.");
+      setRecordedOnce(true);
+    });
+  }, [isWord, autoRecord, recording]);
+
+  async function handleAutoStartDefault() {
+    try {
+      const autoRecordSetting = await loadSettingById("autoRec");
+      const nextAutoRecord = autoRecordSetting === true || autoRecordSetting === "true";
+      setAutoRecord(nextAutoRecord);
+      return nextAutoRecord;
+    } catch (err) {
+      setStatusMessage(`Load user profile failed. ${err}`);
+      setAutoRecord(false);
+      return false;
+    }
+  }
+
+  async function handleAutoStartChange(_, data) {
+    const value = data.checked;
+    setAutoRecord(value);
+    if (!value) {
+      setRecordedOnce(false);
+    }
+    await updateSettings("autoRec", value).catch((err) => {
+      setStatusMessage(`Save user profile failed. ${err}`);
+    });
+  }
 
   async function handleStart() {
     await startRecording();
@@ -244,6 +277,14 @@ export default function App() {
                 </div>
               )}
             </section>
+
+            <Divider />
+
+            <Switch
+              label="Auto-start Recording"
+              checked={autoRecord}
+              onChange={handleAutoStartChange}
+            ></Switch>
 
             {(statusMessage || retryMessage) && (
               <div className="rounded-md bg-slate-10 px-1 py-1">

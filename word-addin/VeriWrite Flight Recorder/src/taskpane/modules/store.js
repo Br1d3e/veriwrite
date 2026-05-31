@@ -2,25 +2,24 @@
 
 import { generateUUID, b64Encoder, b64Decoder } from "./utils.js";
 
-
 let xmlId = null;
 
 /** Saves flightRecord.json at Word's CustomXmlPart Interface
- * 
+ *
  * @param {object} record - The flightRecord file
  * @returns {string} xmlId
  */
 export async function saveCustomXml(record) {
   const json = JSON.stringify(record);
-  const b64 = b64Encoder(json);   // Encode with base64
+  const b64 = b64Encoder(json); // Encode with base64
   const xml = `<vw xmlns="urn:veriwrite:v2"><b64>${b64}</b64></vw>`;
   try {
-    return await(Word.run(async (context) => {
+    return await Word.run(async (context) => {
       const settings = context.document.settings;
       await context.sync();
-      
+
       // Replace original xml part
-      const existingId = settings.getItemOrNullObject('xmlId');  // item
+      const existingId = settings.getItemOrNullObject("xmlId"); // item
       existingId.load("value");
       await context.sync();
       if (!existingId.isNullObject) {
@@ -33,10 +32,10 @@ export async function saveCustomXml(record) {
       settings.add("xmlId", recordXml.id);
       await context.sync();
 
-      return recordXml.id;    // xmlId
-    }))
-  } catch(err) {
-    console.log("Error saving custom xml: ", err)
+      return recordXml.id; // xmlId
+    });
+  } catch (err) {
+    console.log("Error saving custom xml: ", err);
     throw err;
   }
 }
@@ -46,16 +45,16 @@ export async function loadSettings() {
   try {
     return await Word.run(async (context) => {
       const settings = context.document.settings;
-      await context.sync()
-      const docIdItem = settings.getItemOrNullObject('docId');
-      const schemaItem = settings.getItemOrNullObject('v');
-      const xmlIdItem = settings.getItemOrNullObject('xmlId');
+      await context.sync();
+      const docIdItem = settings.getItemOrNullObject("docId");
+      const schemaItem = settings.getItemOrNullObject("v");
+      const xmlIdItem = settings.getItemOrNullObject("xmlId");
 
       // Load Items
       docIdItem.load("value");
       schemaItem.load("value");
       xmlIdItem.load("value");
-      
+
       await context.sync();
 
       const docId = docIdItem.isNullObject ? null : docIdItem.value;
@@ -63,9 +62,26 @@ export async function loadSettings() {
       const xmlId = xmlIdItem.isNullObject ? null : xmlIdItem.value;
 
       return [docId, schema, xmlId];
-    })
-  } catch(err) {
+    });
+  } catch (err) {
     console.log(`Error loading settings: ${err}`);
+  }
+}
+
+export async function loadSettingById(key) {
+  try {
+    return await Word.run(async (context) => {
+      const settings = context.document.settings;
+      await context.sync();
+
+      const item = settings.getItemOrNullObject(key);
+      item.load("value");
+      await context.sync();
+
+      return item.isNullObject ? null : item.value;
+    });
+  } catch (err) {
+    console.log(`Error loading setting ${key}: ${err}`);
   }
 }
 
@@ -87,8 +103,8 @@ export async function updateSettings(key, value) {
       }
 
       await context.sync();
-    })
-  } catch(err) {
+    });
+  } catch (err) {
     console.log(`Error updating settings: ${err}`);
   }
 }
@@ -117,8 +133,8 @@ export async function loadRecord(xmlId) {
       const json = b64Decoder(b64);
       const flightRecord = JSON.parse(json);
       return flightRecord;
-    })
-  } catch(err) {
+    });
+  } catch (err) {
     console.log(`Error loading record: ${err}`);
     return null;
   }
