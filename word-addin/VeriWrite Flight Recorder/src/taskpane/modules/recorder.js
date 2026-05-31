@@ -20,8 +20,7 @@ let docId = null;
 let schema = null;
 let xmlId = null;
 // Recorder States
-let ONLINE = true;
-let onlineStatus = "ONLINE";
+let onlineStatus = true;
 let pending = false;
 let recording = false;
 let failed = false;
@@ -38,13 +37,8 @@ let finalReceipt = null;
 let lastError = null;
 let lastRetryMs = 0;
 
-export function setOnlineMode(value, auto = false) {
-  ONLINE = Boolean(value);
-  if (auto) {
-    onlineStatus = value ? "ONLINE_AUTO" : "OFFLINE_AUTO";
-  } else {
-    onlineStatus = value ? "ONLINE" : "OFFLINE";
-  }
+export function setOnlineMode(value) {
+  onlineStatus = Boolean(value);
 }
 
 export function getOnlineStatus() {
@@ -221,7 +215,7 @@ function failRecording(error) {
 }
 
 function switchOffline(error) {
-  setOnlineMode(false, true);
+  setOnlineMode(false);
   pending = true;
   if (error && error.status === OFFLINE_STATUS) {
     lastError = `${error.op || "record server"} unavailable`;
@@ -233,7 +227,7 @@ function switchOffline(error) {
 }
 
 function switchOnline() {
-  setOnlineMode(true, true);
+  setOnlineMode(true);
   lastError = null;
   lastRetryMs = 0;
 }
@@ -251,6 +245,11 @@ async function checkConnectivity() {
   }
 }
 
+export async function refreshOnlineStatus() {
+  await checkConnectivity();
+  return onlineStatus;
+}
+
 function isOfflineResponse(response) {
   return response && response.status === OFFLINE_STATUS;
 }
@@ -264,7 +263,7 @@ export function getRetryStatus() {
       retryMs,
     };
   }
-  if (lastError && ONLINE === false) {
+  if (lastError && !onlineStatus) {
     return {
       error: lastError,
       retryMs: lastRetryMs,
@@ -280,9 +279,9 @@ async function poll() {
 
     const prevOnlineStatus = onlineStatus;
     await checkConnectivity();
-    if (ONLINE && sessionReady() && evBuffer.length > 0 && Date.now() - lastPost >= postInterval) {
+    if (onlineStatus && sessionReady() && evBuffer.length > 0 && Date.now() - lastPost >= postInterval) {
       let response = null;
-      if (prevOnlineStatus.includes("OFFLINE") && onlineStatus.includes("ONLINE")) {
+      if (prevOnlineStatus === false && onlineStatus === true) {
         response = await flushBlock(currentText, true);
       } else {
         response = await flushBlock(currentText);
@@ -311,7 +310,7 @@ async function captureDiff(pending = false) {
   if (!diff) return newText;
 
   lastText = newText;
-  if (ONLINE || pending) {
+  if (onlineStatus || pending) {
     evBuffer.push(diff);
   }
   session.ev.push(diff);
@@ -326,7 +325,6 @@ async function updateSessions() {
 
 export async function startRecording() {
   if (recording) return;
-  // setOnlineMode();
   failed = false;
   lastError = null;
   lastRetryMs = 0;
@@ -355,7 +353,7 @@ export async function startRecording() {
 
   await checkConnectivity();
 
-  if (ONLINE) {
+  if (onlineStatus) {
     try {
       await syncPendingSessions();
     } catch (error) {
@@ -363,7 +361,7 @@ export async function startRecording() {
     }
   }
 
-  if (ONLINE) {
+  if (onlineStatus) {
     try {
       docState = await startDoc();
       if (isOfflineResponse(docState)) {
@@ -405,7 +403,7 @@ export async function stopRecording() {
 
     const finalText = await captureDiff();
 
-    if (ONLINE && sessionReady()) {
+    if (onlineStatus && sessionReady()) {
       if (evBuffer.length > 0) {
         const response = await flushBlock(finalText);
         if (isOfflineResponse(response)) {
@@ -433,7 +431,7 @@ export async function stopRecording() {
     evBuffer = [];
     session = null;
 
-    if (ONLINE) {
+    if (onlineStatus) {
       await syncPendingSessions();
     }
   } catch (error) {

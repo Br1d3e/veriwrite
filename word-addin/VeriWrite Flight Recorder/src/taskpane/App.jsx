@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Badge,
   Button,
@@ -14,6 +14,7 @@ import {
   getFlightRecord,
   getOnlineStatus,
   getRetryStatus,
+  refreshOnlineStatus,
   setOnlineMode,
   startRecording,
   stopRecording,
@@ -41,7 +42,7 @@ function formatRetryStatus(retryStatus) {
     const seconds = Math.round((retryStatus.retryMs || 0) / 1000);
     return `Reconnecting to record server... ${seconds}s`;
   }
-  return "Internet unavailable.";
+  return "Internet unavailable. Recording in offline mode.";
 }
 
 export default function App() {
@@ -51,30 +52,40 @@ export default function App() {
   const [online, setOnline] = useState(true);
   const [statusMessage, setStatusMessage] = useState("");
   const [retryMessage, setRetryMessage] = useState("");
+  const lastOnlineRef = useRef(null);
 
   useEffect(() => {
     if (!window.Office) return;
     window.Office.onReady((info) => {
       setOfficeReady(true);
       setIsWord(info.host === window.Office.HostType.Word);
-      setOnline(getOnlineStatus().includes("ONLINE"));
+      const currentOnline = getOnlineStatus();
+      lastOnlineRef.current = currentOnline;
+      setOnline(currentOnline);
+      refreshOnlineStatus().then((nextOnline) => {
+        lastOnlineRef.current = nextOnline;
+        setOnline(nextOnline);
+      });
     });
   }, []);
 
   useInterval(() => {
+    refreshOnlineStatus().then((nextOnline) => {
+      setOnline(nextOnline);
+
+      if (lastOnlineRef.current !== null && lastOnlineRef.current !== nextOnline) {
+        setStatusMessage(
+          nextOnline
+            ? "Detected server connection. Recording will resume online."
+            : "Server connection unavailable. Recording will continue offline."
+        );
+      }
+      lastOnlineRef.current = nextOnline;
+    });
+
     const retryStatus = getRetryStatus();
     setRetryMessage(formatRetryStatus(retryStatus));
-
-    const nextOnline = getOnlineStatus().includes("ONLINE");
-    setOnline(nextOnline);
-
-    const status = getOnlineStatus();
-    if (status === "ONLINE_AUTO") {
-      setStatusMessage("Detected server connection. Recording will resume online.");
-    } else if (status === "OFFLINE_AUTO") {
-      setStatusMessage("Server connection unavailable. Recording will continue offline.");
-    }
-  }, 500);
+  }, 1000);
 
   useEffect(() => {
     if (!statusMessage) return undefined;
@@ -90,9 +101,19 @@ export default function App() {
   async function handleStop() {
     await stopRecording();
     setRecording(false);
-    if (!getOnlineStatus().includes("ONLINE")) {
+    if (!getOnlineStatus()) {
       downloadJSON();
     }
+  }
+
+  if (!isWord) {
+    return (
+      <main className="min-h-screen bg-slate-50 px-4 py-5 text-slate-950">
+        <Text block className="text-red-400">
+          VeriWrite is only available in Microsoft Word.
+        </Text>
+      </main>
+    );
   }
 
   return (
