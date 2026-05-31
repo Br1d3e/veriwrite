@@ -9,11 +9,17 @@ import {
   Text,
   Title3,
 } from "@fluentui/react-components";
-import { ArrowDownloadRegular, RecordRegular, StopRegular } from "@fluentui/react-icons";
+import {
+  ArrowDownloadRegular,
+  RecordRegular,
+  StopRegular,
+  Record16Regular,
+} from "@fluentui/react-icons";
 import {
   getFlightRecord,
   getOnlineStatus,
   getRetryStatus,
+  getSessionInfo,
   refreshOnlineStatus,
   setOnlineMode,
   startRecording,
@@ -43,6 +49,16 @@ function formatRetryStatus(retryStatus) {
     return `Reconnecting to record server... ${seconds}s`;
   }
   return "Internet unavailable. Recording in offline mode.";
+}
+
+export function formatDuration(ms) {
+  const totalMinutes = Math.max(0, Math.floor(ms / 60000));
+  if (totalMinutes < 1) {
+    return `${Math.floor(ms / 1000)}s`;
+  }
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return hours > 0 ? `${hours}h ${minutes}m` : `${minutes} min`;
 }
 
 export default function App() {
@@ -101,10 +117,22 @@ export default function App() {
   async function handleStop() {
     await stopRecording();
     setRecording(false);
+    setEvCount(0);
+    setTimeElapsedMs(0);
     if (!getOnlineStatus()) {
       downloadJSON();
     }
   }
+
+  const [evCount, setEvCount] = useState(0);
+  const [timeElapsedMs, setTimeElapsedMs] = useState(0);
+
+  useInterval(() => {
+    if (!recording) return;
+    const sessionInfo = getSessionInfo();
+    setEvCount(sessionInfo.evCount);
+    setTimeElapsedMs(sessionInfo.timeElapsedMs);
+  }, 500);
 
   if (!isWord) {
     return (
@@ -125,13 +153,19 @@ export default function App() {
 
         <Card className="rounded-lg border border-slate-200 shadow-sm">
           <div className="flex flex-col gap-4 px-1 pb-1">
-            <div className="flex items-center justify-between gap-3">
-              <Badge appearance="tint" color={online ? "success" : "warning"}>
-                {online ? "Online" : "Offline"}
-              </Badge>
+            <Divider />
+
+            <div className="flex items-center px-1 gap-1">
+              <Record16Regular color={recording ? "red" : "lightGreen"} />
+              <Text className={recording ? "text-red-600" : "text-green-600"}>
+                {recording ? "Recording" : "Idle"}
+              </Text>
             </div>
 
-            <Divider />
+            <div className="flex flex-col gap-2 px-1 pb-1 text-slate-500">
+              <Text>Session writing time: {formatDuration(timeElapsedMs)}</Text>
+              <Text>Recorded events: {evCount}</Text>
+            </div>
 
             <div className="grid grid-cols-2 gap-2">
               <Button
@@ -150,6 +184,14 @@ export default function App() {
             <Button icon={<ArrowDownloadRegular />} onClick={downloadJSON}>
               Export local record
             </Button>
+
+            <Divider />
+
+            <div className="flex items-center justify-between gap-3">
+              <Badge appearance="tint" color={online ? "success" : "warning"}>
+                {online ? "Online" : "Offline"}
+              </Badge>
+            </div>
 
             {(statusMessage || retryMessage) && (
               <div className="rounded-md bg-slate-100 px-3 py-2">

@@ -45,6 +45,16 @@ export function getOnlineStatus() {
   return onlineStatus;
 }
 
+export function getSessionInfo() {
+  const ev = session && Array.isArray(session.ev) ? session.ev : [];
+  const timeElapsedMs = session ? Date.now() - session.t0 : 0;
+  return {
+    recording,
+    evCount: ev.length,
+    timeElapsedMs,
+  };
+}
+
 export function getPostState() {
   return {
     docState,
@@ -80,7 +90,7 @@ async function newRecord() {
 async function initializeSession(initTextOverride = null) {
   const initText = typeof initTextOverride === "string" ? initTextOverride : await readBodyText();
   session = {
-    id: `s${flightRecord.sessions.length + 1}`,
+    id: generateUUID(),
     t0: Date.now(),
     tn: Date.now(),
     init: initText,
@@ -279,7 +289,12 @@ async function poll() {
 
     const prevOnlineStatus = onlineStatus;
     await checkConnectivity();
-    if (onlineStatus && sessionReady() && evBuffer.length > 0 && Date.now() - lastPost >= postInterval) {
+    if (
+      onlineStatus &&
+      sessionReady() &&
+      evBuffer.length > 0 &&
+      Date.now() - lastPost >= postInterval
+    ) {
       let response = null;
       if (prevOnlineStatus === false && onlineStatus === true) {
         response = await flushBlock(currentText, true);
