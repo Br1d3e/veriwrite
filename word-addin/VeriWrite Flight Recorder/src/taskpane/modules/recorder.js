@@ -29,6 +29,7 @@ let lastText = "";
 const postInterval = 10_000;
 let lastPost = Date.now();
 let evBuffer = [];
+let postedBlocks = 0;
 let posting = null;
 let docState = null;
 let sesState = null;
@@ -56,19 +57,13 @@ export function getSessionInfo() {
 }
 
 export function getPostState() {
+  const pendingSessions = flightRecord.sessions.filter((s) => s && s.fullOnline !== true);
   return {
-    docState,
-    sesState,
-    blockReceipt,
-    finalReceipt,
-    lastError,
-  };
-}
-
-export function getEvBlock() {
-  return {
-    timeElapsed: (Date.now() - lastPost) / 1000,
-    evBuffer,
+    bufferedEv: evBuffer.length,
+    pending,
+    pendingSessions: pendingSessions.length,
+    postedBlocks,
+    lastPost,
   };
 }
 
@@ -205,6 +200,7 @@ async function flushBlock(docText, delayed = false) {
       }
       blockReceipt = response.receipt;
       lastPost = Date.now();
+      postedBlocks++;
       return response;
     })
     .catch((error) => {
@@ -275,6 +271,7 @@ export function getRetryStatus() {
   }
   if (lastError && !onlineStatus) {
     return {
+      retrying: false,
       error: lastError,
       retryMs: lastRetryMs,
     };

@@ -3,11 +3,10 @@ import {
   Badge,
   Button,
   Card,
-  CardHeader,
   Divider,
-  Switch,
   Text,
   Title3,
+  MessageBar,
 } from "@fluentui/react-components";
 import {
   ArrowDownloadRegular,
@@ -20,12 +19,14 @@ import {
   getOnlineStatus,
   getRetryStatus,
   getSessionInfo,
+  getPostState,
   refreshOnlineStatus,
   setOnlineMode,
   startRecording,
   stopRecording,
 } from "./modules/recorder";
 import { useInterval } from "./hooks/useInterval";
+import { useTimeout } from "./hooks/useTimeout";
 
 const AUTO_MESSAGE_MS = 5000;
 
@@ -69,6 +70,7 @@ export default function App() {
   const [statusMessage, setStatusMessage] = useState("");
   const [retryMessage, setRetryMessage] = useState("");
   const lastOnlineRef = useRef(null);
+  const lastRetryRef = useRef("");
 
   useEffect(() => {
     if (!window.Office) return;
@@ -86,28 +88,49 @@ export default function App() {
   }, []);
 
   useInterval(() => {
-    refreshOnlineStatus().then((nextOnline) => {
-      setOnline(nextOnline);
-
-      if (lastOnlineRef.current !== null && lastOnlineRef.current !== nextOnline) {
-        setStatusMessage(
-          nextOnline
-            ? "Detected server connection. Recording will resume online."
-            : "Server connection unavailable. Recording will continue offline."
-        );
-      }
-      lastOnlineRef.current = nextOnline;
-    });
-
     const retryStatus = getRetryStatus();
-    setRetryMessage(formatRetryStatus(retryStatus));
+    const retryKey = retryStatus
+      ? `${retryStatus.retrying ? "retrying" : "offline"}:${retryStatus.error || ""}`
+      : "";
+    if (retryKey !== lastRetryRef.current) {
+      lastRetryRef.current = retryKey;
+      setRetryMessage(formatRetryStatus(retryStatus));
+    }
+    if (retryStatus?.retrying !== true) {
+      refreshOnlineStatus().then((nextOnline) => {
+        setOnline(nextOnline);
+
+        if (lastOnlineRef.current !== null && lastOnlineRef.current !== nextOnline) {
+          setStatusMessage(
+            nextOnline
+              ? "Detected server connection. Recording will resume online."
+              : "Server connection unavailable. Recording will continue offline."
+          );
+        }
+        lastOnlineRef.current = nextOnline;
+      });
+    }
   }, 1000);
 
-  useEffect(() => {
-    if (!statusMessage) return undefined;
-    const timeout = setTimeout(() => setStatusMessage(""), AUTO_MESSAGE_MS);
-    return () => clearTimeout(timeout);
-  }, [statusMessage]);
+  // useEffect(() => {
+  //   if (!statusMessage) return undefined;
+  //   const timeout = setTimeout(() => setStatusMessage(""), AUTO_MESSAGE_MS);
+  //   return () => clearTimeout(timeout);
+  // }, [statusMessage]);
+
+  useTimeout(
+    () => {
+      setStatusMessage("");
+    },
+    statusMessage ? AUTO_MESSAGE_MS : null
+  );
+
+  useTimeout(
+    () => {
+      setRetryMessage("");
+    },
+    retryMessage ? AUTO_MESSAGE_MS : null
+  );
 
   async function handleStart() {
     await startRecording();
@@ -126,12 +149,23 @@ export default function App() {
 
   const [evCount, setEvCount] = useState(0);
   const [timeElapsedMs, setTimeElapsedMs] = useState(0);
+  const [pending, setPending] = useState(false);
+  const [bufferedEv, setBufferedEv] = useState(0);
+  const [pendingSessions, setPendingSessions] = useState(0);
+  const [pendingEv, setPendingEv] = useState(0);
+  const [postedBlocks, setPostedBlocks] = useState(0);
 
   useInterval(() => {
     if (!recording) return;
     const sessionInfo = getSessionInfo();
     setEvCount(sessionInfo.evCount);
     setTimeElapsedMs(sessionInfo.timeElapsedMs);
+    const postState = getPostState();
+    setPending(postState.pending);
+    setBufferedEv(postState.bufferedEv);
+    setPendingEv(postState.pendingEv);
+    setPendingSessions(postState.pendingSessions);
+    setPostedBlocks(postState.postedBlocks);
   }, 500);
 
   if (!isWord) {
@@ -187,19 +221,37 @@ export default function App() {
 
             <Divider />
 
-            <div className="flex items-center justify-between gap-3">
-              <Badge appearance="tint" color={online ? "success" : "warning"}>
-                {online ? "Online" : "Offline"}
-              </Badge>
-            </div>
+            <section className="">
+              <div className="flex items-center justify-between gap-2 py-2">
+                <Badge appearance="tint" color={online ? "success" : "warning"}>
+                  {online ? "Online" : "Offline"}
+                </Badge>
+              </div>
+              {online ? (
+                <div className="flex flex-col gap-2 px-1 pb-1 text-slate-500">
+                  <Text font="monospace">Server authenticates this writing session.</Text>
+                  <Text>Blocks sent: {postedBlocks}</Text>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2 px-1 pb-1 text-slate-500">
+                  <Text font="monospace">Recording continues locally.</Text>
+                  {pending && (
+                    <>
+                      <Text>Pending sessions: {pendingSessions}</Text>
+                      <Text>Pending events: {bufferedEv}</Text>
+                    </>
+                  )}
+                </div>
+              )}
+            </section>
 
             {(statusMessage || retryMessage) && (
-              <div className="rounded-md bg-slate-100 px-3 py-2">
-                {statusMessage && <Text block>{statusMessage}</Text>}
+              <div className="rounded-md bg-slate-10 px-1 py-1">
+                {statusMessage && <MessageBar className="bg-slate-100">{statusMessage}</MessageBar>}
                 {retryMessage && (
-                  <Text block className="text-slate-600">
-                    {retryMessage}
-                  </Text>
+                  // <Text block className="text-slate-600">
+                  <MessageBar>{retryMessage}</MessageBar>
+                  // </Text>
                 )}
               </div>
             )}
