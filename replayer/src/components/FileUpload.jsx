@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { checkStruct, processData } from "../../modules/loader";
+import { checkStruct, processData } from "../lib/loader";
 import { Separator } from "./ui/separator";
 import { toast } from "sonner";
 

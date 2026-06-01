@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { Toaster } from "@/components/ui/sonner";
-import RecordPicker from "./views/RecordPicker";
-import Workspace from "./views/Workspace";
+import RecordPicker from "@/views/RecordPicker";
+import Workspace from "@/views/Workspace";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { calDocStats } from "../modules/stats/doc";
-import { calSession } from "../modules/stats/session";
+import { calDocStats } from "@/lib/stats/doc";
+import { calSession } from "@/lib/stats/session";
 
 export default function App() {
   const states = {

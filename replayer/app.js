@@ -1,22 +1,34 @@
-
-import { loadRecord, startPlaying, stopPlaying, resetStatus, changeSpeed, updateDOM, seekToSession, seekNextSession, seekPrevSession, getSession } from "./modules/player.js"
+import {
+  loadRecord,
+  startPlaying,
+  stopPlaying,
+  resetStatus,
+  changeSpeed,
+  updateDOM,
+  seekToSession,
+  seekNextSession,
+  seekPrevSession,
+  getSession,
+} from "./modules/player.js";
 import { cursorDOM, restoreCursor } from "./modules/renderer.js";
-import { checkStruct, processData } from "./modules/loader.js";
+import { checkStruct, processData } from "./src/lib/loader.js";
 import {
   renderDocGapHighlight,
-  resetDocReport, 
+  resetDocReport,
   resetDocUI,
   setDocGapSelectedHandler,
-  updateDocumentStats
-} from "./modules/stats/ui/docStatsPanel.js";
+  updateDocumentStats,
+} from "./src/lib/stats/ui/docStatsPanel.js";
 import {
   resetSesReport,
   resetSessionStatsPanel,
-  updateSessionStats
-} from "./modules/stats/ui/sessionStatsPanel.js"
-import { queryTitle, queryAuthor, getRecordById } from "./modules/recordApi.js";
-import { renderIntegrityPanel, resetIntegrityPanel } from "./modules/stats/ui/integrityPanel.js";
-
+  updateSessionStats,
+} from "./src/lib/stats/ui/sessionStatsPanel.js";
+import { queryTitle, queryAuthor, getRecordById } from "./src/lib/recordApi.js";
+import {
+  renderIntegrityPanel,
+  resetIntegrityPanel,
+} from "./src/lib/stats/ui/integrityPanel.js";
 
 // HTML Elements
 const fileEl = document.getElementById("file");
@@ -45,7 +57,6 @@ const caretEl = document.getElementById("caret");
 const beforeEl = document.getElementById("before");
 const afterEl = document.getElementById("after");
 
-
 // DOM Object transferred to recorder & player
 const DOM = {
   caretEl: caretEl,
@@ -56,13 +67,13 @@ const DOM = {
   sessionProgEl: sessionProgEl,
   progressEl: progressEl,
   speedLbl: speedLbl,
-  titleEl: titleEl, 
+  titleEl: titleEl,
   screenEl: screenEl,
   speedLbl: speedLbl,
   speedSlider: speedSlider,
   sessionsEl: sessionsEl,
-  sessionBtns: sessionBtns
-}
+  sessionBtns: sessionBtns,
+};
 
 // Current active flightRecord
 let flightRecord;
@@ -87,7 +98,7 @@ function startReplayer(flightRecord, v = 3) {
   if (!checkStruct(flightRecord, v)) {
     inputErrTxt.hidden = false;
     setTimeout(() => {
-        inputErrTxt.hidden = true;
+      inputErrTxt.hidden = true;
     }, 3000);
     return;
   }
@@ -104,7 +115,7 @@ function startReplayer(flightRecord, v = 3) {
   cursorDOM(DOM);
 
   // Normalize data using loader.js
-  if (v === 2){
+  if (v === 2) {
     flightRecord = processData(flightRecord);
   }
 
@@ -154,7 +165,7 @@ async function updateSearch() {
     results = await queryAuthor(input);
   }
   genSearchResultsUI(results);
-  
+
   return results;
 }
 
@@ -171,7 +182,7 @@ function genSearchResultsUI(results) {
       const row = results[i];
       const title = row.title;
       const author = row.author;
-      
+
       const searchCard = document.createElement("div");
       searchCard.className = "search-card";
       searchCard.id = i;
@@ -207,7 +218,7 @@ function genSessionBtns(sessions) {
   const prev = document.createElement("button");
   prev.id = "prev";
   prev.textContent = "Prev";
-  sessionBtns.appendChild(prev)
+  sessionBtns.appendChild(prev);
 
   for (let i = 0; i < sessions.length; i++) {
     const btn = document.createElement("button");
@@ -236,7 +247,6 @@ function resetSessionBtns() {
 
 updateDOM(DOM);
 
-
 fileEl.addEventListener("change", async () => {
   const f = fileEl.files?.[0];
   if (!f) return;
@@ -249,7 +259,7 @@ fileEl.addEventListener("change", async () => {
 let searchResults;
 searchBarEl.addEventListener("input", async () => {
   searchResults = await updateSearch();
-})
+});
 
 searchResultsEl.addEventListener("click", async (e) => {
   if (!searchResults) return;
@@ -260,7 +270,7 @@ searchResultsEl.addEventListener("click", async (e) => {
   flightRecord = await getRecordById(docId);
 
   startReplayer(flightRecord);
-})
+});
 
 playBtn.addEventListener("click", () => {
   restoreCursor(screenEl);
@@ -273,8 +283,8 @@ resetBtn.addEventListener("click", () => {
   firstBlockIntegrity(getSession());
 });
 speedSlider.addEventListener("change", () => {
-  changeSpeed(Number(speedSlider.value))
-  });
+  changeSpeed(Number(speedSlider.value));
+});
 // Switch sessions and show session stats details
 sessionBtns.addEventListener("click", (e) => {
   if (e.target === null) return;
@@ -288,7 +298,7 @@ sessionBtns.addEventListener("click", (e) => {
       break;
     case "next":
       session = seekNextSession();
-      break
+      break;
     default:
       const sid = Number(btnId);
       session = seekToSession(sid);
@@ -298,7 +308,7 @@ sessionBtns.addEventListener("click", (e) => {
   updateSessionStats(session);
   firstBlockIntegrity(session);
   restoreCursor(screenEl);
-})
+});
 
 setDocGapSelectedHandler((gap) => {
   stopPlaying();

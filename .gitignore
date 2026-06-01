@@ -5,8 +5,8 @@ build/
 .env
 *.log
 .vscode/
-replayer/modules/stats/session/test/output_*
-replayer/modules/stats/session/test/*.txt
+replayer/src/lib/stats/doc/test
+replayer/src/lib/stats/session/test
 .vite
 __pycache__
 test_*

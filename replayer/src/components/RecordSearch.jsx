@@ -1,9 +1,5 @@
 import { useState } from "react";
-import {
-  getRecordById,
-  queryAuthor,
-  queryTitle,
-} from "../../modules/recordApi.js";
+import { getRecordById, queryAuthor, queryTitle } from "../lib/recordApi.js";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "./ui/input-group";
 import { Button } from "./ui/button.jsx";
 import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
