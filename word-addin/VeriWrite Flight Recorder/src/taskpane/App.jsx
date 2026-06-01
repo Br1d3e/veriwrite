@@ -231,12 +231,12 @@ export default function App() {
             <div className="flex items-center px-1 gap-1">
               <Record16Regular color={recording ? "red" : "lightGreen"} />
               <Text className={recording ? "text-red-600" : "text-green-600"}>
-                {recording ? "Recording" : "Idle"}
+                {recording ? "Recording" : "Ready"}
               </Text>
             </div>
 
             <div className="flex flex-col gap-2 px-1 pb-1 text-slate-500">
-              <Text>Session writing time: {formatDuration(timeElapsedMs)}</Text>
+              <Text>Session time: {formatDuration(timeElapsedMs)}</Text>
               <Text>Recorded events: {evCount}</Text>
             </div>
 
@@ -268,12 +268,14 @@ export default function App() {
               </div>
               {online ? (
                 <div className="flex flex-col gap-2 px-1 pb-1 text-slate-500">
-                  <Text font="monospace">Server authenticates this writing session.</Text>
+                  <Text font="monospace">This session is protected by server verification.</Text>
                   <Text>Blocks sent: {postedBlocks}</Text>
                 </div>
               ) : (
                 <div className="flex flex-col gap-2 px-1 pb-1 text-slate-500">
-                  <Text font="monospace">Recording continues locally.</Text>
+                  <Text font="monospace">
+                    Recording continues locally. It will sync when the server is available.
+                  </Text>
                   {pending && (
                     <>
                       <Text>Pending sessions: {pendingSessions}</Text>
@@ -287,7 +289,7 @@ export default function App() {
             <Divider />
 
             <Switch
-              label="Auto-start Recording"
+              label="Auto-start recording"
               checked={autoRecord}
               onChange={handleAutoStartChange}
             ></Switch>
