@@ -189,18 +189,25 @@ class AnalyzeDB:
                 continue
             
             mapping = {"TRUE": True, "FALSE": False, "UNKNOWN": None}
+
+            dt = session["dt"]
+            if pd.isna(dt):
+                dt = 0
+            closed_server_ts = session["closed_server_ts"]
+            if pd.isna(closed_server_ts):
+                closed_server_ts = None
         
             s.append({
                 "sid": sid,
                 "t0": int(session["st0"]),
-                "tn": int(session["st0"] + session["dt"]),
+                "tn": int(session["st0"] + dt),
                 "init": session["init_text"],
                 "ev": session["ev"],
                 "b": blocks.drop(columns=["ch"]).to_dict(orient="records"),
                 "cs": mapping.get(session["continuity_status"]),
                 "fs": session["freshness_status"],
                 "mr": session["merkle_root"] == merkle_tree_root(blocks["ch"].to_list()),
-                "ct": int(session["closed_server_ts"]),
+                "ct": int(closed_server_ts) if closed_server_ts is not None else None,
                 "fr": session["final_receipt"],
                 "bc": int(session["block_count"]),
                 "status": session["session_status"]

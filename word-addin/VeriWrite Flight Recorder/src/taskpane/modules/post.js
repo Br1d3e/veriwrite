@@ -293,7 +293,12 @@ export async function startDoc(t0Override = null, titleOverride = null, authorOv
   return response;
 }
 
-export async function startSession(initTextOverride = null, delayed = false, overrideT0 = null) {
+export async function startSession(
+  initTextOverride = null,
+  delayed = false,
+  overrideT0 = null,
+  sessionId = null
+) {
   if (!docId) {
     await ensureDocSettings();
   }
@@ -302,7 +307,7 @@ export async function startSession(initTextOverride = null, delayed = false, ove
   }
 
   resetSessionState();
-  sid = generateUUID();
+  sid = sessionId || generateUUID();
 
   st0 = overrideT0 || Date.now();
 

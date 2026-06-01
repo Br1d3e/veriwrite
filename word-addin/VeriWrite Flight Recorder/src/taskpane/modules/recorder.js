@@ -24,6 +24,8 @@ let onlineStatus = true;
 let pending = false;
 let recording = false;
 let failed = false;
+const CHECKPOINT_INTERVAL = 10_000; // 10s for testing
+let lastCheckpoint = Date.now();
 let lastPoll = Date.now();
 let lastText = "";
 const postInterval = 10_000;
@@ -67,11 +69,11 @@ export function getPostState() {
   };
 }
 
-async function newRecord() {
+async function newRecord(docIdOverride = null) {
   let flightRecord = {
     v: 2,
     m: {
-      docId: generateUUID(),
+      docId: docIdOverride || generateUUID(),
       created: Date.now(),
       lastModified: Date.now(),
       title: await getDocTitle(),
@@ -85,7 +87,7 @@ async function newRecord() {
 async function initializeSession(initTextOverride = null) {
   const initText = typeof initTextOverride === "string" ? initTextOverride : await readBodyText();
   session = {
-    id: generateUUID(),
+    sid: generateUUID(),
     t0: Date.now(),
     tn: Date.now(),
     init: initText,
@@ -146,7 +148,7 @@ async function syncPendingSessions() {
       initText,
       true,
       pendingSession.t0,
-      pendingSession.tn
+      pendingSession.sid
     );
     if (isOfflineResponse(sessionResponse)) {
       switchOffline(sessionResponse);
@@ -281,6 +283,15 @@ export function getRetryStatus() {
 async function poll() {
   if (!recording || failed) return;
 
+  if (Date.now() - lastCheckpoint >= CHECKPOINT_INTERVAL) {
+    try {
+      lastCheckpoint = Date.now();
+      await updateSessions();
+    } catch (error) {
+      failRecording(error);
+    }
+  }
+
   try {
     const currentText = await captureDiff(pending);
 
@@ -294,6 +305,7 @@ async function poll() {
     ) {
       let response = null;
       if (prevOnlineStatus === false && onlineStatus === true) {
+        // delayed
         response = await flushBlock(currentText, true);
       } else {
         response = await flushBlock(currentText);
@@ -332,7 +344,14 @@ async function captureDiff(pending = false) {
 // Append new session into flightRecord.sessions
 async function updateSessions(finalText = null) {
   session.localEh = await hashText(finalText || (await readBodyText()));
-  flightRecord.sessions.push(session);
+
+  if (flightRecord.sessions.map((s) => s.sid).includes(session.sid)) {
+    // Update existing session
+    flightRecord.sessions = flightRecord.sessions.map((s) => (s.sid === session.sid ? session : s));
+  } else {
+    // Append new session
+    flightRecord.sessions.push(session);
+  }
   await persistRecord();
 }
 
@@ -356,13 +375,17 @@ export async function startRecording() {
     flightRecord = await loadRecord(xmlId);
   }
 
-  // No docId, create new document
-  if (!docId || !schema || !flightRecord) {
-    console.log("Record load failed or is new, initializing fresh record...");
-    flightRecord = await newRecord();
-    await updateSettings("docId", flightRecord.m.docId);
-    await updateSettings("v", 2);
+  if (!docId && flightRecord?.m?.docId) {
+    docId = flightRecord.m.docId;
   }
+
+  // No stored record, create new document
+  if (!flightRecord) {
+    console.log("Record load failed or is new, initializing fresh record...");
+    flightRecord = await newRecord(docId);
+  }
+  await updateSettings("docId", flightRecord.m.docId);
+  await updateSettings("v", 2);
 
   await checkConnectivity();
 
@@ -374,13 +397,16 @@ export async function startRecording() {
     }
   }
 
+  await initializeSession(sessionInitText);
+  await persistRecord(); // checkpoint immediately when record starts
+
   if (onlineStatus) {
     try {
       docState = await startDoc();
       if (isOfflineResponse(docState)) {
         switchOffline(docState);
       } else {
-        sesState = await startSession(sessionInitText);
+        sesState = await startSession(sessionInitText, false, null, session?.sid);
         if (isOfflineResponse(sesState)) {
           switchOffline(sesState);
         } else {
@@ -393,8 +419,7 @@ export async function startRecording() {
       switchOffline(error);
     }
   }
-  // Start new session
-  await initializeSession(sessionInitText);
+
   lastPoll = Date.now();
   lastText = sessionInitText;
 
@@ -449,7 +474,6 @@ export async function stopRecording() {
     }
   } catch (error) {
     failRecording(error);
-    throw error;
   }
 }
 

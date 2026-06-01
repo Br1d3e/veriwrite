@@ -8,6 +8,7 @@ and the current rolling document-state validation used during block ingest.
 import base64
 import hashlib
 import json
+import math
 import os
 from datetime import datetime
 from typing import Any
@@ -83,6 +84,10 @@ def update_doc_integrity_status(cursor, d_id: str, curr_doc_integrity: str) -> s
 
 def verify_protocol(v):
     return v == 3
+
+
+def is_finite_number(value) -> bool:
+    return isinstance(value, (int, float)) and math.isfinite(value)
 
 
 def connect():
@@ -278,6 +283,22 @@ def start_session(session: dict[str, Any]) -> dict[str, Any]:
         with conn.cursor() as cursor:
             cursor.execute(
                 """
+                SELECT sid, final_receipt
+                FROM sessions
+                WHERE sid = %s
+                """,
+                (sid,),
+            )
+            existing_session = cursor.fetchone()
+            if existing_session:
+                return {
+                    "status": "SESSION_EXISTS",
+                    "op": "session/start",
+                    "sid": sid,
+                }
+
+            cursor.execute(
+                """
                 SELECT eh
                 FROM sessions
                 WHERE d_id = %s AND eh IS NOT NULL
@@ -323,7 +344,6 @@ def start_session(session: dict[str, Any]) -> dict[str, Any]:
                 ),
             )
             update_server_ts(cursor, d_id, server_ts)
-
     return {
         "status": "SUCCESS", 
         "op": "session/start", 
@@ -654,6 +674,9 @@ def end_session(session_end: dict[str, Any]) -> dict[str, Any]:
         return {"status": "INVALID PROTOCOL", "op": "session/end", "sid": sid}
 
     dt = session_end.get("dt")
+    if not is_finite_number(dt) or dt < 0:
+        return {"status": "INVALID_DURATION", "op": "session/end", "sid": sid, "dt": dt}
+
     end_hash = session_end.get("eh")
 
     with connect() as conn:
