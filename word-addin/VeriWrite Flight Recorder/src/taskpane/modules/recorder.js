@@ -91,7 +91,7 @@ async function initializeSession(initTextOverride = null) {
     init: initText,
     ev: [],
     fullOnline: false,
-    localPh: null,
+    localPh: initText === "" ? null : await hashText(initText),
     localEh: null,
   };
 }
@@ -330,7 +330,8 @@ async function captureDiff(pending = false) {
 }
 
 // Append new session into flightRecord.sessions
-async function updateSessions() {
+async function updateSessions(finalText = null) {
+  session.localEh = await hashText(finalText || (await readBodyText()));
   flightRecord.sessions.push(session);
   await persistRecord();
 }
@@ -420,7 +421,7 @@ export async function stopRecording() {
         const response = await flushBlock(finalText);
         if (isOfflineResponse(response)) {
           switchOffline(response);
-          await updateSessions();
+          await updateSessions(finalText);
           return;
         }
       } else {
@@ -439,7 +440,7 @@ export async function stopRecording() {
         session.fullOnline = true;
       }
     }
-    await updateSessions();
+    await updateSessions(finalText);
     evBuffer = [];
     session = null;
 

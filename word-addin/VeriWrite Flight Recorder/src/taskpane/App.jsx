@@ -171,12 +171,18 @@ export default function App() {
   }
 
   async function handleStop() {
-    await stopRecording();
-    setRecording(false);
-    setEvCount(0);
-    setTimeElapsedMs(0);
-    if (!getOnlineStatus()) {
-      downloadJSON();
+    try {
+      await stopRecording();
+    } catch (err) {
+      setStatusMessage(`Stop recording failed. ${err}`);
+    } finally {
+      setRecording(false);
+      setEvCount(0);
+      setTimeElapsedMs(0);
+
+      // if (!getOnlineStatus()) {
+      //   downloadJSON();
+      // }
     }
   }
 
