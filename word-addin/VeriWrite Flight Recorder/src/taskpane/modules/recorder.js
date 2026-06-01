@@ -341,8 +341,7 @@ async function captureDiff(pending = false) {
   return newText;
 }
 
-// Append new session into flightRecord.sessions
-async function updateSessions(finalText = null) {
+export async function updateSessions(finalText = null) {
   session.localEh = await hashText(finalText || (await readBodyText()));
 
   if (flightRecord.sessions.map((s) => s.sid).includes(session.sid)) {
@@ -458,12 +457,16 @@ export async function stopRecording() {
           );
         }
       }
-      finalReceipt = await endSession(finalText);
+      finalReceipt = await endSession(finalText, false, session.t0, session.tn);
       if (isOfflineResponse(finalReceipt)) {
         switchOffline(finalReceipt);
       } else if (finalReceipt && finalReceipt.receipt) {
         session.fullOnline = true;
+      } else {
+        throw new Error(`Record server did not return a session receipt: ${JSON.stringify(finalReceipt)}`);
       }
+    } else if (onlineStatus && session && session.ev.length > 0) {
+      throw new Error("Record server session is not ready; saved local session but did not upload blocks.");
     }
     await updateSessions(finalText);
     evBuffer = [];
@@ -474,6 +477,7 @@ export async function stopRecording() {
     }
   } catch (error) {
     failRecording(error);
+    throw error;
   }
 }
 

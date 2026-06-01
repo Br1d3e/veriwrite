@@ -2,6 +2,7 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { FluentProvider, webLightTheme } from "@fluentui/react-components";
 import App from "./App.jsx";
+import { updateSessions } from "./modules/recorder.js";
 import "./styles.css";
 
 let root = null;
@@ -38,6 +39,19 @@ if (window.Office?.onReady) {
   window.Office.onReady(() => {
     enableAutoShowTaskpaneWithDocument();
     renderApp();
+
+    if (window.Office?.addin?.onVisibilityModeChanged) {
+      window.Office.addin.onVisibilityModeChanged((args) => {
+        if (
+          args.visibilityMode === window.Office.VisibilityMode.hidden ||
+          args.visibilityMode === "Hidden"
+        ) {
+          updateSessions().catch((err) => {
+            console.warn("Failed to update record before interrupted stop.", err);
+          });
+        }
+      });
+    }
   });
 
   window.setTimeout(renderApp, 3000);

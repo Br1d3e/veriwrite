@@ -299,19 +299,22 @@ def start_session(session: dict[str, Any]) -> dict[str, Any]:
 
             cursor.execute(
                 """
-                SELECT eh
+                SELECT eh, current_dsh, ih
                 FROM sessions
-                WHERE d_id = %s AND eh IS NOT NULL
+                WHERE d_id = %s AND st0 < %s
                 ORDER BY st0 DESC
                 LIMIT 1
                 """,
-                (d_id,),
+                (d_id, st0),
             )
             previous_session = cursor.fetchone()
-            prev_end_hash = previous_session["eh"] if previous_session else None
-            continuity_status = "UNKNOWN"
-            if prev_end_hash:
-                continuity_status = "TRUE" if prev_end_hash == init_hash else "FALSE"
+            if previous_session:
+                prev_hash = (
+                    previous_session["eh"]
+                    or previous_session["current_dsh"]
+                    or previous_session["ih"]
+                )
+                continuity_status = "TRUE" if prev_hash == init_hash else "FALSE"
             else:
                 continuity_status = "TRUE"  # true if first session
 
