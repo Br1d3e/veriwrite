@@ -61,7 +61,7 @@ export default function FileUpload({ onRecordLoaded, className = "" }) {
         );
       }
       console.log(record);
-      const validStruct = checkStruct(record, 2);
+      const validStruct = checkStruct(record, record?.v);
       if (!validStruct) {
         throw new Error("Invalid flight record file format.");
       }

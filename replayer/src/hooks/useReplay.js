@@ -107,8 +107,8 @@ export default function useReplay(record) {
               },
         );
       },
-      seekToSession: (sid) => {
-        setSnapshot((prev) => seekToSession(prev, sid));
+      seekToSession: (sessionIndex) => {
+        setSnapshot((prev) => seekToSession(prev, sessionIndex));
       },
       seekNextSession: () => {
         setSnapshot((prev) => seekNextSession(prev));

@@ -10,23 +10,18 @@ import { Packr } from "msgpackr";
 
 function dedupe(sessions) {
   // Remove duplicates by session ID
-  for (var i = 1; i < sessions.length; i++) {
-    const currId = sessions[i].sid ?? sessions[i].id;
-    const prevId = sessions[i - 1].sid ?? sessions[i - 1].id;
-    if (
-      currId &&
-      prevId &&
-      currId === prevId
-      // || sessions[i].t0 === sessions[i-1].t0
-      // || sessions[i].tn === sessions[i-1].tn
-      // || sessions[i].init === sessions[i-1].init
-      // || sessions[i].ev === sessions[i-1].ev
-    ) {
-      sessions.splice(i, 1);
-      i--;
+  const seenIds = new Set();
+  return sessions.filter((session) => {
+    const sessionId = session.sid ?? session.id;
+    if (!sessionId) return true;
+
+    if (seenIds.has(sessionId)) {
+      return false;
     }
-  }
-  return sessions;
+
+    seenIds.add(sessionId);
+    return true;
+  });
 }
 
 function sort(sessions) {
@@ -45,9 +40,12 @@ function normalizeLines(s) {
 
 function normalizeRecord(sessions) {
   for (let i = 0; i < sessions.length; i++) {
-    sessions[i].init = normalizeLines(sessions[i].init);
-    for (let j = 0; j < sessions[i].ev.length; j++) {
-      sessions[i].ev[j][3] = normalizeLines(sessions[i].ev[j][3]);
+    sessions[i].init = normalizeLines(sessions[i].init ?? "");
+    const ev = Array.isArray(sessions[i].ev) ? sessions[i].ev : [];
+    sessions[i].ev = ev;
+
+    for (let j = 0; j < ev.length; j++) {
+      ev[j][3] = normalizeLines(ev[j][3] ?? "");
     }
   }
   return sessions;
@@ -55,10 +53,14 @@ function normalizeRecord(sessions) {
 
 export function processData(flightRecord) {
   let newRecord = flightRecord;
-  let sessions = newRecord.sessions || newRecord.s;
+  let sessions = newRecord.sessions || newRecord.s || [];
   sessions = dedupe(sessions);
   sessions = normalizeRecord(sessions);
   sessions = sort(sessions);
+  newRecord.sessions = sessions;
+  if (newRecord.s) {
+    newRecord.s = sessions;
+  }
   return newRecord;
 }
 
@@ -72,8 +74,7 @@ export function checkStruct(flightRecord, protocolVer) {
       flightRecord &&
       v === protocolVer &&
       m &&
-      sessions &&
-      typeof sessions === "object"
+      Array.isArray(sessions)
     );
   } else if (protocolVer === 3) {
     const v = flightRecord.v ?? null;
@@ -84,9 +85,8 @@ export function checkStruct(flightRecord, protocolVer) {
       flightRecord &&
       v === protocolVer &&
       m &&
-      s &&
       typeof m === "object" &&
-      typeof s === "object"
+      Array.isArray(s)
     );
   }
 }

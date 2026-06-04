@@ -242,7 +242,10 @@ export default function IntegrityStatsPanel({
         </CardHeader>
         <Separator />
         <CardContent className="grid gap-1">
-          <MetricRow label="Session ID" value={formatSid(session?.sid)} />
+          <MetricRow
+            label="Session ID"
+            value={formatSid(session?.sid || session?.id)}
+          />
           <MetricRow
             label="Block Count"
             value={session?.bc ?? blocks.length ?? "Unknown"}

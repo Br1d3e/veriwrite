@@ -46,22 +46,22 @@ export function step(currentSnapshot, ev) {
   };
 }
 
-export function seekToSession(currentSnapshot, sid) {
+export function seekToSession(currentSnapshot, sessionIndex) {
   if (
-    typeof sid !== "number" ||
-    sid < 0 ||
-    sid >= currentSnapshot.sessions.length
+    typeof sessionIndex !== "number" ||
+    sessionIndex < 0 ||
+    sessionIndex >= currentSnapshot.sessions.length
   ) {
     return currentSnapshot;
   }
 
-  const init = currentSnapshot.sessions[sid]?.init ?? "";
-  const evCount = calculateTotalEv(currentSnapshot, sid);
-  const sesTotalEv = totalSessionEv(currentSnapshot, sid);
+  const init = currentSnapshot.sessions[sessionIndex]?.init ?? "";
+  const evCount = calculateTotalEv(currentSnapshot, sessionIndex);
+  const sesTotalEv = totalSessionEv(currentSnapshot, sessionIndex);
 
   return {
     ...currentSnapshot,
-    currentSession: sid,
+    currentSession: sessionIndex,
     i: 0,
     playTs: 0,
     budget: 0,

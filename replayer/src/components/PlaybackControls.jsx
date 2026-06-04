@@ -174,7 +174,7 @@ function SessionButtons({
             const index = groupStart + offset;
 
             return (
-              <PaginationItem key={session.sid || index}>
+              <PaginationItem key={session.sid || session.id || index}>
                 <PaginationLink
                   href="#"
                   isActive={currentSession === index}

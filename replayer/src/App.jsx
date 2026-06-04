@@ -5,6 +5,7 @@ import Workspace from "@/views/Workspace";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { calDocStats } from "@/lib/stats/doc";
 import { calSession } from "@/lib/stats/session";
+import { processData } from "@/lib/loader";
 
 export default function App() {
   const states = {
@@ -18,12 +19,13 @@ export default function App() {
   const [sessionStats, setSessionStats] = useState(null);
 
   function handleRecordLoaded({ nextRecord, source }) {
-    const sessions = nextRecord?.sessions || nextRecord?.s || [];
+    const processedRecord = processData(nextRecord);
+    const sessions = processedRecord?.sessions || processedRecord?.s || [];
 
-    setRecord(nextRecord);
+    setRecord(processedRecord);
     setOnline(source === "server");
     setAppState(states.play);
-    setDocStats(calDocStats(nextRecord));
+    setDocStats(calDocStats(processedRecord));
     setSessionStats(calSession(sessions.length > 0 ? sessions[0] : null));
   }
 
