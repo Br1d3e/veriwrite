@@ -12,6 +12,7 @@ import {
   OFFLINE_STATUS,
   sessionReady,
 } from "./post";
+import { serializeRecord, wrapVwContainer } from "./vwContainer";
 
 // Initialize record
 let flightRecord = null;
@@ -24,6 +25,7 @@ let onlineStatus = true;
 let pending = false;
 let recording = false;
 let failed = false;
+let fileReady = false;
 const CHECKPOINT_INTERVAL = 10_000; // 10s for testing
 let lastCheckpoint = Date.now();
 let lastPoll = Date.now();
@@ -114,6 +116,10 @@ function applyEvents(text, ev = []) {
     nextText = nextText.slice(0, pos) + ins + nextText.slice(pos + delLen);
   }
   return nextText;
+}
+
+function sessionCount(record) {
+  return Array.isArray(record?.sessions) ? record.sessions.length : 0;
 }
 
 async function persistRecord() {
@@ -356,6 +362,7 @@ export async function updateSessions(finalText = null) {
 
 export async function startRecording() {
   if (recording) return;
+  fileReady = false;
   failed = false;
   lastError = null;
   lastRetryMs = 0;
@@ -369,9 +376,12 @@ export async function startRecording() {
   [docId, schema, xmlId] = await loadSettings();
   const sessionInitText = await readBodyText();
 
-  // Load existing record
+  // Load existing record without clobbering newer in-memory sessions.
   if (xmlId) {
-    flightRecord = await loadRecord(xmlId);
+    const storedRecord = await loadRecord(xmlId);
+    if (!flightRecord || sessionCount(storedRecord) >= sessionCount(flightRecord)) {
+      flightRecord = storedRecord;
+    }
   }
 
   if (!docId && flightRecord?.m?.docId) {
@@ -429,6 +439,7 @@ export async function startRecording() {
 
 export async function stopRecording() {
   if (!recording && !session) return;
+  fileReady = false;
   recording = false;
 
   await checkConnectivity();
@@ -446,6 +457,7 @@ export async function stopRecording() {
         if (isOfflineResponse(response)) {
           switchOffline(response);
           await updateSessions(finalText);
+          fileReady = true;
           return;
         }
       } else {
@@ -463,10 +475,14 @@ export async function stopRecording() {
       } else if (finalReceipt && finalReceipt.receipt) {
         session.fullOnline = true;
       } else {
-        throw new Error(`Record server did not return a session receipt: ${JSON.stringify(finalReceipt)}`);
+        throw new Error(
+          `Record server did not return a session receipt: ${JSON.stringify(finalReceipt)}`
+        );
       }
     } else if (onlineStatus && session && session.ev.length > 0) {
-      throw new Error("Record server session is not ready; saved local session but did not upload blocks.");
+      throw new Error(
+        "Record server session is not ready; saved local session but did not upload blocks."
+      );
     }
     await updateSessions(finalText);
     evBuffer = [];
@@ -475,7 +491,10 @@ export async function stopRecording() {
     if (onlineStatus) {
       await syncPendingSessions();
     }
+
+    fileReady = true;
   } catch (error) {
+    fileReady = false;
     failRecording(error);
     throw error;
   }
@@ -483,4 +502,12 @@ export async function stopRecording() {
 
 export function getFlightRecord() {
   return flightRecord;
+}
+
+export function isFileReady() {
+  return fileReady;
+}
+
+export function getVwRecord() {
+  return wrapVwContainer(flightRecord);
 }

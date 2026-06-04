@@ -42,6 +42,19 @@ export function b64Decoder(b64) {
   return new TextDecoder().decode(bytes);
 }
 
+export function bytesToBase64(bytes) {
+  let bin = "";
+  for (const b of bytes) bin += String.fromCharCode(b);
+  return btoa(bin);
+}
+
+export function base64ToBytes(b64) {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+
 
 /**
  * Compares two input texts, generates [dt, pos, delLen, ins]

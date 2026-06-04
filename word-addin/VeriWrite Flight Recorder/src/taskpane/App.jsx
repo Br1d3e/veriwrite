@@ -25,25 +25,14 @@ import {
   setOnlineMode,
   startRecording,
   stopRecording,
+  isFileReady,
 } from "./modules/recorder";
 import { loadSettingById, updateSettings } from "./modules/store";
 import { useInterval } from "./hooks/useInterval";
 import { useTimeout } from "./hooks/useTimeout";
+import { downloadVwContainer, downloadJSON } from "./modules/export";
 
 const AUTO_MESSAGE_MS = 5000;
-
-function downloadJSON() {
-  const flightRecord = getFlightRecord();
-  if (!flightRecord) return;
-
-  const blob = new Blob([JSON.stringify(flightRecord, null, 2)], { type: "application/json" });
-  const link = document.createElement("a");
-  const safeTitle = (flightRecord.m.title || "untitled").replace(/[^\w-]+/g, "_");
-  link.href = URL.createObjectURL(blob);
-  link.download = `${safeTitle}.flightrecord.json`;
-  link.click();
-  URL.revokeObjectURL(link.href);
-}
 
 function formatRetryStatus(retryStatus) {
   if (!retryStatus) return "";
@@ -75,6 +64,7 @@ export default function App() {
   const [recordedOnce, setRecordedOnce] = useState(false);
   const lastOnlineRef = useRef(null);
   const lastRetryRef = useRef("");
+  const [hasRecord, setHasRecord] = useState(false);
 
   useEffect(() => {
     if (!window.Office) return;
@@ -179,6 +169,8 @@ export default function App() {
       setRecording(false);
       setEvCount(0);
       setTimeElapsedMs(0);
+      const record = getFlightRecord();
+      setHasRecord(isFileReady() && !!record && Object.keys(record).length > 0);
 
       // if (!getOnlineStatus()) {
       //   downloadJSON();
@@ -254,9 +246,21 @@ export default function App() {
               </Button>
             </div>
 
-            <Button icon={<ArrowDownloadRegular />} onClick={downloadJSON}>
+            <Button
+              icon={<ArrowDownloadRegular />}
+              disabled={!(hasRecord && !recording)}
+              onClick={() => downloadVwContainer(getFlightRecord())}
+            >
               Export local record
             </Button>
+            {/* 
+            <Button
+              icon={<ArrowDownloadRegular />}
+              disabled={!(hasRecord && !recording)}
+              onClick={() => downloadJSON(getFlightRecord())}
+            >
+            [Dev] Export .json
+            </Button> */}
 
             <Divider />
 

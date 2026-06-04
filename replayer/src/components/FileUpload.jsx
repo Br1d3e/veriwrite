@@ -1,5 +1,11 @@
 import { useRef, useState } from "react";
-import { checkStruct, processData } from "../lib/loader";
+import {
+  recordFileType,
+  isVwContainer,
+  decodeVwContainer,
+  checkStruct,
+  processData,
+} from "../lib/loader";
 import { Separator } from "./ui/separator";
 import { toast } from "sonner";
 
@@ -37,8 +43,24 @@ export default function FileUpload({ onRecordLoaded, className = "" }) {
 
     try {
       setError("");
-      const text = await file.text();
-      const record = JSON.parse(text);
+
+      const fileType = recordFileType(file);
+      let record;
+      if (fileType == "json") {
+        const text = await file.text();
+        record = JSON.parse(text);
+      } else if (fileType == "vw") {
+        const bytes = new Uint8Array(await file.arrayBuffer());
+        if (!isVwContainer(bytes)) {
+          throw new Error("Invalid .vw flightRecord format.");
+        }
+        record = decodeVwContainer(bytes);
+      } else {
+        throw new Error(
+          "Invalid file type. Replayer supports .json and .vw format.",
+        );
+      }
+      console.log(record);
       const validStruct = checkStruct(record, 2);
       if (!validStruct) {
         throw new Error("Invalid flight record file format.");
@@ -52,8 +74,8 @@ export default function FileUpload({ onRecordLoaded, className = "" }) {
       );
     } catch (err) {
       console.log(err);
-      setError("Invalid JSON flight record file.");
-      toast.error(err.message || "Invalid JSON flight record file.");
+      setError("Invalid flight record file.");
+      toast.error(err.message || "Invalid flight record file.");
       event.target.value = "";
     }
   }
@@ -74,7 +96,7 @@ export default function FileUpload({ onRecordLoaded, className = "" }) {
           className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
           type="file"
           aria-label="Upload flight record file"
-          accept="application/json,.json"
+          accept="application/json,.json,.vw"
           onChange={handleFileChange}
         />
         <div className="flex gap-3">

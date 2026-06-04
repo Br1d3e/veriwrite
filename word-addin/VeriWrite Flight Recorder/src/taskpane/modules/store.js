@@ -1,6 +1,7 @@
 // Handles Settings and CustomXmlParts in Word Document
 
-import { generateUUID, b64Encoder, b64Decoder } from "./utils.js";
+import { bytesToBase64, base64ToBytes } from "./utils.js";
+import { serializeRecord, deserializeRecord } from "./vwContainer.js";
 
 let xmlId = null;
 
@@ -10,9 +11,10 @@ let xmlId = null;
  * @returns {string} xmlId
  */
 export async function saveCustomXml(record) {
-  const json = JSON.stringify(record);
-  const b64 = b64Encoder(json); // Encode with base64
-  const xml = `<vw xmlns="urn:veriwrite:v2"><b64>${b64}</b64></vw>`;
+  // const json = JSON.stringify(record);
+  const serialized = serializeRecord(record);
+  const b64 = bytesToBase64(serialized);
+  const xml = `<vw xmlns="urn:veriwrite:v3"><b64>${b64}</b64></vw>`;
   try {
     return await Word.run(async (context) => {
       const settings = context.document.settings;
@@ -29,7 +31,12 @@ export async function saveCustomXml(record) {
       const recordXml = context.document.customXmlParts.add(xml);
       recordXml.load("id");
       await context.sync();
-      settings.add("xmlId", recordXml.id);
+
+      if (existingId.isNullObject) {
+        settings.add("xmlId", recordXml.id);
+      } else {
+        existingId.value = recordXml.id;
+      }
       await context.sync();
 
       return recordXml.id; // xmlId
@@ -130,8 +137,9 @@ export async function loadRecord(xmlId) {
       const b64Node = xmlDoc.getElementsByTagName("b64")[0];
       if (!b64Node || !b64Node.textContent) return null;
       const b64 = b64Node.textContent;
-      const json = b64Decoder(b64);
-      const flightRecord = JSON.parse(json);
+      // const flightRecord = JSON.parse(json);
+      const raw = base64ToBytes(b64);
+      const flightRecord = deserializeRecord(raw);
       return flightRecord;
     });
   } catch (err) {

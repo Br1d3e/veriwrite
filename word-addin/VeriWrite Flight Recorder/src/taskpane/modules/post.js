@@ -2,7 +2,7 @@
  * @fileoverview Post recorded session blocks to record server.
  */
 
-import { generateUUID, arraySum, SERVER_URL } from "./utils";
+import { generateUUID, arraySum, SERVER_URL, bytesToBase64, base64ToBytes } from "./utils";
 import { getDocAuthor, getDocTitle, readBodyText } from "./docInfo";
 import { loadSettings, updateSettings } from "./store";
 
@@ -38,17 +38,6 @@ export function resetSessionState() {
   currentDocHash = null;
   challenge = null;
   serverSessionReady = false;
-}
-
-function bytesToBase64(bytes) {
-  let binary = "";
-  for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary);
-}
-
-function base64ToBytes(base64) {
-  const binaryBytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
-  return new Uint8Array(binaryBytes);
 }
 
 function toHex(bytes) {
