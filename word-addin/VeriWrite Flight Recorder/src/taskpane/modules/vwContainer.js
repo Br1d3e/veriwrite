@@ -2,6 +2,18 @@ import { Packr } from "msgpackr";
 
 const magic = new TextEncoder().encode("VWFR");
 const version = new Uint8Array([1]);
+const codecId = new Uint8Array([1]);
+const flightRecordStructures = [
+  ["v", "m", "sessions"],
+  ["docId", "created", "lastModified", "title", "author"],
+  ["sid", "t0", "tn", "init", "ev", "fullOnline", "localPh", "localEh"],
+];
+const recordPackr = new Packr({
+  structures: flightRecordStructures.map((structure) => structure.slice()),
+});
+const recordUnpackr = new Packr({
+  structures: flightRecordStructures.map((structure) => structure.slice()),
+});
 
 function concatUint8Arrays(arrays) {
   const totalLength = arrays.reduce((sum, arr) => sum + arr.length, 0);
@@ -14,19 +26,23 @@ function concatUint8Arrays(arrays) {
   return result;
 }
 
+async function sha256Bytes(bytes) {
+  return new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
+}
+
 export function serializeRecord(flightRecord) {
-  const packr = new Packr(); // TODO: insert with flightRecord structure
-  const packed = packr.pack(flightRecord);
+  const packed = recordPackr.pack(flightRecord);
   return packed;
 }
 
 export function deserializeRecord(bytes) {
-  const packr = new Packr();
-  const record = packr.unpack(bytes);
+  const record = recordUnpackr.unpack(bytes);
   return record;
 }
 
-export function wrapVwContainer(flightRecord) {
+export async function wrapVwContainer(flightRecord) {
   const packedRecord = serializeRecord(flightRecord);
-  return concatUint8Arrays([magic, version, packedRecord]);
+  const hash = await sha256Bytes(packedRecord);
+  const recordStart = new Uint8Array([4 + 1 + 1 + 1 + hash.length]); // header + record length + hash
+  return concatUint8Arrays([magic, version, codecId, recordStart, hash, packedRecord]);
 }

@@ -65,7 +65,6 @@ export default function useReplay(record) {
 
       if (nextSnapshot.i >= ev.length) {
         if (nextSnapshot.currentSession >= nextSnapshot.sessions.length - 1) {
-          console.log(`Finished All Sessions`);
           return {
             ...nextSnapshot,
             playing: false,

@@ -21,13 +21,13 @@ export function downloadBytes(bytes, filename) {
   URL.revokeObjectURL(link.href);
 }
 
-export function downloadVwContainer(flightRecord) {
+export async function downloadVwContainer(flightRecord) {
   if (!flightRecord) return;
   if (!Array.isArray(flightRecord.sessions)) {
     throw new Error("Cannot export: flight record sessions are not loaded.");
   }
 
-  const bytes = wrapVwContainer(flightRecord);
+  const bytes = await wrapVwContainer(flightRecord);
   const safeTitle = (flightRecord?.m?.title || "untitled").replace(/[^\w-]+/g, "_");
   downloadBytes(bytes, `${safeTitle}.vw`);
 }

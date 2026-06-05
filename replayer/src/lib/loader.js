@@ -8,6 +8,15 @@
 
 import { Packr } from "msgpackr";
 
+const flightRecordStructures = [
+  ["v", "m", "sessions"],
+  ["docId", "created", "lastModified", "title", "author"],
+  ["sid", "t0", "tn", "init", "ev", "fullOnline", "localPh", "localEh"],
+];
+const recordUnpackr = new Packr({
+  structures: flightRecordStructures.map((structure) => structure.slice()),
+});
+
 function dedupe(sessions) {
   // Remove duplicates by session ID
   const seenIds = new Set();
@@ -70,12 +79,7 @@ export function checkStruct(flightRecord, protocolVer) {
     const m = flightRecord.m ?? null;
     const sessions = flightRecord.sessions ?? null;
 
-    return (
-      flightRecord &&
-      v === protocolVer &&
-      m &&
-      Array.isArray(sessions)
-    );
+    return flightRecord && v === protocolVer && m && Array.isArray(sessions);
   } else if (protocolVer === 3) {
     const v = flightRecord.v ?? null;
     const m = flightRecord.m ?? null;
@@ -103,13 +107,42 @@ export function recordFileType(file) {
 }
 
 export function isVwContainer(bytes) {
+  if (!(bytes instanceof Uint8Array) || bytes.length < 39) return false;
   const magic = new TextDecoder().decode(bytes.slice(0, 4));
   const version = bytes[4];
-  return magic === "VWFR" && version === 1;
+  const codecId = bytes[5];
+  const recordStart = bytes[6];
+  return (
+    magic === "VWFR" &&
+    version === 1 &&
+    codecId === 1 &&
+    recordStart >= 39 &&
+    recordStart < bytes.length
+  );
+}
+
+function bytesEqual(a, b) {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+}
+
+export async function verifyHash(bytes) {
+  const recordStart = bytes[6];
+  const givenHash = bytes.slice(7, recordStart);
+  const binaryPayload = bytes.slice(recordStart);
+  const computedHash = new Uint8Array(
+    await crypto.subtle.digest("SHA-256", binaryPayload),
+  );
+
+  return bytesEqual(givenHash, computedHash);
 }
 
 export function decodeVwContainer(bytes) {
-  const binaryPayload = bytes.slice(5);
-  const packr = new Packr();
-  return packr.unpack(binaryPayload);
+  const recordStart = bytes[6];
+  const binaryPayload = bytes.slice(recordStart);
+
+  return recordUnpackr.unpack(binaryPayload);
 }

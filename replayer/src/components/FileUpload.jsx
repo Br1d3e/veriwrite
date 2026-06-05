@@ -3,6 +3,7 @@ import {
   recordFileType,
   isVwContainer,
   decodeVwContainer,
+  verifyHash,
   checkStruct,
   processData,
 } from "../lib/loader";
@@ -52,7 +53,14 @@ export default function FileUpload({ onRecordLoaded, className = "" }) {
       } else if (fileType == "vw") {
         const bytes = new Uint8Array(await file.arrayBuffer());
         if (!isVwContainer(bytes)) {
-          throw new Error("Invalid .vw flightRecord format.");
+          throw new Error("Invalid .vw flight record format.");
+        }
+        const validHash = await verifyHash(bytes);
+        if (!validHash) {
+          toast.warning(
+            "Hash checksum does not match. This record may have been changed or damaged.",
+            { position: "top-center", duration: 5000 },
+          );
         }
         record = decodeVwContainer(bytes);
       } else {
@@ -60,7 +68,6 @@ export default function FileUpload({ onRecordLoaded, className = "" }) {
           "Invalid file type. Replayer supports .json and .vw format.",
         );
       }
-      console.log(record);
       const validStruct = checkStruct(record, record?.v);
       if (!validStruct) {
         throw new Error("Invalid flight record file format.");

@@ -116,7 +116,9 @@ export function seekToEvent(eventIdx, currentSnapshot) {
     docText: docText,
     playTs: calculateTs(eventIdx, currentSnapshot),
     playing: false,
-    evCount: calculateTotalEv(currentSnapshot, currentSnapshot.currentSession - 1) + eventIdx,
+    evCount:
+      calculateTotalEv(currentSnapshot, currentSnapshot.currentSession - 1) +
+      eventIdx,
     sesTotalEv: totalSessionEv(currentSnapshot),
     caretPos: docText.length,
     sesProg: calSesProgress({
@@ -125,7 +127,9 @@ export function seekToEvent(eventIdx, currentSnapshot) {
     }),
     docProg: calDocProgress({
       ...currentSnapshot,
-      evCount: calculateTotalEv(currentSnapshot, currentSnapshot.currentSession - 1) + eventIdx,
+      evCount:
+        calculateTotalEv(currentSnapshot, currentSnapshot.currentSession - 1) +
+        eventIdx,
     }),
   };
 }
@@ -137,7 +141,6 @@ export function seekLastEvent(currentSnapshot) {
 
 export function resetStatus(currentSnapshot) {
   if (!currentSnapshot.record) return;
-  console.log("reset status");
   return {
     ...currentSnapshot,
     playTs: 0,

@@ -216,7 +216,7 @@ export default function IntegrityStatsPanel({
   if (!online) {
     return (
       <div
-        className={`rounded-md border bg-muted/30 p-4 text-sm text-muted-foreground ${className}`}
+        className={`rounded-md border border-amber-500 bg-amber-300/30 p-4 text-sm text-muted-foreground ${className}`}
       >
         The record was offline, and the server cannot authenticate writing
         process.
