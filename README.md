@@ -4,7 +4,7 @@ VeriWrite is a writing-process evidence system for academic integrity review.
 
 It helps students preserve evidence of how they wrote a document, and helps teachers replay and inspect that writing process before making an academic integrity judgment.
 
-> **Important:** VeriWrite is not an AI detector. It does not prove or disprove originality by itself. It should be treated as an evidence packet that supports human review.
+> VeriWrite is not an AI detector. It does not prove or disprove originality by itself. It should be treated as an evidence packet that supports human review.
 
 ## Contents
 
@@ -14,6 +14,7 @@ It helps students preserve evidence of how they wrote a document, and helps teac
 - [Record Replayer](#record-replayer)
 - [Data Integrity Model](#data-integrity-model)
 - [What The Integrity Proof Helps Detect](#what-the-integrity-proof-helps-detect)
+- [Offline Recovery Mode](#offline-recovery-mode)
 - [Limitations And Challenges](#limitations-and-challenges)
 - [Motivation](#motivation)
 - [Project Structure](#project-structure)
@@ -41,6 +42,10 @@ Students use the **VeriWrite Flight Recorder**, a Microsoft Word add-in, while w
 
 The recorder observes document changes, groups them into sessions and blocks, and sends integrity evidence to the record server.
 
+<p align="center">
+  <img src="recorder_example.png" alt="VeriWrite Recorder Word add-in panel showing recording status, session time, export button, online verification state, blocks sent, and auto-start recording toggle." width="360">
+</p>
+
 ### Teacher Side
 
 Teachers use the **VeriWrite Record Replayer** to load a student's record and inspect:
@@ -58,21 +63,21 @@ The Flight Recorder captures writing activity as compact edit events.
 
 Each event stores:
 
-| Field | Meaning |
-| --- | --- |
-| `dt` | elapsed time since the previous event |
-| `pos` | edit position |
-| `delLen` | number of deleted characters |
-| `ins` | inserted text |
+| Field    | Meaning                               |
+| -------- | ------------------------------------- |
+| `dt`     | elapsed time since the previous event |
+| `pos`    | edit position                         |
+| `delLen` | number of deleted characters          |
+| `ins`    | inserted text                         |
 
 The recorder polls and detects keystroke-level document changes through the Microsoft Word API.
 
 Recorded data is grouped into:
 
-| Unit | Meaning |
-| --- | --- |
-| **Session** | one continuous writing period |
-| **Block** | a short fixed-period batch inside a session |
+| Unit        | Meaning                                     |
+| ----------- | ------------------------------------------- |
+| **Session** | one continuous writing period               |
+| **Block**   | a short fixed-period batch inside a session |
 
 Each block contains event data, timing data, document state hashes, and integrity metadata. The block payload is encrypted and sent to the record server.
 
@@ -100,6 +105,10 @@ The replayer also provides supporting analysis:
 - session-level statistics
 - block-level integrity status
 - freshness status
+
+<p align="center">
+  <img src="replayer_example_2.png" alt="VeriWrite Replayer dashboard showing session-level analysis, paste insertion cards, writing flow metrics, and synchronized replay controls." width="900">
+</p>
 
 The purpose is to help teachers understand the writing process, not to automatically judge the student.
 
@@ -151,11 +160,11 @@ The server issues freshness challenges with expiration windows.
 
 Blocks are classified based on whether they were received within the expected window:
 
-| Status | Meaning |
-| --- | --- |
-| `FRESH` | received within the expected live window |
-| `DELAYED` | valid block, but received after the live window |
-| `STALE` | freshness evidence is too old or no longer acceptable |
+| Status    | Meaning                                               |
+| --------- | ----------------------------------------------------- |
+| `FRESH`   | received within the expected live window              |
+| `DELAYED` | valid block, but received after the live window       |
+| `STALE`   | freshness evidence is too old or no longer acceptable |
 
 For example, if a student disables internet during recording and reconnects later, the writing data can still be stored, but the evidence level is weaker and shown as delayed.
 
@@ -164,6 +173,11 @@ For example, if a student disables internet during recording and reconnects late
 After verification, the server signs block receipts and session final receipts using Ed25519.
 
 These receipts are shown in the teacher-side replayer so the teacher can see which parts of the record were verified by the server.
+
+<p align="center">
+  <img src="replayer_integrity_example.png" alt="Integrity panel showing verified session integrity and verified block integrity." width="520">
+  <img src="replayer_integrity_example_2.png" alt="Integrity panel showing a needs-review session and delayed block freshness status." width="520">
+</p>
 
 ## What The Integrity Proof Helps Detect
 
@@ -176,6 +190,42 @@ The integrity system is designed to address practical evidence problems such as:
 - document state does not match the submitted event stream
 
 In these cases, the replayer can show degraded or invalid integrity status instead of silently treating the record as fully verified.
+
+## Offline Recovery Mode
+
+VeriWrite introduces a backup option that makes records available even when the student completes their writing entirely offline.
+
+> Note: offline backup mode is preferable only when online recording is unavailable because of internet connection issues. It does not guarantee server-backed evidence of data integrity. Integrity statistics that depend on server proof are not available for fully offline records.
+
+### Word Add-in File Architecture
+
+In the **VeriWrite Flight Recorder** Microsoft Word add-in, the `Export local record` button exports a unique `.vw` _VeriWrite Record_ file.
+
+### The `.vw` Container
+
+VeriWrite uses an enhanced record file structure built around _MessagePack_ serialization.
+
+The `.vw` format makes exports and imports more efficient. It also stores the writing record as a binary payload, which makes accidental manual modification harder than with plain JSON.
+
+The current `.vw` binary format is structured as follows.
+
+#### Heading
+
+- Magic bytes: `VWFR`, which stands for _VeriWrite Flight Record_
+- Version: `1`
+- Codec ID: `1` (_MessagePack_ serialization)
+- Record start index: the byte position where the actual writing record begins
+- Hash checksum: a SHA-256 checksum of the serialized record, used to detect whether the exported record has been changed or damaged
+
+#### Payload
+
+- Flight record: serialized writing record using _MessagePack_
+
+### Replayer Dashboard Support
+
+VeriWrite Replayer supports both the previous `.json` format and the upgraded `.vw` record format.
+
+When a teacher uploads a record, the replayer first checks whether the file matches the expected flight record structure. For `.vw` files, it also recomputes the SHA-256 checksum from the serialized record payload. If the checksum does not match, the replayer immediately warns that the record may have been damaged or changed.
 
 ## Limitations And Challenges
 
@@ -191,7 +241,8 @@ VeriWrite should be treated as an evidence system, not a final decision system.
 
 - Replayer statistics are derived from Microsoft Word API data and local algorithms.
 - Statistics may be inaccurate because of API performance constraints, sampling behavior, and algorithmic limits.
-- Generated reports may use LLMs and can be mistaken.
+- Generated reports use carefully prompted LLMs but can still be mistaken.
+- `.vw` offline recovery records do not generally prove originality or writing integrity. Stronger evidence must rely on server verification.
 - Server-side integrity checks do not fully solve fake or unauthorized clients.
 - Server-side integrity checks do not fully prevent automated scripts that type text into Word while the recorder is running.
 
@@ -207,17 +258,18 @@ VeriWrite aims to give students a more transparent way to provide evidence of th
 
 ## Project Structure
 
-| Path | Purpose |
-| --- | --- |
-| `word-addin/VeriWrite Flight Recorder/` | Microsoft Word add-in recorder |
-| `backend/record_server/` | FastAPI record server and PostgreSQL storage |
-| `backend/LLM/` | replayer stats panel LLM integration |
-| `replayer/` | teacher-side writing process replayer |
+| Path                                    | Purpose                                      |
+| --------------------------------------- | -------------------------------------------- |
+| `word-addin/VeriWrite Flight Recorder/` | Microsoft Word add-in recorder               |
+| `backend/record_server/`                | FastAPI record server and PostgreSQL storage |
+| `backend/LLM/`                          | replayer stats panel LLM integration         |
+| `replayer/`                             | teacher-side writing process replayer        |
 
 ## Current Status
 
 - Microsoft Word flight recorder
 - compact event-based writing record format
+- migration to a compact binary `.vw` format for more robust offline recovery
 - multi-session replayer
 - replay controls
 - session navigation
@@ -226,16 +278,13 @@ VeriWrite aims to give students a more transparent way to provide evidence of th
 - LLM-assisted analysis
 - integrity verification design and implementation
 - server-backed verification concept using block hash chains and signed results
+- improved UI polish
+- better demo workflow
 
 Planned / future work:
 
 - stronger server-backed verified mode
-- improved document-level analytics
-- improved UI polish
-- better demo workflow
-- clearer teacher-facing reports
-- more robust offline recovery
 - future batch / receipt architecture
-- possible migration from raw JSON to a more compact container format
+- deployment, putting the VeriWrite product into practice if possible
 
 ---
