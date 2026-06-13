@@ -1,0 +1,301 @@
+id: s2
+med: 2.0
+p90: 3.0
+p95: 4.0
+p99: 6.0
+large insert counts: [208 156 156 507]
+len: 208
+dt: 12443
+rate: 16.72 kps
+text: a Chinese invasion of Taiwan (image of a scary Chinese fighter plane), financial markets in "free fall," "500 regional banks have shuttered their doors" (endless lines of depositors made penniless by Biden); 
+
+len: 156
+dt: 277249
+rate: 0.56 kps
+text: A deepfake posted to Trump's Truth Social account depicts Florida Governor Ron DeSantis riding a rhinoceros (i.e., "RINO," i.e., "Republican In Name Only").
+
+len: 156
+dt: 30471
+rate: 5.12 kps
+text: A deepfake posted to Trump's Truth Social account depicts Florida Governor Ron DeSantis riding a rhinoceros (i.e., "RINO," i.e., "Republican In Name Only").
+
+len: 507
+dt: 33322
+rate: 15.22 kps
+text: Social media platforms claim that they restrict deepfakes. Facebook has announced that it will remove deepfakes, but Business Insider says Facebook's policy has "loopholes." YouTube says that it takes down deepfakes, but the platform allows content claiming that the 2020 election was stolen. Twitter labels deepfakes and prohibits sharing of "misleading media" which "deceive or confuse people and lead to harm." In any event, YouTube, TikTok, and Facebook are working on their own generative-AI platforms.
+
+id: s3
+med: 2.0
+p90: 3.0
+p95: 4.0
+p99: 12.090000000000032
+large insert counts: [558 344  62  33  38  56  72]
+len: 558
+dt: 386
+rate: 1445.6 kps
+text: (Social media platforms claim that they restrict deepfakes. Facebook has announced that it will remove deepfakes, but Business Insider says Facebook's policy has "loopholes." YouTube says that it takes down deepfakes, but the platform allows content claiming that the 2020 election was stolen. Twitter labels deepfakes and prohibits sharing of "misleading media" which "deceive or confuse people and lead to harm." In any event, YouTube, TikTok, and Facebook are working on their own generative-AI platforms.) used for consequence, original source (Pierson)
+
+len: 344
+dt: 36129
+rate: 9.52 kps
+text: In 2021, China's Cyberspace Administration took regulatory measures on social networking software to address emerging risks associated with this technology. However, by 2023, online fraud rates remained high, with some perpetrators using Deepfake technology to conduct online transactions, successfully defrauding victims of over 2 million RMB.
+
+len: 62
+dt: 687
+rate: 90.25 kps
+text: "Implementation Outline for a Rule of Law Society (2020-2025) 
+
+len: 33
+dt: 359
+rate: 91.92 kps
+text:  Data Security Management Measure
+
+len: 38
+dt: 11861
+rate: 3.2 kps
+text: The Cyberspace Administration of China
+
+len: 56
+dt: 1067
+rate: 52.48 kps
+text: Departments like The Cyberspace Administration of China
+
+len: 72
+dt: 1154
+rate: 62.39 kps
+text: President Xi highlights to recognize the tendency in AI’s development, 
+
+id: s3
+med: 2.0
+p90: 3.0
+p95: 4.0
+p99: 12.090000000000032
+large insert counts: [558 344  62  33  38  56  72]
+len: 558
+dt: 386
+rate: 1445.6 kps
+text: (Social media platforms claim that they restrict deepfakes. Facebook has announced that it will remove deepfakes, but Business Insider says Facebook's policy has "loopholes." YouTube says that it takes down deepfakes, but the platform allows content claiming that the 2020 election was stolen. Twitter labels deepfakes and prohibits sharing of "misleading media" which "deceive or confuse people and lead to harm." In any event, YouTube, TikTok, and Facebook are working on their own generative-AI platforms.) used for consequence, original source (Pierson)
+
+len: 344
+dt: 36129
+rate: 9.52 kps
+text: In 2021, China's Cyberspace Administration took regulatory measures on social networking software to address emerging risks associated with this technology. However, by 2023, online fraud rates remained high, with some perpetrators using Deepfake technology to conduct online transactions, successfully defrauding victims of over 2 million RMB.
+
+len: 62
+dt: 687
+rate: 90.25 kps
+text: "Implementation Outline for a Rule of Law Society (2020-2025) 
+
+len: 33
+dt: 359
+rate: 91.92 kps
+text:  Data Security Management Measure
+
+len: 38
+dt: 11861
+rate: 3.2 kps
+text: The Cyberspace Administration of China
+
+len: 56
+dt: 1067
+rate: 52.48 kps
+text: Departments like The Cyberspace Administration of China
+
+len: 72
+dt: 1154
+rate: 62.39 kps
+text: President Xi highlights to recognize the tendency in AI’s development, 
+
+id: s5
+med: 2.0
+p90: 3.0
+p95: 4.0
+p99: 5.0
+large insert counts: []
+id: s6
+med: 2.0
+p90: 3.0
+p95: 4.0
+p99: 5.0
+large insert counts: [ 31 127 127 127 127]
+len: 31
+dt: 914
+rate: 33.92 kps
+text: people can easily get access to
+
+len: 127
+dt: 390
+rate: 325.64 kps
+text: A deepfake of Biden in a wheelchair made to suggest that Biden is too old and infirm to be president would deceive many people.
+
+len: 127
+dt: 667
+rate: 190.4 kps
+text: A deepfake of Biden in a wheelchair made to suggest that Biden is too old and infirm to be president would deceive many people.
+
+len: 127
+dt: 867
+rate: 146.48 kps
+text: A deepfake of Biden in a wheelchair made to suggest that Biden is too old and infirm to be president would deceive many people.
+
+len: 127
+dt: 2283
+rate: 55.63 kps
+text: A deepfake of Biden in a wheelchair made to suggest that Biden is too old and infirm to be president would deceive many people.
+
+id: s7
+med: 2.0
+p90: 4.0
+p95: 5.0
+p99: 12.0
+large insert counts: []
+id: s8
+med: 2.0
+p90: 3.0
+p95: 4.0
+p99: 5.0
+large insert counts: [219  22 159  20 153 146 165 274]
+len: 219
+dt: 25551
+rate: 8.57 kps
+text: Implementation Outline for a Rule of Law Society (2020-2025)” emphasized regulation on AI media, and the draft “Data Security Management Measure” made labeling deepfakes on social media a mandatory requirement (Wang). 
+
+len: 22
+dt: 1353
+rate: 16.26 kps
+text:  ”, published in China
+
+len: 159
+dt: 2402
+rate: 66.19 kps
+text: . Global citizens should actively consider and learn about the world’s newest technology by themselves and increase awareness on misinformation from deepfakes.
+
+len: 20
+dt: 1638
+rate: 12.21 kps
+text: on digital platforms
+
+len: 153
+dt: 357
+rate: 428.57 kps
+text: Political deepfakes are an important global issue that requires active regulation, as they impact democratic practices and lowers trust among the public.
+
+len: 146
+dt: 474
+rate: 308.02 kps
+text: Apart from technological detection of AI content, it is also important to foster public literacy and knowledge in political and digital technology
+
+len: 165
+dt: 356
+rate: 463.48 kps
+text: As technology enhances, political deepfakes need both restriction via strict regulation of countries and improved public literacy in politics and digital technology.
+
+len: 274
+dt: 50932
+rate: 5.38 kps
+text: In China, deepfake detection is strictly prioritized for national security, social media platforms are mandatorily required to detect and label AI gIn United States, regulation of deepfakes focuses on election fairness and isn’t unified as a whole country 
+
+id: s8
+med: 2.0
+p90: 3.0
+p95: 4.0
+p99: 5.0
+large insert counts: [219  22 159  20 153 146 165 274]
+len: 219
+dt: 25551
+rate: 8.57 kps
+text: Implementation Outline for a Rule of Law Society (2020-2025)” emphasized regulation on AI media, and the draft “Data Security Management Measure” made labeling deepfakes on social media a mandatory requirement (Wang). 
+
+len: 22
+dt: 1353
+rate: 16.26 kps
+text:  ”, published in China
+
+len: 159
+dt: 2402
+rate: 66.19 kps
+text: . Global citizens should actively consider and learn about the world’s newest technology by themselves and increase awareness on misinformation from deepfakes.
+
+len: 20
+dt: 1638
+rate: 12.21 kps
+text: on digital platforms
+
+len: 153
+dt: 357
+rate: 428.57 kps
+text: Political deepfakes are an important global issue that requires active regulation, as they impact democratic practices and lowers trust among the public.
+
+len: 146
+dt: 474
+rate: 308.02 kps
+text: Apart from technological detection of AI content, it is also important to foster public literacy and knowledge in political and digital technology
+
+len: 165
+dt: 356
+rate: 463.48 kps
+text: As technology enhances, political deepfakes need both restriction via strict regulation of countries and improved public literacy in politics and digital technology.
+
+len: 274
+dt: 50932
+rate: 5.38 kps
+text: In China, deepfake detection is strictly prioritized for national security, social media platforms are mandatorily required to detect and label AI gIn United States, regulation of deepfakes focuses on election fairness and isn’t unified as a whole country 
+
+id: s10
+med: 2.0
+p90: 4.0
+p95: 4.0
+p99: 5.0
+large insert counts: [93 93]
+len: 93
+dt: 7206
+rate: 12.91 kps
+respondents on the Lucid survey research platform
+
+len: 93
+dt: 851
+rate: 109.28 kps
+respondents on the Lucid survey research platform
+
+id: s11
+med: 1.0
+p90: 3.0
+p95: 3.3999999999999986
+p99: 5.439999999999991
+large insert counts: []
+id: s12
+med: 2.0
+p90: 3.0
+p95: 4.0
+p99: 5.0
+large insert counts: []
+id: s13
+med: 2.0
+p90: 3.0
+p95: 4.0
+p99: 62.12000000000057
+large insert counts: [1992   47  126  110  110]
+len: 1992
+dt: 887
+rate: 2245.77 kps
+“ChatGPT Usage and Adoption Patterns at Work.” Openai.com, OpenAI, 2026, openai.com/business/guides-and-resources/chatgpt-usage-and-adoption-patterns-at-wClegg, Nick. “What We Saw on Our Platforms during 2024’S Global Elections | Meta.” Meta, 3 Dec. 2024, about.fb.com/news/2024/12/2024-global-elections-metaLiu, Guozhu. “深度伪造与国家安全:基于总体国家安全观的视角.” 国际安全研究, vol. 40, no. 3, Apr. 2022, https://doi.org/10.14093/j.cnki.cn10-1132/d.2022.03.0Mani, Eshann. “Shaping Robust AI Regulation: Lessons from India’s ‘Deepfake’ Election - Harvard Political Review.” Harvard Political Review, 6 Dec. 2024, Pierson, Charles. “AI and the 2024 Presidential Election.” CounterPunch, Counterpunch, June 2023, p. 20, research.ebsco.com/linkprocessor/plink?id=2a66e40Rascius, Brendan. “Don’t Get Fooled This Election Season — Here’s How You Can Spot Deepfake Political Ads.” Charlotte Observer, 20 Feb. 2024, www.charlott“The Definition of Deepfake.” Time.com, TIME USA, LLC, 3 Apr. 2025, p. N.PAG-N.PAG, research.ebsco.com/linkprocessor/plink?id=161a9e1460be33dc8331228a0ed8Wang, Xinzhi. “A Comparative Study of Deepfake Policy in the United States and China.” International Journal of Frontiers in Sociology, vol. 7, no. 4, FraZhao, Qiuyue. “系好人工智能竞速发展‘安全带’-新华网.” News.cn, 2025, www.news.cn/tech/20250530/bbeaae05635e455eac48ab99cbd3398a/c.html. Accessed 4 Mar. 2026.
+
+len: 47
+dt: 15001
+rate: 3.13 kps
+text: (“ChatGPT Usage and Adoption Patterns at Work”)
+
+len: 126
+dt: 2155
+rate: 58.47 kps
+text: The Indian National Congress, the country’s major opposition party committed the largest spread of deepfakes on social media. 
+
+len: 110
+dt: 3326
+rate: 33.07 kps
+text: , which prohibits impact of political deepfakes.  (The United Nation could also engage in drafting policies …)
+
+len: 110
+dt: 4463
+rate: 24.65 kps
+text: , which prohibits impact of political deepfakes.  (The United Nation could also engage in drafting policies …)

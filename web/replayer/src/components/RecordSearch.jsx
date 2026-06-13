@@ -1,8 +1,12 @@
 import { useState } from "react";
 import { getRecordById, queryAuthor, queryTitle } from "../lib/recordApi.js";
-import { InputGroup, InputGroupAddon, InputGroupInput } from "./ui/input-group";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "./ui/input-group.jsx";
 import { Button } from "./ui/button.jsx";
-import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "./ui/tabs.jsx";
 import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ChevronRightIcon, Search } from "lucide-react";
