@@ -27,7 +27,6 @@ app.add_middleware(
 async def get_ping_server():
     return {"status": "OK"}
 
-
 @app.post("/ping")
 async def ping_server():
     return {"status": "OK"}
@@ -77,11 +76,20 @@ async def query_record_author(payload: dict[str, Any]):
     return query_author(author, limit=limit)
 
 
-@app.post("/record/load")
-async def load_record(payload: dict[str, Any]):
+async def load_record_by_id(payload: dict[str, Any]):
     d_id = payload.get("d_id")
     if not isinstance(d_id, str) or not d_id.strip():
         raise ValueError("missing d_id")
     analyze = AnalyzeDB()
     analyze.load_doc(d_id=d_id)
     return analyze.get_record()
+
+
+@app.post("/load")
+async def load_record(payload: dict[str, Any]):
+    return await load_record_by_id(payload)
+
+
+@app.post("/record/load")
+async def load_record_legacy(payload: dict[str, Any]):
+    return await load_record_by_id(payload)

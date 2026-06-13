@@ -27,5 +27,5 @@ export async function queryAuthor(author, limit = 10) {
 }
 
 export async function getRecordById(docId) {
-    return await postJson("/record/load", {d_id: docId});
+    return await postJson("/load", {d_id: docId});
 }

@@ -1,7 +1,11 @@
 from pydantic import BaseModel
 from typing import Any
-from backend.LLM.llm import gen_report
-from backend.LLM.utils import format_timestamp, format_duration
+try:
+    from backend.LLM.llm import gen_report
+    from backend.LLM.utils import format_timestamp, format_duration
+except ModuleNotFoundError:
+    from LLM.llm import gen_report
+    from LLM.utils import format_timestamp, format_duration
 from copy import deepcopy
 from fastapi import APIRouter
 

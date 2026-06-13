@@ -1,4 +1,4 @@
-export const SERVER_URL = "";
+export const SERVER_URL = __VERIWRITE_RECORD_API_URL__ || "/record";
 
 // uuid generator
 export function generateUUID() {

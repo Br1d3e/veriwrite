@@ -5,6 +5,8 @@ build/
 .env
 *.log
 .vscode/
+AGENTS.md
+.vercel
 replayer/src/lib/stats/doc/test
 replayer/src/lib/stats/session/test
 .vite

@@ -34,6 +34,10 @@ import { downloadVwContainer, downloadJSON } from "./modules/export";
 
 const AUTO_MESSAGE_MS = 5000;
 
+function isWordHost(info) {
+  return info?.host === window.Office?.HostType?.Word || info?.host === "Word";
+}
+
 function formatRetryStatus(retryStatus) {
   if (!retryStatus) return "";
   if (retryStatus.retrying) {
@@ -53,9 +57,9 @@ export function formatDuration(ms) {
   return hours > 0 ? `${hours}h ${minutes}m` : `${minutes} min`;
 }
 
-export default function App() {
-  const [officeReady, setOfficeReady] = useState(false);
-  const [isWord, setIsWord] = useState(false);
+export default function App({ officeInfo = null }) {
+  const [officeReady, setOfficeReady] = useState(Boolean(officeInfo));
+  const [isWord, setIsWord] = useState(isWordHost(officeInfo));
   const [recording, setRecording] = useState(false);
   const [online, setOnline] = useState(true);
   const [statusMessage, setStatusMessage] = useState("");
@@ -67,10 +71,24 @@ export default function App() {
   const [hasRecord, setHasRecord] = useState(false);
 
   useEffect(() => {
-    if (!window.Office) return;
+    if (officeInfo) {
+      setOfficeReady(true);
+      setIsWord(isWordHost(officeInfo));
+      const currentOnline = getOnlineStatus();
+      lastOnlineRef.current = currentOnline;
+      setOnline(currentOnline);
+      refreshOnlineStatus().then((nextOnline) => {
+        lastOnlineRef.current = nextOnline;
+        setOnline(nextOnline);
+      });
+      handleAutoStartDefault();
+      return;
+    }
+
+    if (!window.Office?.onReady) return;
     window.Office.onReady((info) => {
       setOfficeReady(true);
-      setIsWord(info.host === window.Office.HostType.Word);
+      setIsWord(isWordHost(info));
       const currentOnline = getOnlineStatus();
       lastOnlineRef.current = currentOnline;
       setOnline(currentOnline);
@@ -80,7 +98,7 @@ export default function App() {
       });
       handleAutoStartDefault();
     });
-  }, []);
+  }, [officeInfo]);
 
   useInterval(() => {
     const retryStatus = getRetryStatus();
@@ -198,6 +216,14 @@ export default function App() {
     setPendingSessions(postState.pendingSessions);
     setPostedBlocks(postState.postedBlocks);
   }, 500);
+
+  if (!officeReady) {
+    return (
+      <main className="min-h-screen bg-slate-50 px-4 py-5 text-slate-950">
+        <Text block>Loading VeriWrite Recorder...</Text>
+      </main>
+    );
+  }
 
   if (!isWord) {
     return (

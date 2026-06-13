@@ -1,25 +1,18 @@
-from ollama import chat
-from google import genai
-from google.genai import types
-import os
-from dotenv import load_dotenv
-from pydantic import BaseModel
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from typing import Any
-import json
-from datetime import datetime
-from copy import deepcopy
-import asyncio
-from pathlib import Path
-from backend.LLM.doc_stats import router as doc_stats_router
-from backend.LLM.ses_stats import router as ses_stats_router
+
+try:
+    from backend.LLM.doc_stats import router as doc_stats_router
+    from backend.LLM.ses_stats import router as ses_stats_router
+except ModuleNotFoundError:
+    from LLM.doc_stats import router as doc_stats_router
+    from LLM.ses_stats import router as ses_stats_router
 
 
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=["*"],
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )

@@ -5,7 +5,10 @@ from datetime import datetime
 import json
 import asyncio
 import os
-from backend.LLM.utils import extract_first_json_object
+try:
+    from backend.LLM.utils import extract_first_json_object
+except ModuleNotFoundError:
+    from LLM.utils import extract_first_json_object
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from pathlib import Path
@@ -29,7 +32,7 @@ client = genai.Client(
         client_args={"trust_env": False},
         async_client_args={"trust_env": False},
         retry_options=types.HttpRetryOptions(
-            attempts=1,
+            attempts=MAX_RETRIES,
             http_status_codes=[408, 429, 500, 502, 503, 504],
         ),
     ),

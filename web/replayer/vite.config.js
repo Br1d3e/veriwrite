@@ -13,7 +13,11 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      "/api": {
+      "/record": {
+        target: "http://127.0.0.1:8000",
+        changeOrigin: true,
+      },
+      "/llm": {
         target: "http://127.0.0.1:8000",
         changeOrigin: true,
       },
