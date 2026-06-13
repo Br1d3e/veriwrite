@@ -1,0 +1,14 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "rewrites": [
+    {
+      "source": "/replayer",
+      "destination": "/replayer/index.html"
+    },
+    {
+      "source": "/replayer/:path*",
+      "destination": "/replayer/index.html"
+    }
+  ]
+}

@@ -10,8 +10,7 @@ import {
   storeDocReportById,
   getDocReportById,
 } from "./LLMReports";
-
-const SERVER_IP = "http://127.0.0.1:8000/api";
+import { LLM_API_URL } from "@/lib/apiConfig.js";
 
 export function DocReport({ docStats, docId, className }) {
   const [status, setStatus] = useState("idle");
@@ -46,7 +45,7 @@ export function DocReport({ docStats, docId, className }) {
         onClick={() =>
           handleReport(
             { documentStats: docStats },
-            `${SERVER_IP}/doc-report`,
+            `${LLM_API_URL}/doc-report`,
             setStatus,
             setError,
             setResult,

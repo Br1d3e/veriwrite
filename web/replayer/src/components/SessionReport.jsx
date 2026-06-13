@@ -10,8 +10,7 @@ import {
   storeSessionReportById,
   getSessionReportById,
 } from "./LLMReports";
-
-const SERVER_IP = "http://127.0.0.1:8000/api";
+import { LLM_API_URL } from "@/lib/apiConfig.js";
 
 export function SessionReport({ sessionStats, sid, className }) {
   const [status, setStatus] = useState("idle");
@@ -52,7 +51,7 @@ export function SessionReport({ sessionStats, sid, className }) {
         onClick={() =>
           handleReport(
             { sessionStats },
-            `${SERVER_IP}/ses-report`,
+            `${LLM_API_URL}/ses-report`,
             setStatus,
             setError,
             setResult,

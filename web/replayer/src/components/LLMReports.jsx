@@ -1,8 +1,6 @@
 import { useState } from "react";
 import { Separator } from "@/components/ui/separator";
 
-const SERVER_IP = "http://127.0.0.1:8000/api";
-
 export async function handleReport(
   statsPayload,
   path,

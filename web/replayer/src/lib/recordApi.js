@@ -1,9 +1,8 @@
-
-const SERVER_URL = "http://127.0.0.1:8443";
+import { RECORD_API_URL } from "./apiConfig.js";
 
 
 async function postJson(path, body) {
-    const response = await fetch(`${SERVER_URL}${path}`, {
+    const response = await fetch(`${RECORD_API_URL}${path}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
