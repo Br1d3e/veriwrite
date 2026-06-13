@@ -1,8 +1,5 @@
 """
 PostgreSQL access layer for the VeriWrite record server.
-
-Keep FastAPI endpoint code in main.py. This module owns direct SQL interaction
-and the current rolling document-state validation used during block ingest.
 """
 
 import base64
@@ -22,6 +19,12 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.serialization import Encoding, PrivateFormat, PublicFormat, NoEncryption
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
+
+if __package__ and __package__.startswith("backend."):
+    from backend.record_storage import get_vw_store
+else:
+    from record_storage import get_vw_store
+import uuid
 
 
 DATABASE_URL = os.getenv(
@@ -105,6 +108,8 @@ def canonical_json(value):
 def sha256_hex(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
+def gen_uuid() -> str:
+    return str(uuid.uuid4())
 
 def decrypt_payload(sk_b64: str, ct_b64: str, iv_b64: str, tag_b64: str, aad: str) -> dict[str, Any]:
     s_key = base64.b64decode(sk_b64)
@@ -216,6 +221,125 @@ def update_server_ts(cursor, d_id: str, server_ts = now_ms()) -> int:
     )
     return server_ts
 
+def get_record_from_store(vw_storage_key: str) -> dict[str, Any] | None:
+    vw_store = get_vw_store()
+    if not vw_store.exists(vw_storage_key):
+        return None
+    vw = vw_store.get_record(vw_storage_key)
+    return vw
+
+def merge_record(vw_storage_key: str, record: dict[str, Any]) -> dict[str, Any]:
+    prev_record = get_record_from_store(vw_storage_key)
+    if not prev_record:
+        return record
+    
+    prev_sessions = prev_record.get("sessions") or prev_record.get("s") or []
+    current_sessions = record.get("sessions") or record.get("s") or []
+    sessions_by_sid = {
+        session.get("sid"): session
+        for session in prev_sessions
+        if isinstance(session, dict) and session.get("sid")
+    }
+
+    for session in current_sessions:
+        if not isinstance(session, dict):
+            continue
+        sid = session.get("sid")
+        if not sid:
+            continue
+        if sid in sessions_by_sid and (session.get("init") is None or session.get("ev") is None):
+            continue
+        sessions_by_sid[sid] = session
+
+    merged_record = dict(record)
+    merged_record["sessions"] = sorted(
+        sessions_by_sid.values(),
+        key=lambda session: (session.get("t0") is None, session.get("t0") or 0, session.get("sid") or ""),
+    )
+    return merged_record
+
+def update_vw_store(d_id: str) -> str:
+    try:
+        from .analyze_db import AnalyzeDB
+    except ImportError:
+        from backend.record_db.analyze_db import AnalyzeDB
+
+    with connect() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT vw_storage_key 
+                FROM docs
+                WHERE d_id = %s
+                """,
+                (d_id,),
+            )
+            row = cursor.fetchone()
+            if not row:
+                raise ValueError(f"document not found: {d_id}")
+
+            vw_storage_key = row["vw_storage_key"] or gen_uuid()
+            if row["vw_storage_key"] != vw_storage_key:
+                cursor.execute(
+                    """
+                    UPDATE docs
+                    SET vw_storage_key = %s
+                    WHERE d_id = %s
+                    """,
+                    (vw_storage_key, d_id),
+                )
+
+    analyze_db = AnalyzeDB()
+    analyze_db.load_doc(d_id=d_id)
+    record_dict = analyze_db.get_record()
+    merged_record = merge_record(vw_storage_key, record_dict)
+    
+    vw_store = get_vw_store()
+    # vw_store.store_bytes(vw_storage_key, VWContainer(merged_record).wrap())
+    vw_store.store_record(vw_storage_key, merged_record)
+    return vw_storage_key
+
+
+def flush_pending_sessions(d_id: str):
+    update_vw_store(d_id)
+
+    with connect() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT sid
+                FROM sessions
+                WHERE d_id = %s AND vw_flushed = FALSE AND closed_server_ts IS NOT NULL
+                """,
+                (d_id,),
+            )
+            sessions = cursor.fetchall()
+            if not sessions:
+                return
+
+            sids = [session["sid"] for session in sessions]
+            cursor.execute(
+                """
+                UPDATE sessions
+                SET vw_flushed = TRUE, 
+                    init_text = NULL,
+                    current_text = NULL,
+                    ev = NULL,
+                    final_receipt = NULL
+                WHERE d_id = %s AND sid = ANY(%s)
+                """,
+                (d_id, sids),
+            )
+            cursor.execute(
+                """
+                UPDATE blocks
+                SET ev = NULL, receipt = NULL
+                WHERE d_id = %s AND sid = ANY(%s)
+                """,
+                (d_id, sids),
+            )
+
+
 def start_doc(doc: dict[str, Any]) -> dict[str, Any]:
     d_id = doc.get("dId")
     v = doc.get("v")
@@ -227,20 +351,24 @@ def start_doc(doc: dict[str, Any]) -> dict[str, Any]:
     author = doc.get("a")
     server_ts = now_ms()
 
+    vw_storage_key = gen_uuid()
+
     with connect() as conn:
         with conn.cursor() as cursor:
             cursor.execute(
                 """
-                INSERT INTO docs (d_id, v, t0, title, author, created_server_ts, updated_server_ts)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                INSERT INTO docs (d_id, v, t0, title, author, created_server_ts, updated_server_ts, vw_storage_key)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 ON CONFLICT (d_id) DO UPDATE
                 SET t0 = LEAST(docs.t0, EXCLUDED.t0),
                     title = EXCLUDED.title,
                     author = EXCLUDED.author,
                     updated_server_ts = EXCLUDED.updated_server_ts
                 """,
-                (d_id, v, t0, title, author, server_ts, server_ts),
+                (d_id, v, t0, title, author, server_ts, server_ts, vw_storage_key),
             )
+
+    update_vw_store(d_id)
 
     return {"status": "SUCCESS", "op": "doc/start", "dId": d_id}
 
@@ -347,6 +475,9 @@ def start_session(session: dict[str, Any]) -> dict[str, Any]:
                 ),
             )
             update_server_ts(cursor, d_id, server_ts)
+
+    update_vw_store(d_id)
+        
     return {
         "status": "SUCCESS", 
         "op": "session/start", 
@@ -786,7 +917,11 @@ def end_session(session_end: dict[str, Any]) -> dict[str, Any]:
                 curr_doc_integrity = "RISK"
             elif freshness_status != "FRESH":
                 curr_doc_integrity = "NEEDS_REVIEW"
+            else:
+                curr_doc_integrity = session_status
             update_doc_integrity_status(cursor, d_id, curr_doc_integrity)
+
+    flush_pending_sessions(d_id)
 
     return {
         "status": session_status,

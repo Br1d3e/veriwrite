@@ -2,7 +2,7 @@
 try: 
     from .store_db import DATABASE_URL, merkle_tree_root
 except ImportError:
-    from backend.record_server.store_db import DATABASE_URL, merkle_tree_root
+    from backend.record_db.store_db import DATABASE_URL, merkle_tree_root
 import pandas as pd
 import psycopg
 
@@ -81,7 +81,7 @@ class AnalyzeDB:
         sessions = self.load_sessions()
         matched = sessions[sessions["d_id"] == d_id]
         if matched.empty:
-            raise ValueError(f"sessions not found for {d_id}")
+            matched = sessions.iloc[0:0]
         self.sessions = matched
         return self.sessions
         
@@ -185,9 +185,6 @@ class AnalyzeDB:
             sid = session["sid"]
             blocks = self.fetch_blocks(sid)
 
-            if blocks.empty:
-                continue
-            
             mapping = {"TRUE": True, "FALSE": False, "UNKNOWN": None}
 
             dt = session["dt"]
@@ -196,20 +193,32 @@ class AnalyzeDB:
             closed_server_ts = session["closed_server_ts"]
             if pd.isna(closed_server_ts):
                 closed_server_ts = None
+
+            if blocks.empty:
+                blocks_record = []
+                merkle_valid = session["merkle_root"] == merkle_tree_root([])
+            else:
+                blocks_record = blocks.drop(columns=["ch"]).to_dict(orient="records")
+                merkle_valid = session["merkle_root"] == merkle_tree_root(blocks["ch"].to_list())
+
+            ev = session["ev"]
+            if ev is None or (not isinstance(ev, list) and pd.isna(ev)):
+                ev = []
         
             s.append({
                 "sid": sid,
                 "t0": int(session["st0"]),
                 "tn": int(session["st0"] + dt),
                 "init": session["init_text"],
-                "ev": session["ev"],
-                "b": blocks.drop(columns=["ch"]).to_dict(orient="records"),
+                "ev": ev,
+                "b": blocks_record,
                 "cs": mapping.get(session["continuity_status"]),
                 "fs": session["freshness_status"],
-                "mr": session["merkle_root"] == merkle_tree_root(blocks["ch"].to_list()),
+                "mr": merkle_valid,
                 "ct": int(closed_server_ts) if closed_server_ts is not None else None,
                 "fr": session["final_receipt"],
                 "bc": int(session["block_count"]),
+                "final_receipt": session["final_receipt"],
                 "status": session["session_status"]
             })
         self.record["sessions"] = s

@@ -3,14 +3,14 @@ from typing import Any
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-try:
+if __package__:
     from .store_db import append_block, end_session, start_doc, start_session, create_challenge
     from .search_db import query_title, query_author
     from .analyze_db import AnalyzeDB
-except ImportError:
-    from backend.record_server.store_db import append_block, end_session, start_doc, start_session, create_challenge
-    from backend.record_server.search_db import query_title, query_author
-    from backend.record_server.analyze_db import AnalyzeDB
+else:
+    from record_db.store_db import append_block, end_session, start_doc, start_session, create_challenge
+    from record_db.search_db import query_title, query_author
+    from record_db.analyze_db import AnalyzeDB
 
 
 app = FastAPI()

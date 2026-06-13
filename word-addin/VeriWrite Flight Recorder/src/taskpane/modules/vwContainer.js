@@ -8,10 +8,8 @@ const flightRecordStructures = [
   ["docId", "created", "lastModified", "title", "author"],
   ["sid", "t0", "tn", "init", "ev", "fullOnline", "localPh", "localEh"],
 ];
-const recordPackr = new Packr({
-  structures: flightRecordStructures.map((structure) => structure.slice()),
-});
-const recordUnpackr = new Packr({
+const recordPackr = new Packr({ mapsAsObjects: true, useRecords: false });
+const legacyRecordUnpackr = new Packr({
   structures: flightRecordStructures.map((structure) => structure.slice()),
 });
 
@@ -36,8 +34,11 @@ export function serializeRecord(flightRecord) {
 }
 
 export function deserializeRecord(bytes) {
-  const record = recordUnpackr.unpack(bytes);
-  return record;
+  try {
+    return recordPackr.unpack(bytes);
+  } catch {
+    return legacyRecordUnpackr.unpack(bytes);
+  }
 }
 
 export async function wrapVwContainer(flightRecord) {

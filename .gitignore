@@ -13,3 +13,4 @@ replayer/src/lib/stats/session/test
 __pycache__
 test_*
 .editorconfig
+.vw

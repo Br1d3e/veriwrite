@@ -13,7 +13,8 @@ const flightRecordStructures = [
   ["docId", "created", "lastModified", "title", "author"],
   ["sid", "t0", "tn", "init", "ev", "fullOnline", "localPh", "localEh"],
 ];
-const recordUnpackr = new Packr({
+const recordUnpackr = new Packr({ mapsAsObjects: true, useRecords: false });
+const legacyRecordUnpackr = new Packr({
   structures: flightRecordStructures.map((structure) => structure.slice()),
 });
 
@@ -144,5 +145,9 @@ export function decodeVwContainer(bytes) {
   const recordStart = bytes[6];
   const binaryPayload = bytes.slice(recordStart);
 
-  return recordUnpackr.unpack(binaryPayload);
+  try {
+    return recordUnpackr.unpack(binaryPayload);
+  } catch {
+    return legacyRecordUnpackr.unpack(binaryPayload);
+  }
 }

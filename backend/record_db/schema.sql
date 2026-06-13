@@ -10,7 +10,8 @@ CREATE TABLE IF NOT EXISTS docs (
     integrity_status TEXT NOT NULL DEFAULT 'UNVERIFIED'
         CHECK (integrity_status IN ('VERIFIED', 'NEEDS_REVIEW', 'RISK', 'UNVERIFIED')),
     created_server_ts BIGINT NOT NULL,
-    updated_server_ts BIGINT NOT NULL
+    updated_server_ts BIGINT NOT NULL,
+    vw_storage_key TEXT
 );
 
 CREATE TABLE IF NOT EXISTS sessions (
@@ -26,7 +27,7 @@ CREATE TABLE IF NOT EXISTS sessions (
     session_key_b64 TEXT NOT NULL,
     chal_nonce TEXT,
     chal_expire BIGINT,
-    ev JSONB NOT NULL DEFAULT '[]'::jsonb,
+    ev JSONB DEFAULT '[]'::jsonb,
     block_count INTEGER NOT NULL DEFAULT 0,
     continuity_status TEXT NOT NULL DEFAULT 'UNKNOWN',
     freshness_status TEXT NOT NULL DEFAULT 'UNKNOWN',
@@ -36,7 +37,8 @@ CREATE TABLE IF NOT EXISTS sessions (
     merkle_root TEXT,
     final_receipt JSONB,
     created_server_ts BIGINT NOT NULL,
-    closed_server_ts BIGINT
+    closed_server_ts BIGINT,
+    vw_flushed BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 CREATE TABLE IF NOT EXISTS blocks (
@@ -52,7 +54,7 @@ CREATE TABLE IF NOT EXISTS blocks (
     dtn BIGINT,
     init_dsh TEXT,
     dsh TEXT,
-    ev JSONB NOT NULL DEFAULT '[]'::jsonb,
+    ev JSONB DEFAULT '[]'::jsonb,
     receipt JSONB,
     received_server_ts BIGINT NOT NULL,
     valid_q BOOLEAN NOT NULL,
@@ -66,7 +68,13 @@ CREATE TABLE IF NOT EXISTS blocks (
 );
 
 CREATE INDEX IF NOT EXISTS idx_sessions_d_id ON sessions(d_id);
+CREATE INDEX IF NOT EXISTS idx_sessions_pending_vw_flush
+    ON sessions(d_id, closed_server_ts)
+    WHERE vw_flushed = FALSE AND closed_server_ts IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_blocks_d_id ON blocks(d_id);
 CREATE INDEX IF NOT EXISTS idx_blocks_ch ON blocks(ch);
 CREATE INDEX IF NOT EXISTS idx_docs_title_trgm ON docs USING gin (title gin_trgm_ops);
 CREATE INDEX IF NOT EXISTS idx_docs_author_trgm ON docs USING gin (author gin_trgm_ops);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_docs_vw_storage_key
+    ON docs(vw_storage_key)
+    WHERE vw_storage_key IS NOT NULL;

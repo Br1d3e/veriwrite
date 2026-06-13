@@ -1,12 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-try:
-    from backend.LLM.main import app as llm_app
-    from backend.record_server.main import app as record_app
-except ModuleNotFoundError:
+if __package__:
+    from .LLM.main import app as llm_app
+    from .record_db.main import app as record_app
+else:
     from LLM.main import app as llm_app
-    from record_server.main import app as record_app
+    from record_db.main import app as record_app
 
 app = FastAPI()
 

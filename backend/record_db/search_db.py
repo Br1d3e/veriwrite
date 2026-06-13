@@ -2,7 +2,7 @@ import psycopg
 try:
     from .store_db import DATABASE_URL
 except ImportError: 
-    from backend.record_server.store_db import DATABASE_URL
+    from backend.record_db.store_db import DATABASE_URL
 
 def connect():
     return psycopg.connect(DATABASE_URL)
