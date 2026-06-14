@@ -24,6 +24,11 @@ if __package__ and __package__.startswith("backend."):
     from backend.record_storage import get_vw_store
 else:
     from record_storage import get_vw_store
+
+try:
+    from .analyze_db import AnalyzeDB
+except ImportError:
+    from backend.record_db.analyze_db import AnalyzeDB
 import uuid
 
 
@@ -234,36 +239,51 @@ def merge_record(vw_storage_key: str, record: dict[str, Any]) -> dict[str, Any]:
         return record
     
     prev_sessions = prev_record.get("sessions") or prev_record.get("s") or []
-    current_sessions = record.get("sessions") or record.get("s") or []
-    sessions_by_sid = {
+    db_sessions = record.get("sessions") or record.get("s") or []
+    prev_by_sid = {
         session.get("sid"): session
         for session in prev_sessions
         if isinstance(session, dict) and session.get("sid")
     }
+    db_by_sid = {
+        session.get("sid"): session
+        for session in db_sessions
+        if isinstance(session, dict) and session.get("sid")
+    }
 
-    for session in current_sessions:
-        if not isinstance(session, dict):
-            continue
-        sid = session.get("sid")
-        if not sid:
-            continue
-        if sid in sessions_by_sid and (session.get("init") is None or session.get("ev") is None):
-            continue
-        sessions_by_sid[sid] = session
+    all_sids = set(prev_by_sid.keys()) | set(db_by_sid.keys())
+    merged_by_sid = {}
+    for sid in all_sids:
+        prev_session = prev_by_sid.get(sid, {})
+        db_session = db_by_sid.get(sid, {})
 
-    merged_record = dict(record)
-    merged_record["sessions"] = sorted(
-        sessions_by_sid.values(),
-        key=lambda session: (session.get("t0") is None, session.get("t0") or 0, session.get("sid") or ""),
+        db_flushed = db_session.get("vw_flushed")
+
+        if db_session is None:
+            merged_by_sid[sid] = prev_session
+            continue
+
+        if db_flushed:
+            if not prev_session:
+                raise ValueError(f"db flushed prev session {sid}, but it was not stored in vw.")
+            merged_by_sid[sid] = prev_session
+        else:
+            merged_by_sid[sid] = db_session
+    
+    merged = record.copy()
+    merged["sessions"] = sorted(
+        merged_by_sid.values(),
+        key=lambda s: (
+            s.get("t0") is None,
+            s.get("t0") or 0,
+            s.get("sid") or "",
+        )
     )
-    return merged_record
+
+    return merged
 
 def update_vw_store(d_id: str) -> str:
-    try:
-        from .analyze_db import AnalyzeDB
-    except ImportError:
-        from backend.record_db.analyze_db import AnalyzeDB
-
+    # fetch storage key
     with connect() as conn:
         with conn.cursor() as cursor:
             cursor.execute(
@@ -295,7 +315,6 @@ def update_vw_store(d_id: str) -> str:
     merged_record = merge_record(vw_storage_key, record_dict)
     
     vw_store = get_vw_store()
-    # vw_store.store_bytes(vw_storage_key, VWContainer(merged_record).wrap())
     vw_store.store_record(vw_storage_key, merged_record)
     return vw_storage_key
 

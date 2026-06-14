@@ -219,6 +219,7 @@ class AnalyzeDB:
                 "fr": session["final_receipt"],
                 "bc": int(session["block_count"]),
                 "final_receipt": session["final_receipt"],
+                "vw_flushed": bool(session["vw_flushed"]),
                 "status": session["session_status"]
             })
         self.record["sessions"] = s

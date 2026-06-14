@@ -25,9 +25,9 @@ let serverSessionReady = false;
 let retrying = false;
 let retryStart = 0;
 let retryLastMs = 0;
-const retryTimeout = 5_000;
+const retryTimeout = 30_000;
 const retryInterval = 1_000;
-const requestTimeout = 1_000;
+const requestTimeout = 15_000;
 
 export function resetSessionState() {
   sid = null;
@@ -85,7 +85,7 @@ async function postJson(path, body) {
       signal: controller.signal,
     });
   } catch (error) {
-    // throw new Error(`Record server is unreachable at ${SERVER_URL}. Start backend/record_server before using online mode.`);
+    console.warn(`Record server request failed: ${path}`, error);
     return;
   } finally {
     clearTimeout(timeout);
@@ -93,7 +93,7 @@ async function postJson(path, body) {
 
   if (!response.ok) {
     const detail = await response.text();
-    // throw new Error(`Record server ${path} failed (${response.status}): ${detail}`);
+    console.warn(`Record server ${path} failed (${response.status}): ${detail}`);
     return;
   }
 
