@@ -211,11 +211,13 @@ def gen_challenge(sid: Any | str, freshness_window: int) -> dict[str, Any]:
         "et": expires_ts,
     }
 
-def update_server_ts(cursor, d_id: str, server_ts = now_ms()) -> int:
+def update_server_ts(cursor, d_id: str, server_ts=None) -> int:
+    if server_ts is None:
+        server_ts = now_ms()
     cursor.execute(
         """
         UPDATE docs 
-        SET updated_server_ts = %s 
+        SET updated_server_ts = GREATEST(created_server_ts, updated_server_ts, %s)
         WHERE d_id = %s
         """,
         (server_ts, d_id),
@@ -382,7 +384,11 @@ def start_doc(doc: dict[str, Any]) -> dict[str, Any]:
                 SET t0 = LEAST(docs.t0, EXCLUDED.t0),
                     title = EXCLUDED.title,
                     author = EXCLUDED.author,
-                    updated_server_ts = EXCLUDED.updated_server_ts
+                    updated_server_ts = GREATEST(
+                        docs.created_server_ts,
+                        docs.updated_server_ts,
+                        EXCLUDED.updated_server_ts
+                    )
                 """,
                 (d_id, v, t0, title, author, server_ts, server_ts, vw_storage_key),
             )
@@ -928,7 +934,7 @@ def end_session(session_end: dict[str, Any]) -> dict[str, Any]:
                  sid)
             )
 
-            update_server_ts(cursor, d_id)
+            update_server_ts(cursor, d_id, closed_server_ts)
             
             if valid_continuity and valid_end_hash and freshness_status == "FRESH":
                 curr_doc_integrity = "VERIFIED"
