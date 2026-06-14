@@ -25,10 +25,6 @@ if __package__ and __package__.startswith("backend."):
 else:
     from record_storage import get_vw_store
 
-try:
-    from .analyze_db import AnalyzeDB
-except ImportError:
-    from backend.record_db.analyze_db import AnalyzeDB
 import uuid
 
 
@@ -283,6 +279,10 @@ def merge_record(vw_storage_key: str, record: dict[str, Any]) -> dict[str, Any]:
     return merged
 
 def update_vw_store(d_id: str) -> str:
+    try:
+        from .analyze_db import AnalyzeDB
+    except ImportError:
+        from backend.record_db.analyze_db import AnalyzeDB
     # fetch storage key
     with connect() as conn:
         with conn.cursor() as cursor:
