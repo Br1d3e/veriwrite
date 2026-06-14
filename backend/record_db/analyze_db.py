@@ -106,6 +106,14 @@ class AnalyzeDB:
 
     def get_d_id(self):
         return self.d_id
+    
+    def fetch_storage_key(self):
+        if not isinstance(self.doc, pd.Series):
+            return
+        vw_storage_key = self.doc.get("vw_storage_key", None)
+        if vw_storage_key is None:
+            return None
+        return vw_storage_key
 
     def fetch_doc_meta(self):
         if not isinstance(self.doc, pd.Series):

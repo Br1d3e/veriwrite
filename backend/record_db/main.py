@@ -4,14 +4,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 if __package__:
-    from .store_db import append_block, end_session, start_doc, start_session, create_challenge
+    from .store_db import append_block, end_session, start_doc, start_session, create_challenge, get_record_from_store
     from .search_db import query_title, query_author
     from .analyze_db import AnalyzeDB
 else:
     from record_db.store_db import append_block, end_session, start_doc, start_session, create_challenge
     from record_db.search_db import query_title, query_author
     from record_db.analyze_db import AnalyzeDB
-
+    
 
 app = FastAPI()
 
@@ -76,13 +76,28 @@ async def query_record_author(payload: dict[str, Any]):
     return query_author(author, limit=limit)
 
 
-async def load_record_by_id(payload: dict[str, Any]):
+async def load_record_by_id_legacy(payload: dict[str, Any]):
     d_id = payload.get("d_id")
     if not isinstance(d_id, str) or not d_id.strip():
         raise ValueError("missing d_id")
     analyze = AnalyzeDB()
     analyze.load_doc(d_id=d_id)
     return analyze.get_record()
+
+
+async def load_record_by_id(payload: dict[str, Any]):
+    d_id = payload.get("d_id")
+    if not isinstance(d_id, str) or not d_id.strip():
+        raise ValueError("missing d_id")
+    db = AnalyzeDB()
+    db.load_doc(d_id=d_id)
+    key = db.fetch_storage_key()
+    if key is None:
+        raise ValueError(f"vw key does not exist in database: {key!r} \nd_id: {d_id!r}")
+    record = get_record_from_store(key)
+    if record is None:
+        raise ValueError(f"vw record storage not found for key, {key!r}, \nd_id, {d_id!r}")
+    return record
 
 
 @app.post("/load")
