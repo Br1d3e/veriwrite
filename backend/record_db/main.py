@@ -1,14 +1,14 @@
 from typing import Any
 
-from fastapi import FastAPI
+from fastapi import BackgroundTasks, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 if __package__:
-    from .store_db import append_block, end_session, start_doc, start_session, create_challenge, get_record_from_store
+    from .store_db import append_block, end_session, flush_pending_sessions, start_doc, start_session, create_challenge, get_record_from_store
     from .search_db import query_title, query_author
     from .analyze_db import AnalyzeDB
 else:
-    from record_db.store_db import append_block, end_session, start_doc, start_session, create_challenge
+    from record_db.store_db import append_block, end_session, flush_pending_sessions, start_doc, start_session, create_challenge
     from record_db.search_db import query_title, query_author
     from record_db.analyze_db import AnalyzeDB
     
@@ -49,8 +49,12 @@ async def post_session_block(block: dict[str, Any]):
 
 
 @app.post("/session/end")
-async def post_session_end(session_end: dict[str, Any]):
-    return end_session(session_end)
+async def post_session_end(session_end: dict[str, Any], background_tasks: BackgroundTasks):
+    response = end_session(session_end, flush_vw=False)
+    d_id = session_end.get("dId")
+    if isinstance(d_id, str) and d_id:
+        background_tasks.add_task(flush_pending_sessions, d_id)
+    return response
 
 @app.post("/query/title")
 async def query_record_title(payload: dict[str, Any]):

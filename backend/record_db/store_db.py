@@ -36,7 +36,7 @@ SIGNING_KEY_ID = os.getenv("VERIWRITE_SIGNING_KEY_ID", "local-dev-ed25519")
 SIGNING_PRIVATE_KEY_B64 = os.getenv("VERIWRITE_ED25519_PRIVATE_KEY_B64")
 _PROCESS_SIGNING_KEY = Ed25519PrivateKey.generate()
 
-FRESHNESS_WINDOW = 10_000
+FRESHNESS_WINDOW = 30_000
 INTEGRITY_LEVELS = {
     "UNVERIFIED": -1,
     "VERIFIED": 0,
@@ -825,7 +825,7 @@ def append_block(block: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def end_session(session_end: dict[str, Any]) -> dict[str, Any]:
+def end_session(session_end: dict[str, Any], *, flush_vw: bool = True) -> dict[str, Any]:
     d_id = session_end.get("dId")
     sid = session_end.get("sid")
     v = session_end.get("v")
@@ -946,7 +946,8 @@ def end_session(session_end: dict[str, Any]) -> dict[str, Any]:
                 curr_doc_integrity = session_status
             update_doc_integrity_status(cursor, d_id, curr_doc_integrity)
 
-    flush_pending_sessions(d_id)
+    if flush_vw:
+        flush_pending_sessions(d_id)
 
     return {
         "status": session_status,
