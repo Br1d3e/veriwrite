@@ -24,23 +24,34 @@ let xmlId = null;
 let onlineStatus = true;
 let pending = false;
 let recording = false;
+let stopRequested = false;
 let failed = false;
 let fileReady = false;
-const CHECKPOINT_INTERVAL = 10_000; // 10s for testing
+const CHECKPOINT_INTERVAL = 60_000;
+const POLL_INTERVAL = 200;
+const BACKGROUND_POLL_INTERVAL = 1_000;
+const STOP_SERVER_READY_TIMEOUT = 30_000;
+const STOP_SERVER_READY_INTERVAL = 500;
 let lastCheckpoint = Date.now();
 let lastPoll = Date.now();
 let lastText = "";
-const postInterval = 10_000;
+const postInterval = 60_000;
 let lastPost = Date.now();
+let currentText = "";
 let evBuffer = [];
 let postedBlocks = 0;
 let posting = null;
+let serverStartPromise = null;
 let docState = null;
 let sesState = null;
 let blockReceipt = null;
 let finalReceipt = null;
 let lastError = null;
 let lastRetryMs = 0;
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 export function setOnlineMode(value) {
   onlineStatus = Boolean(value);
@@ -52,16 +63,17 @@ export function getOnlineStatus() {
 
 export function getSessionInfo() {
   const ev = session && Array.isArray(session.ev) ? session.ev : [];
-  const timeElapsedMs = session ? Date.now() - session.t0 : 0;
+  const timeElapsedMs = session ? (stopRequested ? session.tn : Date.now()) - session.t0 : 0;
   return {
-    recording,
+    recording: recording || stopRequested,
     evCount: ev.length,
     timeElapsedMs,
   };
 }
 
 export function getPostState() {
-  const pendingSessions = flightRecord.sessions.filter((s) => s && s.fullOnline !== true);
+  const sessions = Array.isArray(flightRecord?.sessions) ? flightRecord.sessions : [];
+  const pendingSessions = sessions.filter((s) => s && s.fullOnline !== true);
   return {
     bufferedEv: evBuffer.length,
     pending,
@@ -130,10 +142,12 @@ async function persistRecord() {
   xmlId = await saveCustomXml(flightRecord);
 }
 
-async function syncPendingSessions() {
+async function syncPendingSessions(activeSid = null) {
   if (!flightRecord || !Array.isArray(flightRecord.sessions)) return;
 
-  const pendingSessions = flightRecord.sessions.filter((s) => s && s.fullOnline !== true);
+  const pendingSessions = flightRecord.sessions.filter(
+    (s) => s && s.sid !== activeSid && s.fullOnline !== true
+  );
   if (pendingSessions.length === 0) return;
 
   const pendingStarts = pendingSessions.map((s) => s.t0).filter(Number.isFinite);
@@ -225,6 +239,7 @@ async function flushBlock(docText, delayed = false) {
 function failRecording(error) {
   failed = true;
   recording = false;
+  stopRequested = false;
   lastError = error instanceof Error ? error.message : String(error);
 }
 
@@ -289,44 +304,14 @@ export function getRetryStatus() {
 async function poll() {
   if (!recording || failed) return;
 
-  if (Date.now() - lastCheckpoint >= CHECKPOINT_INTERVAL) {
-    try {
-      lastCheckpoint = Date.now();
-      await updateSessions();
-    } catch (error) {
-      failRecording(error);
-    }
-  }
-
   try {
-    const currentText = await captureDiff(pending);
-
-    const prevOnlineStatus = onlineStatus;
-    await checkConnectivity();
-    if (
-      onlineStatus &&
-      sessionReady() &&
-      evBuffer.length > 0 &&
-      Date.now() - lastPost >= postInterval
-    ) {
-      let response = null;
-      if (prevOnlineStatus === false && onlineStatus === true) {
-        // delayed
-        response = await flushBlock(currentText, true);
-      } else {
-        response = await flushBlock(currentText);
-      }
-      if (isOfflineResponse(response)) {
-        switchOffline(response);
-      }
-    }
+    currentText = await captureDiff(pending);
   } catch (error) {
     failRecording(error);
-  }
-
-  // Poll again (rate 200ms)
-  if (recording && !failed) {
-    setTimeout(poll, 200);
+  } finally {
+    if (recording && !failed) {
+      setTimeout(poll, POLL_INTERVAL);
+    }
   }
 }
 
@@ -347,7 +332,98 @@ async function captureDiff(pending = false) {
   return newText;
 }
 
+async function postPoll() {
+  if (!recording || failed) return;
+
+  try {
+    const prevOnlineStatus = onlineStatus;
+    await checkConnectivity();
+    if (
+      onlineStatus &&
+      sessionReady() &&
+      evBuffer.length > 0 &&
+      Date.now() - lastPost >= postInterval
+    ) {
+      let response = null;
+      const delayed = prevOnlineStatus === false && onlineStatus === true;
+      response = await flushBlock(currentText, delayed);
+
+      if (isOfflineResponse(response)) {
+        switchOffline(response);
+      }
+    }
+  } catch (error) {
+    failRecording(error);
+  } finally {
+    if (recording && !failed) {
+      setTimeout(postPoll, BACKGROUND_POLL_INTERVAL);
+    }
+  }
+}
+
+async function savePollCheckpoint() {
+  if (!recording || failed) return;
+
+  if (Date.now() - lastCheckpoint >= CHECKPOINT_INTERVAL) {
+    try {
+      lastCheckpoint = Date.now();
+      await updateSessions();
+    } catch (error) {
+      failRecording(error);
+    }
+  }
+  if (recording && !failed) {
+    setTimeout(savePollCheckpoint, BACKGROUND_POLL_INTERVAL);
+  }
+}
+
+async function waitForServerSessionReady() {
+  const started = Date.now();
+  if (serverStartPromise && !sessionReady()) {
+    await Promise.race([serverStartPromise, sleep(STOP_SERVER_READY_TIMEOUT)]);
+  }
+  while (onlineStatus && !sessionReady() && Date.now() - started < STOP_SERVER_READY_TIMEOUT) {
+    await sleep(STOP_SERVER_READY_INTERVAL);
+  }
+  return sessionReady();
+}
+
+async function startServerSession(sessionInitText) {
+  await checkConnectivity();
+
+  if (onlineStatus) {
+    try {
+      await syncPendingSessions(session?.sid);
+    } catch (error) {
+      switchOffline(error);
+    }
+  }
+
+  if (onlineStatus) {
+    try {
+      docState = await startDoc();
+      if (isOfflineResponse(docState)) {
+        switchOffline(docState);
+      } else {
+        sesState = await startSession(sessionInitText, false, null, session?.sid);
+        if (isOfflineResponse(sesState)) {
+          switchOffline(sesState);
+        } else {
+          lastPost = Date.now();
+          pending = false;
+        }
+      }
+    } catch (error) {
+      switchOffline(error);
+    }
+  }
+}
+
 export async function updateSessions(finalText = null) {
+  if (!session || !flightRecord) return;
+  if (!Array.isArray(flightRecord.sessions)) {
+    flightRecord.sessions = [];
+  }
   session.localEh = await hashText(finalText || (await readBodyText()));
 
   if (flightRecord.sessions.map((s) => s.sid).includes(session.sid)) {
@@ -369,17 +445,28 @@ export async function startRecording() {
   blockReceipt = null;
   finalReceipt = null;
   posting = null;
+  serverStartPromise = null;
   pending = false;
   evBuffer = [];
+  postedBlocks = 0;
   session = null;
+  stopRequested = false;
+
+  const sessionInitText = await readBodyText();
+  await initializeSession(sessionInitText);
+
+  lastPoll = Date.now();
+  lastText = sessionInitText;
+  currentText = sessionInitText;
+  recording = true;
+  poll();
 
   [docId, schema, xmlId] = await loadSettings();
-  const sessionInitText = await readBodyText();
 
   // Load existing record without clobbering newer in-memory sessions.
   if (xmlId) {
     const storedRecord = await loadRecord(xmlId);
-    if (!flightRecord || sessionCount(storedRecord) >= sessionCount(flightRecord)) {
+    if (!flightRecord || sessionCount(storedRecord) > sessionCount(flightRecord)) {
       flightRecord = storedRecord;
     }
   }
@@ -390,57 +477,28 @@ export async function startRecording() {
 
   // No stored record, create new document
   if (!flightRecord) {
-    console.log("Record load failed or is new, initializing fresh record...");
     flightRecord = await newRecord(docId);
   }
   await updateSettings("docId", flightRecord.m.docId);
-  await updateSettings("v", 2);
+  await updateSettings("v", 3);
 
-  await checkConnectivity();
-
-  if (onlineStatus) {
-    try {
-      await syncPendingSessions();
-    } catch (error) {
-      switchOffline(error);
-    }
-  }
-
-  await initializeSession(sessionInitText);
   await persistRecord(); // checkpoint immediately when record starts
-
-  if (onlineStatus) {
-    try {
-      docState = await startDoc();
-      if (isOfflineResponse(docState)) {
-        switchOffline(docState);
-      } else {
-        sesState = await startSession(sessionInitText, false, null, session?.sid);
-        if (isOfflineResponse(sesState)) {
-          switchOffline(sesState);
-        } else {
-          evBuffer = [];
-          lastPost = Date.now();
-          pending = false;
-        }
-      }
-    } catch (error) {
-      switchOffline(error);
-    }
-  }
-
-  lastPoll = Date.now();
-  lastText = sessionInitText;
-
-  recording = true;
-
-  poll();
+  postPoll();
+  savePollCheckpoint();
+  serverStartPromise = startServerSession(sessionInitText);
 }
 
-export async function stopRecording() {
-  if (!recording && !session) return;
+export async function stopRecording(onStopped = null) {
+  if (!recording && !stopRequested && !session) return;
   fileReady = false;
-  recording = false;
+
+  if (recording) {
+    const finalText = await captureDiff();
+    currentText = finalText;
+    await updateSessions(finalText);
+    recording = false;
+    stopRequested = true;
+  }
 
   await checkConnectivity();
 
@@ -448,15 +506,17 @@ export async function stopRecording() {
     if (posting) {
       await posting;
     }
+    const finalText = currentText;
 
-    const finalText = await captureDiff();
+    if (onlineStatus && !sessionReady()) {
+      await waitForServerSessionReady();
+    }
 
     if (onlineStatus && sessionReady()) {
       if (evBuffer.length > 0) {
         const response = await flushBlock(finalText);
         if (isOfflineResponse(response)) {
           switchOffline(response);
-          await updateSessions(finalText);
           fileReady = true;
           return;
         }
@@ -472,32 +532,46 @@ export async function stopRecording() {
       finalReceipt = await endSession(finalText, false, session.t0, session.tn);
       if (isOfflineResponse(finalReceipt)) {
         switchOffline(finalReceipt);
+        pending = true;
+        fileReady = true;
+        return {
+          status: "WAITING_FOR_SERVER_SESSION",
+          message:
+            "Session end is still waiting for the record server. Keep Word open and try Stop again shortly.",
+        };
       } else if (finalReceipt && finalReceipt.receipt) {
         session.fullOnline = true;
+        await updateSessions(finalText);
       } else {
         throw new Error(
           `Record server did not return a session receipt: ${JSON.stringify(finalReceipt)}`
         );
       }
     } else if (onlineStatus && session && session.ev.length > 0) {
-      throw new Error(
-        "Record server session is not ready; saved local session but did not upload blocks."
-      );
+      pending = true;
+      fileReady = true;
+      return {
+        status: "WAITING_FOR_SERVER_SESSION",
+        message:
+          "Record server session is not ready yet. Keep Word open and try Stop again shortly.",
+      };
     }
-    await updateSessions(finalText);
-    evBuffer = [];
-    session = null;
 
     if (onlineStatus) {
       await syncPendingSessions();
     }
 
+    evBuffer = [];
+    session = null;
+    stopRequested = false;
     fileReady = true;
   } catch (error) {
     fileReady = false;
     failRecording(error);
     throw error;
   }
+  onStopped && onStopped();
+  return { status: "STOPPED" };
 }
 
 export function getFlightRecord() {

@@ -32,7 +32,7 @@ import { useInterval } from "./hooks/useInterval";
 import { useTimeout } from "./hooks/useTimeout";
 import { downloadVwContainer, downloadJSON } from "./modules/export";
 
-const AUTO_MESSAGE_MS = 5000;
+const AUTO_MESSAGE_MS = 6000;
 
 function isWordHost(info) {
   return info?.host === window.Office?.HostType?.Word || info?.host === "Word";
@@ -61,6 +61,8 @@ export default function App({ officeInfo = null }) {
   const [officeReady, setOfficeReady] = useState(Boolean(officeInfo));
   const [isWord, setIsWord] = useState(isWordHost(officeInfo));
   const [recording, setRecording] = useState(false);
+  const [starting, setStarting] = useState(false);
+  const [stopping, setStopping] = useState(false);
   const [online, setOnline] = useState(true);
   const [statusMessage, setStatusMessage] = useState("");
   const [retryMessage, setRetryMessage] = useState("");
@@ -142,11 +144,20 @@ export default function App({ officeInfo = null }) {
   useEffect(() => {
     if (!isWord || !autoRecord || recording || recordedOnce) return;
 
-    startRecording().then(() => {
-      setRecording(true);
-      setStatusMessage("Recording started automatically.");
-      setRecordedOnce(true);
-    });
+    setStarting(true);
+    setStatusMessage("Recording started automatically.");
+    startRecording()
+      .then(() => {
+        setRecording(true);
+      })
+      .catch((err) => {
+        setRecording(false);
+        setStatusMessage(`Start recording failed. ${err}`);
+      })
+      .finally(() => {
+        setStarting(false);
+        setRecordedOnce(true);
+      });
   }, [isWord, autoRecord, recording]);
 
   async function handleAutoStartDefault() {
@@ -174,19 +185,40 @@ export default function App({ officeInfo = null }) {
   }
 
   async function handleStart() {
-    await startRecording();
-    setRecording(true);
+    setStarting(true);
+    setStatusMessage("Recording has started locally. Waiting for server response...");
+    try {
+      await startRecording();
+      setRecording(true);
+    } catch (err) {
+      setStatusMessage(`Start recording failed. ${err}`);
+    } finally {
+      setStarting(false);
+    }
   }
 
   async function handleStop() {
+    setStopping(true);
+    let stopResult = null;
+    setStatusMessage(
+      "Recording has stopped. Do not close Word yet. Waiting for server response..."
+    );
     try {
-      await stopRecording();
+      stopResult = await stopRecording();
+      if (stopResult?.status === "WAITING_FOR_SERVER_SESSION") {
+        setStatusMessage(stopResult.message);
+      } else {
+        setStatusMessage("Recording stopped and saved.");
+      }
     } catch (err) {
       setStatusMessage(`Stop recording failed. ${err}`);
     } finally {
-      setRecording(false);
-      setEvCount(0);
-      setTimeElapsedMs(0);
+      setStopping(false);
+      if (stopResult?.status !== "WAITING_FOR_SERVER_SESSION") {
+        setRecording(false);
+        setEvCount(0);
+        setTimeElapsedMs(0);
+      }
       const record = getFlightRecord();
       setHasRecord(isFileReady() && !!record && Object.keys(record).length > 0);
 
@@ -262,13 +294,13 @@ export default function App({ officeInfo = null }) {
               <Button
                 appearance="primary"
                 icon={<RecordRegular />}
-                disabled={recording || !isWord}
+                disabled={recording || starting || !isWord}
                 onClick={handleStart}
               >
-                Start
+                {starting ? "Starting..." : "Start"}
               </Button>
-              <Button icon={<StopRegular />} disabled={!recording} onClick={handleStop}>
-                Stop
+              <Button icon={<StopRegular />} disabled={!recording || stopping} onClick={handleStop}>
+                {stopping ? "Stopping..." : "Stop"}
               </Button>
             </div>
 
@@ -279,13 +311,13 @@ export default function App({ officeInfo = null }) {
             >
               Export local record
             </Button>
-            {/* 
-            <Button
+
+            {/* <Button
               icon={<ArrowDownloadRegular />}
               disabled={!(hasRecord && !recording)}
               onClick={() => downloadJSON(getFlightRecord())}
             >
-            [Dev] Export .json
+              [Dev] Export .json
             </Button> */}
 
             <Divider />
@@ -300,6 +332,7 @@ export default function App({ officeInfo = null }) {
                 <div className="flex flex-col gap-2 px-1 pb-1 text-slate-500">
                   <Text font="monospace">This session is protected by server verification.</Text>
                   <Text>Blocks sent: {postedBlocks}</Text>
+                  <Text>Pending events: {bufferedEv}</Text>
                 </div>
               ) : (
                 <div className="flex flex-col gap-2 px-1 pb-1 text-slate-500">
