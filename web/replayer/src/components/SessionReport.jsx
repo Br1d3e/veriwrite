@@ -10,9 +10,8 @@ import {
   storeSessionReportById,
   getSessionReportById,
 } from "./LLMReports";
-import { LLM_API_URL } from "@/lib/apiConfig.js";
 
-export function SessionReport({ sessionStats, sid, className }) {
+export function SessionReport({ sessionStats, docId, sid, className }) {
   const [status, setStatus] = useState("idle");
   const [error, setError] = useState("");
   const [result, setResult] = useState({});
@@ -51,7 +50,8 @@ export function SessionReport({ sessionStats, sid, className }) {
         onClick={() =>
           handleReport(
             { sessionStats },
-            `${LLM_API_URL}/ses-report`,
+            "ses-report",
+            docId,
             setStatus,
             setError,
             setResult,
@@ -150,5 +150,9 @@ export function SessionReport({ sessionStats, sid, className }) {
 }
 
 export default memo(SessionReport, (prev, next) => {
-  return prev.sessionStats === next.sessionStats && prev.sid === next.sid;
+  return (
+    prev.sessionStats === next.sessionStats &&
+    prev.sid === next.sid &&
+    prev.docId === next.docId
+  );
 });

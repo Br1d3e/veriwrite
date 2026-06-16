@@ -27,6 +27,17 @@ class DocReportRequest(BaseModel):
     documentStats: dict[str, Any]
 
 
+def get_document_stats(req: dict[str, Any]) -> dict[str, Any]:
+    stats = req.get("stats") or req.get("statsPayload") or {}
+    if isinstance(stats, DocReportRequest):
+        return stats.documentStats
+    if isinstance(stats, dict) and isinstance(stats.get("documentStats"), dict):
+        return stats["documentStats"]
+    if isinstance(stats, dict):
+        return stats
+    return {}
+
+
 def reformat_doc_stats(doc_stats):
     formatted = deepcopy(doc_stats)
     timeline = formatted.get("timeline", {})
@@ -109,17 +120,24 @@ DOC_SYSTEM_PROMPT = """
     """
 
 
-@router.post("/api/doc-report")
-async def gen_doc_report(req: DocReportRequest):
+@router.post("/doc-report")
+async def gen_doc_report(req: dict[str, Any]):
+    stats = get_document_stats(req)
+    token = req.get("token")
     prompt = {
             "task": "Generate a neutral document-level report.",
-            "documentStats": reformat_doc_stats(req.documentStats),
+            "documentStats": reformat_doc_stats(stats),
         }
 
     return await gen_report(
         route_name="doc-report",
+        token=token,
         prompt=prompt,
         system_prompt=DOC_SYSTEM_PROMPT,
         response_schema=DocReportSchema,
         local_model="gemma4:e4b",
     )
+
+@router.post("/api/doc-report")
+async def gen_doc_report_legacy(req: dict[str, Any]):
+    return await gen_doc_report(req)

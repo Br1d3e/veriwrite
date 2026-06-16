@@ -1,30 +1,61 @@
 import { useState } from "react";
 import { Separator } from "@/components/ui/separator";
+import { ENABLE_LLM_REPORTS } from "@/lib/apiConfig";
+import { getLLMReport, refreshLLMToken } from "@/lib/recordApi";
+
+function isTokenExpired(response) {
+  return response?.status === 401 && response?.detail === "TOKEN_EXPIRED";
+}
+
+function isTokenInvalid(response) {
+  return response?.status === 401 && response?.detail === "INVALID_SIGNATURE";
+}
+
+function isReportError(response) {
+  return response?.status && response.status !== "OK";
+}
 
 export async function handleReport(
   statsPayload,
-  path,
+  type,
+  docId,
   setStatus,
   setError,
   setResult,
   onDone,
 ) {
+  if (!ENABLE_LLM_REPORTS) {
+    setError("AI report is currently unavailable.");
+    setStatus("idle");
+    return;
+  }
   try {
+    let token = getTokenById(docId);
+    if (!token) {
+      token = await refreshLLMToken(docId);
+      storeTokenById(docId, token);
+    }
     setStatus("generating");
     setError("");
-    const res = await fetch(path, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(statsPayload),
-    });
-
-    const data = await res.json();
-    if (!res.ok) {
-      throw new Error(data?.detail || `HTTP ${res.status}`);
+    let res = await getLLMReport(statsPayload, type, token);
+    if (isTokenInvalid(res)) {
+      setError("Server rejected LLM token. Please retry later.");
+      setStatus("idle");
+      return;
     }
-    setResult(data);
+    if (isTokenExpired(res)) {
+      setError("LLM token expired. Refreshing a new one...");
+      const newToken = await refreshLLMToken(docId);
+      storeTokenById(docId, newToken);
+      res = await getLLMReport(statsPayload, type, newToken);
+    }
+    if (isReportError(res)) {
+      setError(res.detail || "Failed to generate report.");
+      setStatus("idle");
+      return;
+    }
+    setError("");
+    setResult(res.result || res);
     onDone?.();
     setStatus("done");
   } catch (err) {
@@ -64,4 +95,13 @@ export function storeSessionReportById(sid, report) {
 
 export function getSessionReportById(sid) {
   return sessionReports[sid];
+}
+
+let tokens = {};
+export function storeTokenById(docId, token) {
+  tokens[docId] = token;
+}
+
+export function getTokenById(docId) {
+  return tokens[docId];
 }

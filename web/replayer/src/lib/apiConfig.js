@@ -5,5 +5,7 @@ const API_URL =
 export const RECORD_API_URL =
   import.meta.env.VITE_RECORD_API_URL || `${API_URL}/record`;
 
-export const LLM_API_URL =
-  import.meta.env.VITE_LLM_API_URL || `${API_URL}/llm/api`;
+export const LLM_API_URL = import.meta.env.VITE_LLM_API_URL || `${API_URL}/llm`;
+
+export const ENABLE_LLM_REPORTS =
+  import.meta.env.VITE_ENABLE_LLM_REPORTS ?? false;

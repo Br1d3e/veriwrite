@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import useReplay from "@/hooks/useReplay";
 import StatsPanel from "@/components/StatsPanel";
 import { ChevronLeftIcon } from "lucide-react";
@@ -8,6 +8,8 @@ import {
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 import ReplayCard from "@/components/ReplayCard";
+import { calDocStats } from "@/lib/stats/doc";
+import { calSession } from "@/lib/stats/session";
 
 function StatsRail({ onShow }) {
   return (
@@ -24,17 +26,36 @@ function StatsRail({ onShow }) {
   );
 }
 
-export default function Workspace({
-  record,
-  docStats,
-  sessionStats,
-  online,
-  onSwitchSession,
-  onReturn,
-}) {
+export default function Workspace({ record, online, onReturn: onReturnApp }) {
   const [snapshot, actions] = useReplay(record);
   const [screenHighlight, setScreenHighlight] = useState(null);
   const [view, setView] = useState("split");
+
+  const sessions = useMemo(() => record.sessions || record.s || [], [record]);
+  const [docStats, setDocStats] = useState(() => calDocStats(record));
+  const [sessionStats, setSessionStats] = useState(() =>
+    calSession(sessions.length > 0 ? sessions[0] : null),
+  );
+
+  useEffect(() => {
+    setDocStats(calDocStats(record));
+  }, [record]);
+
+  useEffect(() => {
+    setSessionStats(calSession(sessions[snapshot.currentSession] || null));
+  }, [sessions, snapshot.currentSession]);
+
+  function onSwitchSession(session) {
+    setSessionStats(calSession(session));
+  }
+
+  function onReturn() {
+    setScreenHighlight(null);
+    setView("split");
+    onReturnApp?.();
+    setDocStats(null);
+    setSessionStats(null);
+  }
 
   if (view === "split") {
     return (
@@ -78,7 +99,7 @@ export default function Workspace({
           snapshot={snapshot}
           actions={actions}
           onSwitchSession={onSwitchSession}
-          onReturn={onReturn}
+          onReturn={onReturnApp}
           screenHighlight={screenHighlight}
           setScreenHighlight={setScreenHighlight}
           className="max-w-5xl min-w-0"

@@ -52,7 +52,10 @@ function StatsPanel({
             </TabsContent>
             <TabsContent value="session">
               <SessionStatsPanel
-                sid={sessions[currentSession]?.sid || sessions[currentSession]?.id}
+                docId={record.m?.docId || record.m?.d_id || record.m?.dId}
+                sid={
+                  sessions[currentSession]?.sid || sessions[currentSession]?.id
+                }
                 sessionStats={sessionStats}
                 actions={actions}
                 onPasteHighlight={onGapHighlight}

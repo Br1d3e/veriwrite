@@ -1,7 +1,6 @@
 from ollama import chat
 from google import genai
 from google.genai import types
-from datetime import datetime
 import json
 import asyncio
 import os
@@ -13,14 +12,21 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 from pathlib import Path
 from fastapi import HTTPException
-
-LOCAL = False
+import hashlib
+import hmac
+import base64
+import time
 
 load_dotenv()
 load_dotenv(Path(__file__).resolve().parent / ".env", override=False)
 
+LOCAL = os.getenv("LLM_LOCAL", "false").lower() in ("1", "true", "yes")
 API_KEY = os.getenv("GEMINI_API_KEY")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemma-4-31b-it")
+ENABLE_LLM_REPORTS = os.getenv("ENABLE_LLM_REPORTS", "false").lower() in ("1", "true", "yes")
+SECRET = os.getenv("LLM_HMAC_SECRET", "local-dev-hmac")
+SECRET_BYTES = SECRET.encode("utf-8")
+TOKEN_EXP = 15 * 60 # 15 minutes
 REQUEST_TIMEOUT_SECONDS = 120
 REQUEST_TIMEOUT_MS = REQUEST_TIMEOUT_SECONDS * 1000
 MAX_RETRIES = 3
@@ -40,13 +46,56 @@ client = genai.Client(
 
 async def report_health():
     return {
-        "ok": True,
+        "status": "OK",
         "provider": "ollama" if LOCAL else "google-genai",
         "model": "gemma4:e4b" if LOCAL else GEMINI_MODEL,
         "apiKeyConfigured": bool(API_KEY),
         "timeoutSeconds": REQUEST_TIMEOUT_SECONDS,
     }
 
+
+def sign_hmac(msg_bytes: bytes) -> str:
+    digest = hmac.new(SECRET_BYTES, msg_bytes, hashlib.sha256).digest()
+    return base64.urlsafe_b64encode(digest).decode("utf-8")
+
+def generate_token(payload: dict):
+    if not ENABLE_LLM_REPORTS:
+        return
+    
+    d_id = payload.get("d_id")
+    if not d_id:
+        raise ValueError("Missing d_id")
+    
+    msg = {
+        "d_id": d_id,
+        "exp": int(time.time()) + TOKEN_EXP
+    }
+    msg_json = json.dumps(msg)
+    msg_bytes = msg_json.encode("utf-8")
+    msg_b64 = base64.urlsafe_b64encode(msg_bytes).decode("utf-8")
+
+    signature = sign_hmac(msg_bytes)
+
+    token = f"{msg_b64}.{signature}"
+    return token
+
+def verify_token(token: str):
+    if not ENABLE_LLM_REPORTS:
+        return
+    
+    msg_b64, signature = token.split(".")
+    msg_bytes = base64.urlsafe_b64decode(msg_b64)
+    msg = json.loads(msg_bytes)
+
+    exp = msg.get("exp")
+
+    expected_signature = sign_hmac(msg_bytes)
+    if not hmac.compare_digest(signature, expected_signature):
+        raise ValueError(f"INVALID_SIGNATURE")
+
+    if time.time() > exp:
+        raise ValueError(f"TOKEN_EXPIRED")
+    
 
 def section_title(field_name: str) -> str:
     titles = {
@@ -78,16 +127,39 @@ def normalize_string_sections(content: dict, response_schema: type[BaseModel]) -
             }
     return normalized
 
+def wrap_report_status(result: dict, status="OK"):
+    return {
+        "status": status,
+        "result": result
+    }
+
 
 retry = 0
 async def gen_report(
     *,
     route_name: str,
     prompt: dict,
+    token: str,
     system_prompt: str,
     response_schema: type[BaseModel],
     local_model: str = "gemma4:e4b",
 ):
+    if not ENABLE_LLM_REPORTS:
+        return {
+            "status": 503,
+            "detail": "LLM reports are disabled",
+            "result": {}
+        }
+    
+    try:
+        verify_token(token)
+    except Exception as err:
+        return {
+            "status": 401,
+            "detail": str(err),
+            "result": {}
+        }
+
     schema = response_schema.model_json_schema()
 
     def generate_raw_content():
@@ -103,11 +175,16 @@ async def gen_report(
                 stream=False,
             )
             message = response.get("message") if isinstance(response, dict) else response.message
-            print(message.content)
             return message.get("content") if isinstance(message, dict) else message.content
 
         if not API_KEY:
             raise ValueError("Missing GEMINI_API_KEY")
+        
+        if not ENABLE_LLM_REPORTS:
+            raise HTTPException(
+                status_code=503,
+                detail="LLM reports are disabled."
+            )
 
         print(f"[{route_name}] calling Google GenAI model={GEMINI_MODEL}")
         response = client.models.generate_content(
@@ -151,10 +228,12 @@ async def gen_report(
         ) from err
 
     if isinstance(raw_content, response_schema):
-        return raw_content
+        return wrap_report_status(raw_content)
     if isinstance(raw_content, dict):
-        return response_schema.model_validate(
+        return wrap_report_status(
+            response_schema.model_validate(
             normalize_string_sections(raw_content, response_schema)
+            )
         )
 
     try:
@@ -162,7 +241,8 @@ async def gen_report(
         content = json.loads(json_content)
         if isinstance(content, dict):
             content = normalize_string_sections(content, response_schema)
-        return response_schema.model_validate(content)
+        validated = response_schema.model_validate(content)
+        return wrap_report_status(validated)
     except Exception as err:
         preview = raw_content[:500] if isinstance(raw_content, str) else repr(raw_content)
         raise HTTPException(

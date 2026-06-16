@@ -14,6 +14,18 @@ router = APIRouter()
 class SessionReportRequest(BaseModel):
     sessionStats: dict[str, Any]
 
+
+def get_session_stats(req: dict[str, Any]) -> dict[str, Any]:
+    stats = req.get("stats") or req.get("statsPayload") or {}
+    if isinstance(stats, SessionReportRequest):
+        return stats.sessionStats
+    if isinstance(stats, dict) and isinstance(stats.get("sessionStats"), dict):
+        return stats["sessionStats"]
+    if isinstance(stats, dict):
+        return stats
+    return {}
+
+
 class SessionReportSection(BaseModel):
     title: str
     observation: str
@@ -81,8 +93,6 @@ def reformat_session_stats(session_stats):
     } if paste_ins else {
         "interpretation": "No paste insertions were detected during this session."
     }
-
-    print(paste_ins)
 
     # writingFlow
     writing_flow = interpret.get("flow", {})
@@ -180,14 +190,22 @@ Section Goal:
     If the revision ratio is moderate, you may say the session had a balanced mix of new writing and revisions.
 """
 
-@router.post("/api/ses-report")
-async def gen_session_report(req: SessionReportRequest):
+@router.post("/ses-report")
+async def gen_session_report(req: dict[str, Any]):
+    stats = get_session_stats(req)
+    token = req.get("token")
     return await gen_report(
         route_name="ses-report",
+        token=token,
         prompt={
             "task": "Generate a neutral session-level interpretation.",
-            "sessionStats": reformat_session_stats(req.sessionStats),
+            "sessionStats": reformat_session_stats(stats),
         },
         system_prompt=SESSION_SYSTEM_PROMPT,
         response_schema=SessionReportSchema,
     )
+
+
+@router.post("/api/ses-report")
+async def gen_session_report_legacy(req: dict[str, Any]):
+    return await gen_session_report(req)

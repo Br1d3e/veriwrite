@@ -10,7 +10,6 @@ import {
   storeDocReportById,
   getDocReportById,
 } from "./LLMReports";
-import { LLM_API_URL } from "@/lib/apiConfig.js";
 
 export function DocReport({ docStats, docId, className }) {
   const [status, setStatus] = useState("idle");
@@ -45,7 +44,8 @@ export function DocReport({ docStats, docId, className }) {
         onClick={() =>
           handleReport(
             { documentStats: docStats },
-            `${LLM_API_URL}/doc-report`,
+            "doc-report",
+            docId,
             setStatus,
             setError,
             setResult,

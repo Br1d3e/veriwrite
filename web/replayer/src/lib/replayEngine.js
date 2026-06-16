@@ -227,7 +227,9 @@ export function calSesProgress(arg1, arg2) {
   const sessions = record.sessions || record.s;
   if (!Array.isArray(sessions)) return 0;
   const sessionLength = sessions[currentSnapshot.currentSession].ev.length;
-  return sessionLength === 0 ? 0 : (currentSnapshot.i / sessionLength) * 100;
+  return sessionLength === 0
+    ? 0
+    : ((currentSnapshot.i + 1) / sessionLength) * 100;
 }
 
 export function calDocProgress(currentSnapshot) {

@@ -229,6 +229,7 @@ function getProductSimGraphData(graph) {
 }
 
 function SessionStatsPanel({
+  docId,
   sid,
   sessionStats,
   actions,
@@ -267,7 +268,7 @@ function SessionStatsPanel({
 
   return (
     <div className={`grid gap-2 ${className}`}>
-      <SessionReport sessionStats={sessionStats} sid={sid} />
+      <SessionReport sessionStats={sessionStats} sid={sid} docId={docId} />
       <StatsHeading text="Overview" />
       <div className="grid grid-cols-2 gap-2">
         <MetricBox
@@ -347,26 +348,29 @@ function SessionStatsPanel({
             `}
         />
       </div>
-      <div>
-        <Collapsible className="rounded-md">
-          <CollapsibleTrigger asChild>
-            <Button variant="ghost" className="group gap-1">
-              Show details
-              <ChevronDownIcon className="ml-auto group-data-[state=open]:rotate-180" />
-            </Button>
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <PieChartCard
-              title="Revision Types"
-              desc=""
-              chartConfig={getRevisionPieConfig(revRatios)}
-              chartData={getRevisionPieData(revRatios)}
-              chartClassName="h-48 aspect-auto"
-              className="gap-3 my-2 mx-1"
-            />
-          </CollapsibleContent>
-        </Collapsible>
-      </div>
+
+      {revRatios.total > 0 && (
+        <div>
+          <Collapsible className="rounded-md">
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" className="group gap-1">
+                Show details
+                <ChevronDownIcon className="ml-auto group-data-[state=open]:rotate-180" />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <PieChartCard
+                title="Revision Types"
+                desc=""
+                chartConfig={getRevisionPieConfig(revRatios)}
+                chartData={getRevisionPieData(revRatios)}
+                chartClassName="h-48 aspect-auto"
+                className="gap-3 my-2 mx-1"
+              />
+            </CollapsibleContent>
+          </Collapsible>
+        </div>
+      )}
 
       <div className="gap-3 px-1 my-2">
         <LineChartCard
@@ -388,6 +392,7 @@ function SessionStatsPanel({
 
 export default memo(SessionStatsPanel, (prev, next) => {
   return (
+    prev.sid === next.sid &&
     prev.sessionStats === next.sessionStats &&
     prev.actions === next.actions &&
     prev.onPasteHighlight === next.onPasteHighlight
