@@ -1,4 +1,4 @@
-import { cpSync, existsSync, mkdirSync, rmSync } from "node:fs";
+import { cpSync, mkdirSync, rmSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -23,11 +23,7 @@ function run(command, args, options = {}) {
 
 function ensureDependencies(app) {
   const appDir = join(root, app);
-  const nodeModules = join(appDir, "node_modules");
-
-  if (!existsSync(nodeModules)) {
-    run("npm", ["ci"], { cwd: appDir });
-  }
+  run("npm", ["ci"], { cwd: appDir });
 }
 
 for (const app of apps) {
