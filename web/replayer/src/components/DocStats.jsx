@@ -318,6 +318,8 @@ function DocStatsPanel({
   docStats,
   sessions,
   actions,
+  record,
+  online,
   docId,
   onGapHighlight,
 }) {
@@ -329,7 +331,12 @@ function DocStatsPanel({
 
   return (
     <div className="grid gap-2">
-      <DocReport docStats={docStats} docId={docId} />
+      <DocReport
+        docStats={docStats}
+        docId={docId}
+        record={record}
+        online={online}
+      />
       <StatsHeading text="Timeline" />
       <div className="grid grid-cols-2 gap-2">
         <MetricBox label={"Session Count"} value={timeline.sessionCount} />
@@ -425,6 +432,8 @@ export default memo(DocStatsPanel, (prev, next) => {
     prev.docStats === next.docStats &&
     prev.sessions === next.sessions &&
     prev.actions === next.actions &&
+    prev.record === next.record &&
+    prev.online === next.online &&
     prev.docId === next.docId &&
     prev.onGapHighlight === next.onGapHighlight
   );

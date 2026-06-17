@@ -46,6 +46,8 @@ function StatsPanel({
                 docStats={docStats}
                 sessions={sessions}
                 actions={actions}
+                record={record}
+                online={online}
                 onGapHighlight={onGapHighlight}
                 docId={record.m?.docId || record.m?.d_id || record.m?.dId}
               />
@@ -53,6 +55,8 @@ function StatsPanel({
             <TabsContent value="session">
               <SessionStatsPanel
                 docId={record.m?.docId || record.m?.d_id || record.m?.dId}
+                record={record}
+                online={online}
                 sid={
                   sessions[currentSession]?.sid || sessions[currentSession]?.id
                 }

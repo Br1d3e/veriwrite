@@ -1,5 +1,6 @@
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
+import canonicalize from "canonicalize";
 
 export function cn(...inputs) {
   return twMerge(clsx(inputs));
@@ -32,4 +33,13 @@ export function formatDateLabel(dateText) {
     month: "short",
     day: "numeric",
   });
+}
+
+export async function hashRecord(record) {
+  const record_str = canonicalize(record);
+  const record_bytes = new TextEncoder().encode(record_str);
+  const digest = await crypto.subtle.digest("SHA-256", record_bytes);
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
 }

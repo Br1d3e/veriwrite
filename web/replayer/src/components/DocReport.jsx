@@ -11,7 +11,7 @@ import {
   getDocReportById,
 } from "./LLMReports";
 
-export function DocReport({ docStats, docId, className }) {
+export function DocReport({ docStats, docId, record, online, className }) {
   const [status, setStatus] = useState("idle");
   const [error, setError] = useState("");
   const [result, setResult] = useState({});
@@ -46,6 +46,8 @@ export function DocReport({ docStats, docId, className }) {
             { documentStats: docStats },
             "doc-report",
             docId,
+            record,
+            online,
             setStatus,
             setError,
             setResult,
@@ -141,5 +143,10 @@ export function DocReport({ docStats, docId, className }) {
 }
 
 export default memo(DocReport, (prev, next) => {
-  return prev.docStats === next.docStats && prev.docId === next.docId;
+  return (
+    prev.docStats === next.docStats &&
+    prev.docId === next.docId &&
+    prev.record === next.record &&
+    prev.online === next.online
+  );
 });

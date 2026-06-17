@@ -2,13 +2,21 @@ import { useState } from "react";
 import { Separator } from "@/components/ui/separator";
 import { ENABLE_LLM_REPORTS } from "@/lib/apiConfig";
 import { getLLMReport, refreshLLMToken } from "@/lib/recordApi";
+import { hashRecord } from "@/lib/utils";
 
 function isTokenExpired(response) {
   return response?.status === 401 && response?.detail === "TOKEN_EXPIRED";
 }
 
 function isTokenInvalid(response) {
-  return response?.status === 401 && response?.detail === "INVALID_SIGNATURE";
+  const errs = [
+    "INVALID_SIGNATURE",
+    "INVALID_TOKEN",
+    "DOCUMENT_NOT_FOUND",
+    "VW_HASH_NOT_FOUND",
+    "INVALID_VW_HASH",
+  ];
+  return response?.status === 401 && errs.includes(response?.detail);
 }
 
 function isReportError(response) {
@@ -19,6 +27,8 @@ export async function handleReport(
   statsPayload,
   type,
   docId,
+  record,
+  online,
   setStatus,
   setError,
   setResult,
@@ -30,10 +40,12 @@ export async function handleReport(
     return;
   }
   try {
-    let token = getTokenById(docId);
+    const vwHash = await hashRecord(record);
+    const tokenKey = `${online ? "llm" : "offline_llm"}:${docId}:${vwHash}`;
+    let token = getTokenById(tokenKey);
     if (!token) {
-      token = await refreshLLMToken(docId);
-      storeTokenById(docId, token);
+      token = await refreshLLMToken(docId, record, vwHash, online);
+      storeTokenById(tokenKey, token);
     }
     setStatus("generating");
     setError("");
@@ -45,8 +57,8 @@ export async function handleReport(
     }
     if (isTokenExpired(res)) {
       setError("LLM token expired. Refreshing a new one...");
-      const newToken = await refreshLLMToken(docId);
-      storeTokenById(docId, newToken);
+      const newToken = await refreshLLMToken(docId, record, vwHash, online);
+      storeTokenById(tokenKey, newToken);
       res = await getLLMReport(statsPayload, type, newToken);
     }
     if (isReportError(res)) {

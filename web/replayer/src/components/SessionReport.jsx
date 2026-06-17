@@ -11,7 +11,14 @@ import {
   getSessionReportById,
 } from "./LLMReports";
 
-export function SessionReport({ sessionStats, docId, sid, className }) {
+export function SessionReport({
+  sessionStats,
+  docId,
+  record,
+  online,
+  sid,
+  className,
+}) {
   const [status, setStatus] = useState("idle");
   const [error, setError] = useState("");
   const [result, setResult] = useState({});
@@ -52,6 +59,8 @@ export function SessionReport({ sessionStats, docId, sid, className }) {
             { sessionStats },
             "ses-report",
             docId,
+            record,
+            online,
             setStatus,
             setError,
             setResult,
@@ -153,6 +162,8 @@ export default memo(SessionReport, (prev, next) => {
   return (
     prev.sessionStats === next.sessionStats &&
     prev.sid === next.sid &&
-    prev.docId === next.docId
+    prev.docId === next.docId &&
+    prev.record === next.record &&
+    prev.online === next.online
   );
 });

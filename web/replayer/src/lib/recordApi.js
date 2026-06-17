@@ -1,4 +1,5 @@
 import { RECORD_API_URL, LLM_API_URL, ENABLE_LLM_REPORTS } from "./apiConfig";
+import { hashRecord } from "./utils";
 
 function apiUrl(base, path) {
   return `${base.replace(/\/$/, "")}${path}`;
@@ -46,9 +47,16 @@ export async function getLLMReport(statsPayload, type, token) {
   });
 }
 
-export async function refreshLLMToken(docId) {
+export async function refreshLLMToken(docId, record, vwHash = null, online = true) {
   if (!ENABLE_LLM_REPORTS) return;
-  return await postJson(apiUrl(LLM_API_URL, "/token"), {
+  const recordHash = vwHash || (await hashRecord(record));
+  const path = online ? "/token" : "/offline-token";
+  const payload = {
     d_id: docId,
-  });
+    vw_hash: recordHash,
+  };
+  if (!online) {
+    payload.record = record;
+  }
+  return await postJson(apiUrl(LLM_API_URL, path), payload);
 }

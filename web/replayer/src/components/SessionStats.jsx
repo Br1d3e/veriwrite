@@ -230,6 +230,8 @@ function getProductSimGraphData(graph) {
 
 function SessionStatsPanel({
   docId,
+  record,
+  online,
   sid,
   sessionStats,
   actions,
@@ -268,7 +270,13 @@ function SessionStatsPanel({
 
   return (
     <div className={`grid gap-2 ${className}`}>
-      <SessionReport sessionStats={sessionStats} sid={sid} docId={docId} />
+      <SessionReport
+        sessionStats={sessionStats}
+        sid={sid}
+        docId={docId}
+        record={record}
+        online={online}
+      />
       <StatsHeading text="Overview" />
       <div className="grid grid-cols-2 gap-2">
         <MetricBox
@@ -393,6 +401,8 @@ function SessionStatsPanel({
 export default memo(SessionStatsPanel, (prev, next) => {
   return (
     prev.sid === next.sid &&
+    prev.record === next.record &&
+    prev.online === next.online &&
     prev.sessionStats === next.sessionStats &&
     prev.actions === next.actions &&
     prev.onPasteHighlight === next.onPasteHighlight

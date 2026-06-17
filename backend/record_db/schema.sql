@@ -11,7 +11,8 @@ CREATE TABLE IF NOT EXISTS docs (
         CHECK (integrity_status IN ('VERIFIED', 'NEEDS_REVIEW', 'RISK', 'UNVERIFIED')),
     created_server_ts BIGINT NOT NULL,
     updated_server_ts BIGINT NOT NULL,
-    vw_storage_key TEXT
+    vw_storage_key TEXT,
+    vw_hash TEXT,
 );
 
 CREATE TABLE IF NOT EXISTS sessions (

@@ -26,6 +26,7 @@ else:
     from record_storage import get_vw_store
 
 import uuid
+import canonicaljson
 
 
 DATABASE_URL = os.getenv(
@@ -231,6 +232,42 @@ def get_record_from_store(vw_storage_key: str) -> dict[str, Any] | None:
     vw = vw_store.get_record(vw_storage_key)
     return vw
 
+def hash_record(record: dict):
+    record_str = canonicaljson.encode_canonical_json(record)
+    return sha256_hex(record_str)
+
+def update_vw_hash(d_id: str, record_hash: str):
+     with connect() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE docs
+                SET vw_hash = %s
+                WHERE d_id = %s
+                """,
+                (record_hash, d_id),
+            )
+
+def check_vw_hash(d_id: str, record_hash: str):
+    with connect() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT *
+                FROM docs
+                WHERE d_id = %s
+                """,
+                (d_id,),
+            )
+            row = cursor.fetchone()
+            if not row:
+                raise ValueError(f"DOCUMENT_NOT_FOUND")
+            if not row["vw_hash"]:
+                raise ValueError(f"VW_HASH_NOT_FOUND")
+            
+            if row["vw_hash"] != record_hash:
+                raise ValueError(f"INVALID_VW_HASH")
+
 def merge_record(vw_storage_key: str, record: dict[str, Any]) -> dict[str, Any]:
     prev_record = get_record_from_store(vw_storage_key)
     if not prev_record:
@@ -315,10 +352,13 @@ def update_vw_store(d_id: str) -> str:
     analyze_db.load_doc(d_id=d_id)
     record_dict = analyze_db.get_record()
     merged_record = merge_record(vw_storage_key, record_dict)
+
+    record_hash = hash_record(merged_record)
+    update_vw_hash(d_id, record_hash)
     
     vw_store = get_vw_store()
     vw_store.store_record(vw_storage_key, merged_record)
-    return vw_storage_key
+    return vw_storage_key, merged_record
 
 
 def flush_pending_sessions(d_id: str):
@@ -362,6 +402,7 @@ def flush_pending_sessions(d_id: str):
 
 
 def start_doc(doc: dict[str, Any]) -> dict[str, Any]:
+
     d_id = doc.get("dId")
     v = doc.get("v")
     if not verify_protocol(v):

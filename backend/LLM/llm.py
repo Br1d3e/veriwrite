@@ -16,20 +16,21 @@ import hashlib
 import hmac
 import base64
 import time
+import canonicaljson
 
 load_dotenv()
 load_dotenv(Path(__file__).resolve().parent / ".env", override=False)
 
-LOCAL = os.getenv("LLM_LOCAL", "false").lower() in ("1", "true", "yes")
+LOCAL = os.getenv("LLM_LOCAL", "true").lower() in ("1", "true", "yes")
 API_KEY = os.getenv("GEMINI_API_KEY")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemma-4-31b-it")
-ENABLE_LLM_REPORTS = os.getenv("ENABLE_LLM_REPORTS", "false").lower() in ("1", "true", "yes")
+ENABLE_LLM_REPORTS = os.getenv("ENABLE_LLM_REPORTS", "true").lower() in ("1", "true", "yes")
 SECRET = os.getenv("LLM_HMAC_SECRET", "local-dev-hmac")
 SECRET_BYTES = SECRET.encode("utf-8")
-TOKEN_EXP = 15 * 60 # 15 minutes
-REQUEST_TIMEOUT_SECONDS = 120
+TOKEN_EXP = int(os.getenv("LLM_TOKEN_EXP", "5"))
+REQUEST_TIMEOUT_SECONDS = int(os.getenv("LLM_REQUEST_TIMEOUT_SECONDS", "120"))
 REQUEST_TIMEOUT_MS = REQUEST_TIMEOUT_SECONDS * 1000
-MAX_RETRIES = 3
+MAX_RETRIES = int(os.getenv("LLM_MAX_RETRIES", "3"))
 
 client = genai.Client(
     api_key=API_KEY,
@@ -58,43 +59,115 @@ def sign_hmac(msg_bytes: bytes) -> str:
     digest = hmac.new(SECRET_BYTES, msg_bytes, hashlib.sha256).digest()
     return base64.urlsafe_b64encode(digest).decode("utf-8")
 
+def hash_record(record: dict) -> str:
+    record_bytes = canonicaljson.encode_canonical_json(record)
+    return hashlib.sha256(record_bytes).hexdigest()
+
+def make_token(claims: dict) -> str:
+    msg = {
+        **claims,
+        "exp": int(time.time()) + TOKEN_EXP,
+    }
+    msg_bytes = json.dumps(msg).encode("utf-8")
+    msg_b64 = base64.urlsafe_b64encode(msg_bytes).decode("utf-8")
+    return f"{msg_b64}.{sign_hmac(msg_bytes)}"
+
 def generate_token(payload: dict):
     if not ENABLE_LLM_REPORTS:
-        return
+        return {
+            "status": 503,
+            "details": "LLM reports are disabled."
+        }
+    
+    try:
+        from ..record_db.store_db import check_vw_hash
+    except ImportError:
+        from backend.record_db.store_db import check_vw_hash
     
     d_id = payload.get("d_id")
     if not d_id:
         raise ValueError("Missing d_id")
+    vw_hash = payload.get("vw_hash")
+    if not vw_hash:
+        raise ValueError("Missing vw_hash")
     
-    msg = {
+    try:
+        check_vw_hash(d_id, vw_hash)
+    except ValueError as err:
+        raise ValueError("Record mismatch:", str(err))
+    
+    return make_token({
         "d_id": d_id,
-        "exp": int(time.time()) + TOKEN_EXP
-    }
-    msg_json = json.dumps(msg)
-    msg_bytes = msg_json.encode("utf-8")
-    msg_b64 = base64.urlsafe_b64encode(msg_bytes).decode("utf-8")
+        "vw_hash": vw_hash,
+        "scope": "llm",
+    })
 
-    signature = sign_hmac(msg_bytes)
+def generate_offline_token(payload: dict):
+    if not ENABLE_LLM_REPORTS:
+        return {
+            "status": 503,
+            "details": "LLM reports are disabled."
+        }
 
-    token = f"{msg_b64}.{signature}"
-    return token
+    d_id = payload.get("d_id")
+    if not d_id:
+        raise ValueError("Missing d_id")
+
+    record = payload.get("record")
+    if not isinstance(record, dict):
+        raise ValueError("Missing record")
+
+    vw_hash = hash_record(record)
+    client_vw_hash = payload.get("vw_hash")
+    if client_vw_hash and client_vw_hash != vw_hash:
+        raise ValueError("Invalid vw_hash")
+
+    return make_token({
+        "d_id": d_id,
+        "vw_hash": vw_hash,
+        "scope": "offline_llm",
+    })
 
 def verify_token(token: str):
     if not ENABLE_LLM_REPORTS:
         return
-    
-    msg_b64, signature = token.split(".")
-    msg_bytes = base64.urlsafe_b64decode(msg_b64)
-    msg = json.loads(msg_bytes)
 
-    exp = msg.get("exp")
+    try:
+        msg_b64, signature = token.split(".")
+        msg_bytes = base64.urlsafe_b64decode(msg_b64)
+        msg = json.loads(msg_bytes)
+    except Exception as err:
+        raise ValueError("INVALID_TOKEN") from err
+
+    d_id = msg.get("d_id")
+    vw_hash = msg.get("vw_hash")
+    if not d_id or not vw_hash:
+        raise ValueError(f"INVALID_TOKEN")
 
     expected_signature = sign_hmac(msg_bytes)
     if not hmac.compare_digest(signature, expected_signature):
         raise ValueError(f"INVALID_SIGNATURE")
 
+    exp = msg.get("exp")
+    if not isinstance(exp, (int, float)):
+        raise ValueError(f"INVALID_TOKEN")
+
     if time.time() > exp:
         raise ValueError(f"TOKEN_EXPIRED")
+
+    scope = msg.get("scope")
+    if scope == "offline_llm":
+        return
+
+    if scope != "llm":
+        raise ValueError(f"INVALID_TOKEN")
+
+    try:
+        from ..record_db.store_db import check_vw_hash
+    except ImportError:
+        from backend.record_db.store_db import check_vw_hash
+
+    check_vw_hash(d_id, vw_hash)
     
 
 def section_title(field_name: str) -> str:

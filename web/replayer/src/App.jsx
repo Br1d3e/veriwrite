@@ -7,6 +7,7 @@ import { processData } from "@/lib/loader";
 import { refreshLLMToken } from "@/lib/recordApi";
 import { ENABLE_LLM_REPORTS } from "@/lib/apiConfig";
 import { storeTokenById } from "@/components/LLMReports.jsx";
+import { hashRecord } from "@/lib/utils";
 
 export default function App() {
   const states = {
@@ -19,15 +20,25 @@ export default function App() {
 
   async function handleRecordLoaded({ nextRecord, source }) {
     const processedRecord = processData(nextRecord);
+    const isOnline = source === "server";
 
     setRecord(processedRecord);
-    setOnline(source === "server");
+    setOnline(isOnline);
     setAppState(states.play);
 
     if (ENABLE_LLM_REPORTS) {
       const docId = processedRecord.m.docId;
-      const token = await refreshLLMToken(docId);
-      storeTokenById(docId, token);
+      const vwHash = await hashRecord(processedRecord);
+      const token = await refreshLLMToken(
+        docId,
+        processedRecord,
+        vwHash,
+        isOnline,
+      );
+      storeTokenById(
+        `${isOnline ? "llm" : "offline_llm"}:${docId}:${vwHash}`,
+        token,
+      );
     }
   }
 

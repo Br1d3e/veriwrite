@@ -9,3 +9,4 @@ google-genai
 ollama
 msgpack
 boto3
+canonicaljson
