@@ -101,7 +101,7 @@ def generate_token(payload: dict):
     try:
         check_vw_hash(d_id, vw_hash)
     except ValueError as err:
-        raise ValueError("Record mismatch:", str(err))
+        return str(err)
     
     return make_token({
         "d_id": d_id,

@@ -1,8 +1,11 @@
 
 try: 
-    from .store_db import DATABASE_URL, merkle_tree_root
+    from .store_db import DATABASE_URL
+    from . import crypto
 except ImportError:
-    from backend.record_db.store_db import DATABASE_URL, merkle_tree_root
+    from backend.record_db.store_db import DATABASE_URL
+    from backend.record_db import crypto
+
 import pandas as pd
 import psycopg
 
@@ -128,7 +131,7 @@ class AnalyzeDB:
         self.record["m"] = m
         return m
 
-    def fetch_blocks(self, sid: str):
+    def fetch_blocks(self, sid: str, check_receipt=False):
         blocks = self.load_blocks(sid, d_id=self.d_id)
         blocks_parsed = blocks[[
             "q",
@@ -184,14 +187,14 @@ class AnalyzeDB:
 
         return blocks_status
 
-    def fetch_sessions(self):
+    def fetch_sessions(self, check_receipt=False):
         if not isinstance(self.sessions, pd.DataFrame) or not self.d_id:
             return
         s = []
         for i in range(len(self.sessions)):
             session = self.sessions.iloc[i]
             sid = session["sid"]
-            blocks = self.fetch_blocks(sid)
+            blocks = self.fetch_blocks(sid, check_receipt=check_receipt)
 
             mapping = {"TRUE": True, "FALSE": False, "UNKNOWN": None}
 
@@ -204,10 +207,10 @@ class AnalyzeDB:
 
             if blocks.empty:
                 blocks_record = []
-                merkle_valid = session["merkle_root"] == merkle_tree_root([])
+                merkle_valid = session["merkle_root"] == crypto.merkle_tree_root([])
             else:
                 blocks_record = blocks.drop(columns=["ch"]).to_dict(orient="records")
-                merkle_valid = session["merkle_root"] == merkle_tree_root(blocks["ch"].to_list())
+                merkle_valid = session["merkle_root"] == crypto.merkle_tree_root(blocks["ch"].to_list())
 
             ev = session["ev"]
             if ev is None or (not isinstance(ev, list) and pd.isna(ev)):
@@ -233,7 +236,7 @@ class AnalyzeDB:
         self.record["sessions"] = s
         return s            
 
-    def get_record(self):
+    def get_record(self, check_receipt=False):
         if not self.d_id:
             raise ValueError("d_id is not loaded")
         if self.record["m"] is None:
@@ -241,5 +244,5 @@ class AnalyzeDB:
         if self.record["status"] is None:
             self.record["status"] = self.doc["integrity_status"] or "UNVERIFIED"
         if self.record["sessions"] is None:
-            self.fetch_sessions()
+            self.fetch_sessions(check_receipt=check_receipt)
         return self.record

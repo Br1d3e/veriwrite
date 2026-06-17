@@ -3,29 +3,22 @@ PostgreSQL access layer for the VeriWrite record server.
 """
 
 import base64
-import hashlib
-import json
 import math
 import os
 from datetime import datetime
 from typing import Any
 
 import psycopg
-from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-from cryptography.hazmat.primitives.asymmetric import ec
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-from cryptography.hazmat.primitives.kdf.hkdf import HKDF
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.serialization import Encoding, PrivateFormat, PublicFormat, NoEncryption
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 
 if __package__ and __package__.startswith("backend."):
     from backend.record_storage import get_vw_store
+    from backend.record_db import crypto
 else:
     from record_storage import get_vw_store
+    from record_db import crypto
 
-import uuid
 import canonicaljson
 
 
@@ -33,9 +26,6 @@ DATABASE_URL = os.getenv(
     "VERIWRITE_DATABASE_URL",
     "postgresql://veriwrite:veriwrite@127.0.0.1:5432/veriwrite",
 )
-SIGNING_KEY_ID = os.getenv("VERIWRITE_SIGNING_KEY_ID", "local-dev-ed25519")
-SIGNING_PRIVATE_KEY_B64 = os.getenv("VERIWRITE_ED25519_PRIVATE_KEY_B64")
-_PROCESS_SIGNING_KEY = Ed25519PrivateKey.generate()
 
 FRESHNESS_WINDOW = 30_000
 INTEGRITY_LEVELS = {
@@ -103,70 +93,6 @@ def now_ms() -> int:
     return int(datetime.now().timestamp() * 1000)
 
 
-def canonical_json(value):
-    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
-
-
-def sha256_hex(text: str) -> str:
-    return hashlib.sha256(text.encode("utf-8")).hexdigest()
-
-def gen_uuid() -> str:
-    return str(uuid.uuid4())
-
-def decrypt_payload(sk_b64: str, ct_b64: str, iv_b64: str, tag_b64: str, aad: str) -> dict[str, Any]:
-    s_key = base64.b64decode(sk_b64)
-    cipher_text = base64.b64decode(ct_b64)
-    iv = base64.b64decode(iv_b64)
-    tag = base64.b64decode(tag_b64)
-
-    try:
-        plain_text = AESGCM(s_key).decrypt(iv, cipher_text + tag, aad.encode("utf-8"))
-        return json.loads(plain_text.decode("utf-8"))
-    except:
-        return {}
-
-
-def get_signing_key() -> Ed25519PrivateKey:
-    if SIGNING_PRIVATE_KEY_B64:
-        return Ed25519PrivateKey.from_private_bytes(base64.b64decode(SIGNING_PRIVATE_KEY_B64))
-    return _PROCESS_SIGNING_KEY
-
-def signing_private_key_b64_for_env() -> str:
-    raw_key = _PROCESS_SIGNING_KEY.private_bytes(Encoding.Raw, PrivateFormat.Raw, NoEncryption())
-    return base64.b64encode(raw_key).decode("ascii")
-
-def sign_receipt(receipt_body: dict[str, Any]) -> dict[str, Any]:
-    signed_receipt = {**receipt_body, "key_id": SIGNING_KEY_ID}
-    signature = get_signing_key().sign(canonical_json(signed_receipt).encode("utf-8"))
-    signed_receipt["sig"] = base64.b64encode(signature).decode("ascii")
-    return signed_receipt
-
-def get_ecdh_keys() -> tuple[ec.EllipticCurvePrivateKey, ec.EllipticCurvePublicKey]:
-    private_key = ec.generate_private_key(ec.SECP256R1())
-    public_key = private_key.public_key()
-    return (private_key, public_key)
-
-def exchange_session_key(c_pub_b64: Any, salt: bytes, info: dict) -> dict[str, Any]:
-    c_pub_bytes = base64.b64decode(c_pub_b64)
-    c_pub = ec.EllipticCurvePublicKey.from_encoded_point(ec.SECP256R1(), c_pub_bytes)
-
-    private_key, public_key = get_ecdh_keys()
-    raw_key = public_key.public_bytes(Encoding.X962, PublicFormat.UncompressedPoint)
-    shared = private_key.exchange(ec.ECDH(), c_pub)
-    hkdf = HKDF(
-        algorithm=hashes.SHA256(),
-        length=32,
-        salt=salt,
-        info=canonical_json(info).encode("utf-8"),
-    )
-    session_key = hkdf.derive(shared)
-
-    return {
-        "s_pub": base64.b64encode(raw_key).decode("ascii"),
-        "s_key": base64.b64encode(session_key).decode("ascii"),
-    }
-
-
 def apply_events(text: str, ev: list[Any]) -> str:
     next_text = text
     for event in ev:
@@ -182,24 +108,6 @@ def apply_events(text: str, ev: list[Any]) -> str:
         next_text = next_text[:pos] + ins + next_text[pos + del_len:]
 
     return next_text
-
-def merkle_tree_root(block_hashes: list[str]) -> str | None:
-    if not block_hashes:
-        return None
-    if len(block_hashes) == 1:
-        return block_hashes[0]
-
-    level = block_hashes[:]
-    if len(level) % 2 == 1:
-        level.append(level[-1])
-
-    next_level = []
-    for i in range(0, len(level), 2):
-        left = bytes.fromhex(level[i])
-        right = bytes.fromhex(level[i + 1])
-        next_level.append(hashlib.sha256(left + right).hexdigest())
-
-    return merkle_tree_root(next_level)
 
 def gen_challenge(sid: Any | str, freshness_window: int) -> dict[str, Any]:
     nonce = base64.b64encode(os.urandom(16)).decode("ascii")
@@ -234,7 +142,7 @@ def get_record_from_store(vw_storage_key: str) -> dict[str, Any] | None:
 
 def hash_record(record: dict):
     record_str = canonicaljson.encode_canonical_json(record)
-    return sha256_hex(record_str)
+    return crypto.sha256_hex(record_str)
 
 def update_vw_hash(d_id: str, record_hash: str):
      with connect() as conn:
@@ -337,7 +245,7 @@ def update_vw_store(d_id: str) -> str:
             if not row:
                 raise ValueError(f"document not found: {d_id}")
 
-            vw_storage_key = row["vw_storage_key"] or gen_uuid()
+            vw_storage_key = row["vw_storage_key"] or crypto.gen_uuid()
             if row["vw_storage_key"] != vw_storage_key:
                 cursor.execute(
                     """
@@ -413,7 +321,7 @@ def start_doc(doc: dict[str, Any]) -> dict[str, Any]:
     author = doc.get("a")
     server_ts = now_ms()
 
-    vw_storage_key = gen_uuid()
+    vw_storage_key = crypto.gen_uuid()
 
     with connect() as conn:
         with conn.cursor() as cursor:
@@ -456,7 +364,7 @@ def start_session(session: dict[str, Any]) -> dict[str, Any]:
         "v": v
     }
     salt = os.urandom(16)
-    keys = exchange_session_key(c_pub, salt, info)
+    keys = crypto.exchange_session_key(c_pub, salt, info)
     session_key_b64 = keys.get("s_key")
     s_pub = keys.get("s_pub")
 
@@ -634,7 +542,7 @@ def append_block(block: dict[str, Any]) -> dict[str, Any]:
     cipher_text = block.get("ct")
     tag = block.get("tag")
     current_hash = block.get("ch")
-    expected_current_hash = sha256_hex(canonical_json({
+    expected_current_hash = crypto.sha256_hex(canonicaljson.encode_canonical_json({
         "header": header,
         "challenge": challenge,
         "iv": iv,
@@ -646,7 +554,7 @@ def append_block(block: dict[str, Any]) -> dict[str, Any]:
         return {"status": "INVALID PROTOCOL", "op": "session/block", "sid": sid, "q": q}
 
     server_ts = now_ms()
-    aad = canonical_json({
+    aad = canonicaljson.encode_canonical_json({
         "header": header, 
         "challenge": challenge
     })
@@ -696,7 +604,7 @@ def append_block(block: dict[str, Any]) -> dict[str, Any]:
                 freshness_status = "DELAYED"
 
 
-            payload = decrypt_payload(session["session_key_b64"], cipher_text, iv, tag, aad)
+            payload = crypto.decrypt_payload(session["session_key_b64"], cipher_text, iv, tag, aad)
             if payload == {}:
                 return {"status": "INVALID AEED TAG", "op": "session/block", "sid": sid, "q": q}
             dt0 = payload.get("dt0")
@@ -725,7 +633,7 @@ def append_block(block: dict[str, Any]) -> dict[str, Any]:
                     "error": str(err),
                 }
 
-            expected_dsh = sha256_hex(next_text)
+            expected_dsh = crypto.sha256_hex(next_text)
             valid_dsh = init_dsh == current_dsh and doc_state_hash == expected_dsh
 
             # if not valid_q:
@@ -764,7 +672,7 @@ def append_block(block: dict[str, Any]) -> dict[str, Any]:
                 session_ev = []
             session_ev.extend(ev)
 
-            receipt = sign_receipt(
+            receipt = crypto.sign_receipt(
                 {
                     "type": "block_receipt",
                     "v": v,
@@ -930,10 +838,10 @@ def end_session(session_end: dict[str, Any], *, flush_vw: bool = True) -> dict[s
             )
             blocks = cursor.fetchall()
             block_hashes = [block["ch"] for block in blocks]
-            merkle_root = merkle_tree_root(block_hashes)
+            merkle_root = crypto.merkle_tree_root(block_hashes)
             last_block_hash = block_hashes[-1] if block_hashes else None
 
-            final_receipt = sign_receipt({
+            final_receipt = crypto.sign_receipt({
                 "type": "session_receipt",
                 "v": v,
                 "dId": d_id,
