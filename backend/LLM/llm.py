@@ -72,6 +72,16 @@ def make_token(claims: dict) -> str:
     msg_b64 = base64.urlsafe_b64encode(msg_bytes).decode("utf-8")
     return f"{msg_b64}.{sign_hmac(msg_bytes)}"
 
+def get_check_vw_hash():
+    try:
+        from backend.record_db.store_db import check_vw_hash
+    except ModuleNotFoundError:
+        try:
+            from record_db.store_db import check_vw_hash
+        except ModuleNotFoundError:
+            from ..record_db.store_db import check_vw_hash
+    return check_vw_hash
+
 def generate_token(payload: dict):
     if not ENABLE_LLM_REPORTS:
         return {
@@ -79,10 +89,7 @@ def generate_token(payload: dict):
             "details": "LLM reports are disabled."
         }
     
-    try:
-        from ..record_db.store_db import check_vw_hash
-    except ImportError:
-        from backend.record_db.store_db import check_vw_hash
+    check_vw_hash = get_check_vw_hash()
     
     d_id = payload.get("d_id")
     if not d_id:
@@ -162,10 +169,7 @@ def verify_token(token: str):
     if scope != "llm":
         raise ValueError(f"INVALID_TOKEN")
 
-    try:
-        from ..record_db.store_db import check_vw_hash
-    except ImportError:
-        from backend.record_db.store_db import check_vw_hash
+    check_vw_hash = get_check_vw_hash()
 
     check_vw_hash(d_id, vw_hash)
     
