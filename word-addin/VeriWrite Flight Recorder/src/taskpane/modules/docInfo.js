@@ -49,7 +49,9 @@ export async function getDocAuthor() {
     return await Word.run(async (context) => {
       const props = context.document.properties;
       props.load("author");
+      const now = performance.now();
       await context.sync();
+      console.log("getDocAuthor context.sync() took", performance.now() - now, "ms");
       return props.author || "Unknown";
     });
   } catch {
@@ -61,7 +63,9 @@ export async function readBodyText() {
   return Word.run(async (context) => {
     const body = context.document.body;
     body.load("text");
+    const now = performance.now();
     await context.sync();
+    console.log("readBodyText context.sync() took", performance.now() - now, "ms");
     return normalizeLines(body.text) || "";
   });
 }

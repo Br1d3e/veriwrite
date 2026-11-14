@@ -29,6 +29,7 @@ let failed = false;
 let fileReady = false;
 const CHECKPOINT_INTERVAL = 60_000;
 const POLL_INTERVAL = 200;
+const MIN_POLL_REST = 50;
 const BACKGROUND_POLL_INTERVAL = 1_000;
 const STOP_SERVER_READY_TIMEOUT = 30_000;
 const STOP_SERVER_READY_INTERVAL = 500;
@@ -48,6 +49,7 @@ let blockReceipt = null;
 let finalReceipt = null;
 let lastError = null;
 let lastRetryMs = 0;
+let eventHandlers = [];
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -84,6 +86,11 @@ export function getPostState() {
 }
 
 async function newRecord(docIdOverride = null) {
+  const now = performance.now();
+  // const title = await getDocTitle();
+  const author = await getDocAuthor();
+  console.log("getDocAuthor took", performance.now() - now, "ms");
+  // console.log("getDocTitle took", Date.now() - now, "ms");
   let flightRecord = {
     v: 2,
     m: {
@@ -91,7 +98,7 @@ async function newRecord(docIdOverride = null) {
       created: Date.now(),
       lastModified: Date.now(),
       title: await getDocTitle(),
-      author: await getDocAuthor(),
+      author: author,
     },
     sessions: [],
   };
@@ -304,25 +311,66 @@ export function getRetryStatus() {
 async function poll() {
   if (!recording || failed) return;
 
+  let elapsedCapturedTime = 0;
   try {
+    const now = Date.now();
     currentText = await captureDiff(pending);
+    elapsedCapturedTime = Date.now() - now;
   } catch (error) {
     failRecording(error);
   } finally {
     if (recording && !failed) {
-      setTimeout(poll, POLL_INTERVAL);
+      setTimeout(poll, Math.max(MIN_POLL_REST, POLL_INTERVAL - elapsedCapturedTime));
     }
   }
 }
 
+async function registerHandlers() {
+  // Deprecated: Word API event handlers are not reliable for capturing text changes, so we rely on polling instead.
+  if (!recording || failed) return;
+
+  await Word.run(async (context) => {
+    const handles = [
+      context.document.onParagraphChanged.add(onTextChanged),
+      context.document.onParagraphAdded.add(onTextChanged),
+      context.document.onParagraphDeleted.add(onTextChanged),
+    ];
+
+    await context.sync();
+  });
+
+  return handles;
+}
+
+function removeHandlers(handles) {
+  // Deprecated: Word API event handlers are not reliable for capturing text changes, so we rely on polling instead.
+  handles.forEach((handle) => {
+    handle.remove();
+  });
+}
+
+// Deprecated: Word API event handlers are not reliable for capturing text changes, so we rely on polling instead.
+export async function onTextChanged() {
+  if (!recording || failed) return;
+
+  try {
+    currentText = await captureDiff(pending);
+  } catch (err) {
+    failRecording(err);
+  }
+}
+
 async function captureDiff(pending = false) {
+  const before = performance.now();
   const newText = await readBodyText();
+  console.log(performance.now() - before, "ms to read body text");
   const diff = computeDiff(lastText, newText, lastPoll);
+  if (!diff) return newText;
+
   lastPoll = Date.now();
   if (session) {
     session.tn = lastPoll;
   }
-  if (!diff) return newText;
 
   lastText = newText;
   if (onlineStatus || pending) {
@@ -459,6 +507,7 @@ export async function startRecording() {
   lastText = sessionInitText;
   currentText = sessionInitText;
   recording = true;
+  // eventHandlers = await registerHandlers();
   poll();
 
   [docId, schema, xmlId] = await loadSettings();
@@ -565,6 +614,7 @@ export async function stopRecording(onStopped = null) {
     session = null;
     stopRequested = false;
     fileReady = true;
+    removeHandlers(eventHandlers);
   } catch (error) {
     fileReady = false;
     failRecording(error);
